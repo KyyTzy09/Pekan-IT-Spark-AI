@@ -48,7 +48,7 @@
 
 | Layer | Teknologi |
 |-------|-----------|
-| Framework | Next.js 14+ App Router |
+| Framework | Next.js 16+ App Router |
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui |
 | State Management | Zustand (client state minimal), TanStack Query (server state) |
@@ -67,18 +67,18 @@
 ## Phase 0 — Foundation Setup (Minggu 1)
 
 ### 0.1 Project Initialization
-- [ ] 🔴 Inisialisasi Next.js 14+ dengan App Router: `bun create next-app@latest spark-ai`
-- [ ] 🔴 Setup TypeScript strict mode
-- [ ] 🔴 Install Tailwind CSS dan konfigurasi dasar
-- [ ] 🔴 Install shadcn/ui: `bunx shadcn-ui@latest init`
-- [ ] 🔴 Setup folder structure: `src/app`, `src/components`, `src/lib`, `src/server`, `src/types`, `prisma/seed`
-- [ ] 🔴 Setup ESLint + Prettier config
+- [x] 🔴 Inisialisasi Next.js 16 dengan App Router
+- [x] 🔴 Setup TypeScript strict mode
+- [x] 🔴 Install Tailwind CSS dan konfigurasi dasar
+- [x] 🔴 Install shadcn/ui
+- [x] 🔴 Setup folder structure: `src/app`, `src/components`, `src/lib`
+- [x] 🔴 Setup Biome
 - [ ] 🔴 Setup environment variables template (`.env.example`)
 
 ### 0.2 Backend Infrastructure (Prisma + PostgreSQL)
-- [ ] 🔴 Install Prisma: `bun add prisma @prisma/client`
-- [ ] 🔴 `bunx prisma init` → generate `prisma/schema.prisma` & `.env`
-- [ ] 🔴 Set `DATABASE_URL` di `.env` (local Postgres: `spark_ai`, user: `postgres`, pass: `postgres`)
+- [x] 🔴 Install Prisma: `bun add prisma @prisma/client`
+- [x] 🔴 `bunx prisma init` → generate `prisma/schema.prisma` & `.env`
+- [x] 🔴 Set `DATABASE_URL` di `.env`
 - [ ] 🔴 Define initial schema di `prisma/schema.prisma`:
   - User, Account, Session (Auth.js standard)
   - StudentProfile, ParentProfile, TeacherProfile
@@ -95,28 +95,29 @@
 - [ ] 🔴 Add seed script: `prisma/seed.ts` + `bunx prisma db seed`
 - [ ] 🔴 Seed data: 1 admin, 1 teacher, sample subjects (Matematika, B.Indo, B.Inggris, IPA), topics, concepts, sample questions
 - [ ] 🟢 Install dan enable pgvector untuk embeddings (RAG AI)
-- [ ] 🟠 Setup Prisma Studio script: `bun run db:studio`
+- [x] 🟠 Setup Prisma Studio script
 
 ### 0.3 Auth Setup (Auth.js v5 atau Better Auth)
-- [ ] 🔴 Install Auth.js: `bun add next-auth@beta @auth/prisma-adapter` atau `better-auth`
-- [ ] 🔴 Konfigurasi auth adapter di Prisma schema
+- [x] 🔴 Install Auth.js: `next-auth@beta` + `@auth/prisma-adapter`
+- [x] 🔴 Konfigurasi auth adapter di Prisma schema
+- [x] 🔴 Setup basic auth config di `src/lib/auth.ts`
+- [x] 🔴 Extend Session type via `src/types/next-auth.d.ts` dengan role
 - [ ] 🔴 Setup Credentials provider (email + password dengan bcrypt)
-- [ ] 🔴 Session strategy: database (bukan JWT) — agar bisa revoke
-- [ ] 🔴 Extend Session type via `src/types/next-auth.d.ts` dengan role
+- [x] 🔴 Setup route handler auth `src/app/api/auth/[...nextauth]/route.ts`
 - [ ] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `teacher`, `admin`)
 - [ ] 🔴 Halaman login `/login` dan register `/register`
 - [ ] 🟠 Setup OAuth provider opsional (Google) untuk kemudahan login
 
 ### 0.4 tRPC + TanStack Query Setup
-- [ ] 🔴 Install tRPC: `bun add @trpc/server @trpc/client @trpc/react-query @trpc/next @tanstack/react-query zod`
-- [ ] 🔴 Setup tRPC router di `src/server/trpc.ts`
-- [ ] 🔴 Setup context dengan auth session
-- [ ] 🔴 Setup provider di `src/app/providers.tsx`
-- [ ] 🔴 Buat procedure protected (`authedProcedure`) dan admin procedure
-- [ ] 🔴 Setup React Query client dengan default staleTime
+- [x] 🔴 Install tRPC: `@trpc/server`, `@trpc/client`, `@trpc/tanstack-react-query`, `@tanstack/react-query`
+- [x] 🔴 Setup tRPC router di `src/trpc/routers/_app.ts`
+- [x] 🔴 Setup context dengan auth session
+- [x] 🔴 Setup provider di `src/app/providers.tsx`
+- [x] 🔴 Buat procedure protected (`authedProcedure`) dan admin procedure
+- [x] 🔴 Setup React Query client dengan default staleTime
 
 ### 0.5 AI SDK Setup
-- [ ] 🔴 Install Vercel AI SDK: `bun add ai @ai-sdk/openai` (atau provider lain)
+- [x] 🔴 Install Vercel AI SDK: `ai` + `@ai-sdk/openai`
 - [ ] 🔴 Setup environment variables: `OPENAI_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY`
 - [ ] 🔴 Buat service layer AI di `src/server/ai/`:
   - `tutor.ts` — generate Socratic response
@@ -126,23 +127,23 @@
 
 ### 0.6 UI Foundation
 - [ ] 🔴 Install komponen shadcn dasar: button, input, card, dialog, sheet, avatar, badge, progress, tabs
-- [ ] 🔴 Setup design tokens (colors, typography, spacing)
-- [ ] 🔴 Buat layout dasar: root layout, auth layout, dashboard layout
-- [ ] 🔴 Setup dark/light mode (optional, P2)
+- [x] 🔴 Setup design tokens (colors, typography, spacing)
+- [x] 🔴 Buat layout dasar: root layout
+- [x] 🔴 Setup dark/light mode
 - [ ] 🔴 Buat loading skeleton reusable
 
 ### 0.7 Bun.js Specific Setup
-- [ ] 🔴 Pastikan `bun` sudah terinstall (bukan npm/yarn/pnpm)
-- [ ] 🔴 Tambahkan scripts di `package.json`:
-  - `"dev": "bun dev"`
-  - `"build": "bun run next build"`
-  - `"start": "bun run next start"`
+- [x] 🔴 Pastikan `bun` sudah terinstall (bukan npm/yarn/pnpm)
+- [x] 🔴 Tambahkan scripts di `package.json`:
+  - `"dev": "next dev"`
+  - `"build": "next build"`
+  - `"start": "next start"`
   - `"db:studio": "bunx prisma studio"`
   - `"db:migrate": "bunx prisma migrate dev"`
   - `"db:seed": "bunx prisma db seed"`
   - `"db:generate": "bunx prisma generate"`
   - `"db:push": "bunx prisma db push"`
-  - `"lint": "bun run next lint"`
+  - `"lint": "biome check"`
   - `"typecheck": "bunx tsc --noEmit"`
 - [ ] 🔴 Setup Prisma binary target untuk Bun: `binaryTargets = ["native", "debian-openssl-3.0.x"]` (jika deploy ke Linux)
 - [ ] 🟠 Pastikan Prisma generate compatible dengan Bun runtime
