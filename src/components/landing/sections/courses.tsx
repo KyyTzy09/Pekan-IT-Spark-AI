@@ -68,8 +68,9 @@ export function Courses() {
             <span className="text-gradient">ribuan konsep</span> siap dibahas.
           </h2>
           <p className="mt-3 text-sm text-muted-foreground md:text-base">
-            Mulai dari materi yang kamu lagi pelajarin di sekolah. Spark ngikutin
-            Kurikulum Merdeka — topiknya selalu relevan dengan kelas kamu.
+            Mulai dari materi yang kamu lagi pelajarin di sekolah. Spark
+            ngikutin Kurikulum Merdeka — topiknya selalu relevan dengan kelas
+            kamu.
           </p>
         </div>
         <Link
@@ -112,10 +113,7 @@ export function Courses() {
                         s.featured ? "h-16 w-16" : "h-14 w-14"
                       }`}
                     >
-                      <Icon
-                        size={s.featured ? 30 : 26}
-                        strokeWidth={2.2}
-                      />
+                      <Icon size={s.featured ? 30 : 26} strokeWidth={2.2} />
                     </div>
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${s.tagBg} ${s.tagText}`}

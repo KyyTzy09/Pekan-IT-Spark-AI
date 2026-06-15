@@ -10,7 +10,12 @@ type RevealProps = {
   as?: keyof React.JSX.IntrinsicElements;
 };
 
-export function Reveal({ children, className, delay = 0, as = "div" }: RevealProps) {
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+  as = "div",
+}: RevealProps) {
   const ref = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {

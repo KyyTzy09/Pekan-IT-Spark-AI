@@ -5,16 +5,20 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      isOnboarded: boolean;
     } & DefaultSession["user"];
   }
 
   interface User extends DefaultUser {
     role: string;
+    isOnboarded?: boolean;
   }
 }
 
 declare module "@auth/core/jwt" {
   interface JWT {
-    role: string;
+    id?: string;
+    role?: string;
+    isOnboarded?: boolean;
   }
 }

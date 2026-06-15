@@ -36,7 +36,7 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_4px_14px_rgba(255,107,107,0.4)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_4px_14px_rgba(225,29,72,0.4)]">
                 <GraduationCap size={18} strokeWidth={2.5} />
               </span>
               <span className="font-heading text-[17px] font-semibold text-gradient">
@@ -89,17 +89,27 @@ export function Footer() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-dashed border-border/60 pt-6 text-[12px] text-muted-foreground sm:flex-row">
           <p className="flex items-center gap-1.5">
-            © 2026 Spark Ai. Dibuat dengan <Heart size={12} className="text-[var(--coral)]" /> buat
-            pendidikan Indonesia.
+            © 2026 Spark Ai. Dibuat dengan{" "}
+            <Heart size={12} className="text-[var(--coral)]" /> buat pendidikan
+            Indonesia.
           </p>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
+            <Link
+              href="/privacy"
+              className="hover:text-foreground transition-colors"
+            >
               Privasi
             </Link>
-            <Link href="/terms" className="hover:text-foreground transition-colors">
+            <Link
+              href="/terms"
+              className="hover:text-foreground transition-colors"
+            >
               Syarat & Ketentuan
             </Link>
-            <Link href="/pdp" className="hover:text-foreground transition-colors">
+            <Link
+              href="/pdp"
+              className="hover:text-foreground transition-colors"
+            >
               UU PDP
             </Link>
           </div>
