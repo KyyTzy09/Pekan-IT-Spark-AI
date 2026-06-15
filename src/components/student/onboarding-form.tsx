@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import * as React from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ export function OnboardingForm({
   correctAnswers: Record<string, string>;
 }) {
   const router = useRouter();
+  const { update } = useSession();
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -177,8 +179,8 @@ export function OnboardingForm({
       return;
     }
 
+    await update();
     router.push("/dashboard");
-    router.refresh();
   };
 
   return (

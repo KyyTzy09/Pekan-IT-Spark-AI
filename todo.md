@@ -2,6 +2,8 @@
 > **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; ready for Phase 5 (Document Upload)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
+> **⚠️ WAJIB pakai `rtk` prefix:** Setiap command `bun` / `bunx` WAJIB ditulis `rtk bun` / `rtk bunx` (cth: `rtk bunx prisma migrate dev`, bukan `bunx prisma migrate dev`). Ini untuk konsistensi tooling environment.
+
 
 ---
 
@@ -76,8 +78,8 @@
 - [x] 🔴 Setup environment variables template (`.env.example`)
 
 ### 0.2 Backend Infrastructure (Prisma + PostgreSQL)
-- [x] 🔴 Install Prisma: `bun add prisma @prisma/client`
-- [x] 🔴 `bunx prisma init` → generate `prisma/schema.prisma` & `.env`
+- [x] 🔴 Install Prisma: `rtk bun add prisma @prisma/client`
+- [x] 🔴 `rtk bunx prisma init` → generate `prisma/schema.prisma` & `.env`
 - [x] 🔴 Set `DATABASE_URL` di `.env`
 - [x] 🔴 Define initial schema di `prisma/schema.prisma`:
   - User, Account, Session (Auth.js standard)
@@ -91,9 +93,9 @@
   - LearningPlan, LearningActivity
   - Document (user uploaded PDF/DOCX as Markdown)
   - ParentStudentLink (untuk invite code orang tua)
-- [x] 🔴 First migration: `bunx prisma migrate dev --name init`
+- [x] 🔴 First migration: `rtk bunx prisma migrate dev --name init`
 - [x] 🔴 Add Prisma client singleton di `src/lib/prisma.ts` (hot-reload safe, adapter-pg)
-- [x] 🔴 Add seed script: `prisma/seed.ts` + `bunx prisma db seed`
+- [x] 🔴 Add seed script: `prisma/seed.ts` + `rtk bunx prisma db seed`
 - [x] 🔴 Seed data: 1 admin, sample subjects (Matematika, B.Indo, B.Inggris, IPA), topics, levels, badges
 - [x] 🟢 ~~Install dan enable pgvector untuk embeddings (RAG AI)~~ — **Aktif di Neon**, tapi implementasi RAG ditunda
 - [x] 🟠 Setup Prisma Studio script
@@ -141,13 +143,13 @@
   - `"dev": "next dev"`
   - `"build": "next build"`
   - `"start": "next start"`
-  - `"db:studio": "bunx prisma studio"`
-  - `"db:migrate": "bunx prisma migrate dev"`
-  - `"db:seed": "bunx prisma db seed"`
-  - `"db:generate": "bunx prisma generate"`
-  - `"db:push": "bunx prisma db push"`
+  - `"db:studio": "rtk bunx prisma studio"`
+  - `"db:migrate": "rtk bunx prisma migrate dev"`
+  - `"db:seed": "rtk bunx prisma db seed"`
+  - `"db:generate": "rtk bunx prisma generate"`
+  - `"db:push": "rtk bunx prisma db push"`
   - `"lint": "biome check"`
-  - `"typecheck": "bunx tsc --noEmit"`
+  - `"typecheck": "rtk bunx tsc --noEmit"`
 - [x] 🔴 Setup Prisma config `prisma.config.ts` dengan seed command
 - [ ] 🔴 Setup Prisma binary target untuk Bun: `binaryTargets = ["native", "debian-openssl-3.0.x"]` (jika deploy ke Linux)
 - [x] 🟠 Pastikan Prisma generate compatible dengan Bun runtime
@@ -290,7 +292,7 @@
 - [x] 🔴 `Topic` & `Concept`: +`isCustom` (bool) untuk track AI-generated content
 - [x] 🔴 `User`: +`customSubjects` reverse relation
 - [x] 🔴 Indexes: `isCustom`, `source`, `createdById` untuk query performant
-- [x] 🔴 Push schema via `bunx prisma db push --accept-data-loss` + regenerate client
+- [x] 🔴 Push schema via `rtk bunx prisma db push --accept-data-loss` + regenerate client
 
 #### 4.6.2 Lapis 2 — Adaptive Difficulty Engine (DONE — siap dipakai Phase 6)
 - [x] 🔴 `src/server/learning/adaptive.ts` — pure functions, 0 side effect
@@ -624,7 +626,6 @@
 - [ ] 🟢 Leaderboard kelas (non-toxic, opt-in)
 - [ ] 🟢 Support bahasa daerah (Jawa, Sunda, dll)
 - [ ] 🟢 iOS app (React Native / Capacitor)
-- [ ] 🟢 Offline mode (cache materi dan soal)
 - [ ] 🟢 AI-generated practice questions from uploaded material
 - [ ] 🟢 Video penjelasan AI / avatar berbicara
 

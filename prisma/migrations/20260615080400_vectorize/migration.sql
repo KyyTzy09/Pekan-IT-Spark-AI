@@ -1,3 +1,6 @@
+-- Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Alter embedding columns to use pgvector type
 ALTER TABLE "concept_embeddings" ALTER COLUMN "embedding" TYPE vector(1536) USING "embedding"::vector(1536);
 ALTER TABLE "document_embeddings" ALTER COLUMN "embedding" TYPE vector(1536) USING "embedding"::vector(1536);
