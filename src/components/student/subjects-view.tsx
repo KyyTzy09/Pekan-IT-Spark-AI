@@ -8,6 +8,7 @@ import {
   Lock,
   Sparkles,
   Star,
+  Wand2,
 } from "lucide-react";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
@@ -16,23 +17,31 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { SubjectExplorerSummary } from "@/server/actions/dashboard";
 
+export type SubjectListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  description: string | null;
+  totalConcepts: number;
+  averageMastery: number;
+  mastered: number;
+  isCustom: boolean;
+  source: "OFFICIAL" | "AI_GENERATED" | "USER_CREATED";
+};
+
 export function SubjectsListView({
   subjects,
   focusedIds,
+  addAction,
 }: {
-  subjects: Array<{
-    id: string;
-    slug: string;
-    name: string;
-    icon: string | null;
-    color: string | null;
-    description: string | null;
-    totalConcepts: number;
-    averageMastery: number;
-    mastered: number;
-  }>;
+  subjects: SubjectListItem[];
   focusedIds: string[];
+  addAction?: React.ReactNode;
 }) {
+  const official = subjects.filter((s) => !s.isCustom);
+  const custom = subjects.filter((s) => s.isCustom);
   return (
     <div className="space-y-5 sm:space-y-7">
       <Reveal>
@@ -45,32 +54,68 @@ export function SubjectsListView({
                 "radial-gradient(circle, oklch(0.78 0.18 25 / 0.5), transparent 70%)",
             }}
           />
-          <p className="relative text-[10px] font-bold uppercase tracking-widest text-[var(--coral)]">
-            Mata pelajaran
-          </p>
-          <h1 className="relative mt-1.5 font-heading text-[26px] font-bold leading-tight tracking-tight sm:text-[32px]">
-            Pilih dan dalami{" "}
-            <span className="text-gradient-warm">dunia Spark</span> ✨
-          </h1>
-          <p className="relative mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[14px]">
-            Tap mata pelajaran buat liat skill tree, konsep yang siap
-            dipelajari, dan progress konstelasi kamu. Topik yang kamu pilih pas
-            onboarding bakal muncul di urutan atas.
-          </p>
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--coral)]">
+                Mata pelajaran
+              </p>
+              <h1 className="mt-1.5 font-heading text-[26px] font-bold leading-tight tracking-tight sm:text-[32px]">
+                Pilih dan dalami{" "}
+                <span className="text-gradient-warm">dunia Spark</span> ✨
+              </h1>
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[14px]">
+                Tap mata pelajaran buat liat skill tree, konsep yang siap
+                dipelajari, dan progress konstelasi kamu. Topik yang kamu pilih
+                pas onboarding bakal muncul di urutan atas.
+              </p>
+            </div>
+            {addAction}
+          </div>
         </header>
       </Reveal>
 
-      <Reveal delay={80}>
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          {subjects.map((s) => (
-            <SubjectCard
-              key={s.id}
-              subject={s}
-              isFocused={focusedIds.includes(s.id)}
-            />
-          ))}
-        </div>
-      </Reveal>
+      {official.length > 0 && (
+        <Reveal delay={80}>
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            {official.map((s) => (
+              <SubjectCard
+                key={s.id}
+                subject={s}
+                isFocused={focusedIds.includes(s.id)}
+              />
+            ))}
+          </div>
+        </Reveal>
+      )}
+
+      {custom.length > 0 && (
+        <Reveal delay={120}>
+          <section>
+            <header className="mb-3 flex items-center justify-between gap-2 px-1">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                  Mapel kamu
+                </p>
+                <h2 className="mt-0.5 font-heading text-[16px] font-bold leading-tight">
+                  Custom + AI
+                </h2>
+              </div>
+              <span className="rounded-full bg-[var(--purple)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]">
+                {custom.length} mapel
+              </span>
+            </header>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              {custom.map((s) => (
+                <SubjectCard
+                  key={s.id}
+                  subject={s}
+                  isFocused={focusedIds.includes(s.id)}
+                />
+              ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
     </div>
   );
 }
@@ -79,17 +124,7 @@ function SubjectCard({
   subject,
   isFocused,
 }: {
-  subject: {
-    id: string;
-    slug: string;
-    name: string;
-    icon: string | null;
-    color: string | null;
-    description: string | null;
-    totalConcepts: number;
-    averageMastery: number;
-    mastered: number;
-  };
+  subject: SubjectListItem;
   isFocused: boolean;
 }) {
   return (
@@ -125,6 +160,15 @@ function SubjectCard({
             {isFocused && (
               <span className="rounded-full bg-[var(--coral)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
                 Fokus
+              </span>
+            )}
+            {subject.isCustom && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--purple)]/8 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
+                title="Mapel ini dibuat pakai Spark AI"
+              >
+                <Wand2 size={8} strokeWidth={2.5} />
+                AI
               </span>
             )}
           </div>

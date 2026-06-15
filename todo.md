@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-15 (v0.8 — Phase 0 done, Phase 1 done, Phase 2.1 done: login + register + role selection + Google OAuth + Zod validation, Phase 2.2 done: 5-step student onboarding flow dengan pretest-based knowledge profile, Phase 2.3 done: invite code + parent-child linking, Phase 3.1–3.3 done: student dashboard layout + home feed + subject/topic explorer dengan konstelasi bintang)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; ready for Phase 4 (AI Tutor Chat)
+> **Last updated:** 2026-06-15 (v0.9 — Phase 4 done: Socratic AI chat, **NEW**: hybrid subject system — seed kurikulum nasional + AI-generated custom subjects per user, adaptive difficulty algorithm ready untuk Phase 6)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; ready for Phase 5 (Document Upload)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 
@@ -247,36 +247,51 @@
 ## Phase 4 — AI Tutor Chat (Socratic) (Minggu 3–4)
 
 ### 4.1 Chat Interface
-- [ ] 🔴 Halaman chat `/chat` dengan UI mirip chat app
-- [ ] 🔴 Tampilkan avatar Spark yang bisa dikustomisasi
-- [ ] 🔴 Input teks untuk pertanyaan siswa
-- [ ] 🔴 Bubble chat dengan styling berbeda untuk siswa dan Spark
-- [ ] 🔴 Loading state saat AI merespons
-- [ ] 🔴 Chat history persistent di database
+- [x] 🔴 Halaman chat `/chat` dengan UI mirip chat app
+- [x] 🔴 Tampilkan avatar Spark yang bisa dikustomisasi
+- [x] 🔴 Input teks untuk pertanyaan siswa
+- [x] 🔴 Bubble chat dengan styling berbeda untuk siswa dan Spark
+- [x] 🔴 Loading state saat AI merespons
+- [x] 🔴 Chat history persistent di database
 
 ### 4.2 Socratic Tutoring Engine
-- [ ] 🔴 System prompt untuk karakter Spark: sabar, suportif, tidak menghakimi
-- [ ] 🔴 Prompt strategy: jangan langsung kasih jawaban, tanya balik pemandu
-- [ ] 🔴 Personifikasi bahasa Indonesia kasual yang ramah anak muda
-- [ ] 🔴 Adaptive response berdasarkan knowledge profile siswa
-- [ ] 🔴 Kontekstualisasi dengan kurikulum dan konsep yang sedang dipelajari
+- [x] 🔴 System prompt untuk karakter Spark: sabar, suportif, tidak menghakimi
+- [x] 🔴 Prompt strategy: jangan langsung kasih jawaban, tanya balik pemandu
+- [x] 🔴 Personifikasi bahasa Indonesia kasual yang ramah anak muda
+- [x] 🔴 Adaptive response berdasarkan knowledge profile siswa
+- [x] 🔴 Kontekstualisasi dengan kurikulum dan konsep yang sedang dipelajari
 
 ### 4.3 Chat Session Management
-- [ ] 🔴 Model `ChatSession` dan `ChatMessage`
-- [ ] 🔴 List chat session sebelumnya
-- [ ] 🔴 Bisa melanjutkan chat lama atau mulai chat baru
-- [ ] 🔴 Auto-title chat dari topik pertama
+- [x] 🔴 Model `ChatSession` dan `ChatMessage`
+- [x] 🔴 List chat session sebelumnya
+- [x] 🔴 Bisa melanjutkan chat lama atau mulai chat baru
+- [x] 🔴 Auto-title chat dari topik pertama
 
 ### 4.4 Anti-Cheating Guardrails
-- [ ] 🔴 Deteksi jika siswa minta jawaban langsung untuk PR/ujian
-- [ ] 🔴 Respon dengan bimbingan Socratic, bukan jawaban instan
-- [ ] 🔴 Refuse topik di luar edukasi
-- [ ] 🔴 Disclaimer bahwa ini AI, bukan manusia
+- [x] 🔴 Deteksi jika siswa minta jawaban langsung untuk PR/ujian
+- [x] 🔴 Respon dengan bimbingan Socratic, bukan jawaban instan
+- [x] 🔴 Refuse topik di luar edukasi
+- [x] 🔴 Disclaimer bahwa ini AI, bukan manusia
 
 ### 4.5 Multimodal Input (P2)
 - [ ] 🟡 Upload gambar soal matematika
 - [ ] 🟡 Input suara (voice-to-text)
 - [ ] 🟡 Render LaTeX / MathML untuk rumus
+
+### 4.6 Hybrid Subject System (NEW — keputusan post-Phase 4)
+- [x] 🔴 Schema: `Subject.isCustom` + `createdById` + `SubjectSource` enum (OFFICIAL/AI_GENERATED/USER_CREATED) + `isVerified` flag
+- [x] 🔴 Schema: tambah `SubjectSlug` enum: SEJARAH, GEOGRAFI, EKONOMI, SOSIOLOGI, PPKN, SENI_BUDAYA, PJOK, PRAKARYA, BAHASA_DAERAH, CODING, CUSTOM
+- [x] 🔴 Schema: `Topic.isCustom` + `Concept.isCustom` untuk track AI-generated content
+- [x] 🔴 Adaptive difficulty algorithm di `src/server/learning/adaptive.ts`: `selectNextDifficulty`, `computeMasteryUpdate`, `deriveConceptStatus`, `checkPrerequisites`, `summarizeSession`
+- [x] 🔴 AI curriculum designer `src/server/ai/curriculum.ts`: generate outline + 5-8 pretest questions untuk custom subject (Zod schema validated)
+- [x] 🔴 Server action `addCustomSubject`: full transaction (subject + topics + concepts + 5-8 pretest questions + slug unique)
+- [x] 🔴 Server action `recordQuestionAttempt`: catat attempt + update `StudentKnowledgeProfile.masteryScore` pakai `computeMasteryUpdate`
+- [x] 🔴 Server action `selectNextQuestionDifficulty`: panggil `selectNextDifficulty` based on rolling 5 attempts
+- [x] 🔴 UI `AddSubjectDialog` di `/subjects`: tab "Mapel nasional" (suggested) + "Custom + AI" (input name + context)
+- [x] 🔴 UI: section "Mapel kamu" di `/subjects` page untuk custom subjects (badge AI)
+- [x] 🔴 UI: "Tambah Mapel" tile di dashboard progress section
+- [ ] 🟠 Seed tambahan: 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi) + PPKN (effort curation, bukan AI generate)
+- [ ] 🟠 Integrate adaptive selectDifficulty ke practice page (Phase 6.1)
 
 ---
 

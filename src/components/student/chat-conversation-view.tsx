@@ -45,12 +45,11 @@ export function ChatConversationView({
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sync local state from server data on server refresh
   React.useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll only on length/pending change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll runs on length/pending transitions, not on a stable ref read
   React.useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

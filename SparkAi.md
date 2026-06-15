@@ -334,15 +334,22 @@ Spark Ai diharapkan memberikan manfaat nyata bagi seluruh pemangku kepentingan:
 Untuk menjaga fokus dan kualitas pengembangan, Spark Ai memiliki batasan-batasan yang jelas pada tahap awal:
 
 ### 6.1 Batasan Lingkup Mata Pelajaran
-- **In scope:** Mata pelajaran utama siswa SMK/SMA, yaitu:
+- **Target pengguna:** Siswa SMA dan SMK (kelas 10–12) sesuai Kurikulum Merdeka.
+- **In scope (seeded — kurikulum nasional):** Mata pelajaran utama yang akan di-*seed* ke database:
   - Matematika
   - Bahasa Indonesia
   - Bahasa Inggris
-  - IPA (Fisika, Kimia, Biologi) — sebagai mata pelajaran terintegrasi sesuai Kurikulum Merdeka
-- **Out of scope (tahap awal):**
-  - Mata pelajaran IPS secara detail (sejarah, geografi, ekonomi, sosiologi) — dapat dipertimbangkan untuk versi berikutnya.
-  - Mata pelajaran kejuruan SMK secara spesifik (misalnya pemrograman, akuntansi, tata boga) — memerlukan pengembangan konten khusus.
-  - Mata pelajaran di luar jenjang SMK/SMA (SD, SMP, perguruan tinggi) — di luar target pengguna.
+  - IPA (Fisika, Kimia, Biologi) — sebagai mata pelajaran terintegrasi
+  - IPS — Sejarah, Geografi, Ekonomi, Sosiologi (roadmap Phase 6+)
+  - PPKN (roadmap Phase 6+)
+- **Pendekatan hybrid (keputusan v0.9, Juni 2026):**
+  - **Lapis 1 — Seed kurikulum nasional** oleh tim/kontributor (bukan AI generate) untuk menjaga kualitas & keselarasan dengan Kurikulum Merdeka.
+  - **Lapis 2 — Adaptive difficulty algorithm** (`src/server/learning/adaptive.ts`): rolling accuracy 5 attempt terakhir menentukan naik/turun difficulty, prerequisite check, mastery score 0–1.
+  - **Lapis 3 — Custom subjects oleh user (AI-generated, terisolasi per-user)**: siswa bisa tambah mapel tambahan (mis. Bahasa Jawa, Coding, Musik) yang di-scope ke akun mereka saja. AI (`src/server/ai/curriculum.ts`) generate outline + 5–8 soal pretest dengan Zod validation. Flag `isVerified=false` untuk review admin.
+- **Out of scope tahap awal:**
+  - Mata pelajaran di luar jenjang SMA/SMK (SD, SMP, perguruan tinggi) — di luar target pengguna.
+  - Mata pelajaran kejuruan SMK spesifik perjurusan — dapat dipertimbangkan untuk fase berikutnya.
+  - Mata pelajaran yang di-*generate* AI untuk masuk kurikulum global (bukan untuk pretest/practice per-user).
 
 ### 6.2 Batasan Peran Aplikasi
 - **TIDAK dimaksudkan untuk menggantikan peran guru di sekolah.** Guru tetap memiliki peran utama dalam pendidikan karakter, diskusi kelas, proyek kolaboratif, dan penilaian formal.

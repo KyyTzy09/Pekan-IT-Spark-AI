@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { SubjectsListView } from "@/components/student/subjects-view";
+import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
+import {
+  type SubjectListItem,
+  SubjectsListView,
+} from "@/components/student/subjects-view";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -19,19 +23,24 @@ export default async function SubjectsPage() {
     redirect("/");
   }
 
+  const userId = session.user.id;
+
   const [profile, subjects, conceptsInSubjects, profiles] = await Promise.all([
     prisma.studentProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
       select: { focusedSubjects: true },
     }),
     prisma.subject.findMany({
-      orderBy: { order: "asc" },
+      where: {
+        OR: [{ createdById: null }, { createdById: userId }],
+      },
+      orderBy: [{ isCustom: "asc" }, { order: "asc" }, { name: "asc" }],
     }),
     prisma.concept.findMany({
       select: { id: true, topic: { select: { subjectId: true } } },
     }),
     prisma.studentKnowledgeProfile.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       select: { conceptId: true, status: true, masteryScore: true },
     }),
   ]);
@@ -39,7 +48,7 @@ export default async function SubjectsPage() {
   const focusedIds = profile?.focusedSubjects ?? [];
   const profileByConcept = new Map(profiles.map((p) => [p.conceptId, p]));
 
-  const summaries = subjects.map((s) => {
+  const summaries: SubjectListItem[] = subjects.map((s) => {
     const subjectConceptIds = conceptsInSubjects
       .filter((c) => c.topic.subjectId === s.id)
       .map((c) => c.id);
@@ -67,8 +76,18 @@ export default async function SubjectsPage() {
       totalConcepts: subjectConceptIds.length,
       averageMastery: average,
       mastered,
+      isCustom: s.isCustom,
+      source: s.source,
     };
   });
 
-  return <SubjectsListView subjects={summaries} focusedIds={focusedIds} />;
+  return (
+    <div className="space-y-5 sm:space-y-7">
+      <SubjectsListView
+        subjects={summaries}
+        focusedIds={focusedIds}
+        addAction={<AddSubjectDialog />}
+      />
+    </div>
+  );
 }

@@ -23,6 +23,17 @@ enum SubjectSlug {
   BAHASA_INDONESIA
   BAHASA_INGGRIS
   IPA
+  SEJARAH
+  GEOGRAFI
+  EKONOMI
+  SOSIOLOGI
+  PPKN
+  SENI_BUDAYA
+  PJOK
+  PRAKARYA
+  BAHASA_DAERAH
+  CODING
+  CUSTOM
 }
 
 enum ConceptStatus {
@@ -30,6 +41,12 @@ enum ConceptStatus {
   LEARNING
   MASTERED
   STRUGGLING
+}
+
+enum SubjectSource {
+  OFFICIAL
+  AI_GENERATED
+  USER_CREATED
 }
 
 enum QuestionType {
@@ -125,6 +142,7 @@ model User {
   learningActivities  LearningActivity[]
   documents           Document[]
   knowledgeProfiles   StudentKnowledgeProfile[]
+  customSubjects      Subject[]                 @relation("CustomSubjects")
   accounts            Account[]
   sessions            Session[]
 
@@ -210,19 +228,27 @@ model ParentStudentLink {
 }
 
 model Subject {
-  id          String       @id @default(cuid())
-  slug        SubjectSlug  @unique
+  id          String        @id @default(cuid())
+  slug        SubjectSlug   @unique
   name        String
   description String?
   icon        String?
   color       String?
-  order       Int          @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  order       Int           @default(0)
+  isCustom    Boolean       @default(false)
+  source      SubjectSource @default(OFFICIAL)
+  createdById String?
+  createdBy   User?         @relation("CustomSubjects", fields: [createdById], references: [id], onDelete: SetNull)
+  isVerified  Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  topics Topic[]
+  topics       Topic[]
   chatSessions ChatSession[]
 
+  @@index([isCustom])
+  @@index([source])
+  @@index([createdById])
   @@map("subjects")
 }
 
@@ -234,10 +260,11 @@ model Topic {
   description String?
   slug        String
   order       Int      @default(0)
+  isCustom    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  concepts Concept[]
+  concepts     Concept[]
   chatSessions ChatSession[]
 
   @@unique([subjectId, slug])
@@ -253,6 +280,7 @@ model Concept {
   slug        String
   order       Int      @default(0)
   contentMd   String?  @db.Text
+  isCustom    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

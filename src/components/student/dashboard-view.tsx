@@ -10,12 +10,15 @@ import {
   Lock,
   MessageCircle,
   Play,
+  Plus,
   Star,
   Target,
+  Wand2,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
+import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -691,26 +694,86 @@ function SubjectsProgress({
               Konstelasi pengetahuan kamu
             </h2>
           </div>
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="rounded-full text-[12.5px] font-semibold"
-          >
-            <Link href="/subjects">
-              Lihat semua
-              <ArrowRight size={13} />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <AddSubjectDialog
+              trigger={
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--coral)]/8 px-3 py-1.5 text-[11.5px] font-bold text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.2)] transition-all hover:-translate-y-0.5 hover:bg-[var(--coral)]/12"
+                >
+                  <Wand2 size={11} strokeWidth={2.5} />
+                  Tambah mapel
+                </button>
+              }
+            />
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="rounded-full text-[12.5px] font-semibold"
+            >
+              <Link href="/subjects">
+                Lihat semua
+                <ArrowRight size={13} />
+              </Link>
+            </Button>
+          </div>
         </header>
 
         <div className="grid gap-3 sm:grid-cols-2">
           {subjects.map((s) => (
             <SubjectProgressCard key={s.id} subject={s} />
           ))}
+          <AddSubjectTile />
         </div>
       </section>
     </Reveal>
+  );
+}
+
+function AddSubjectTile() {
+  return (
+    <AddSubjectDialog
+      trigger={
+        <button
+          type="button"
+          className="group/asb relative flex min-h-[148px] flex-col items-start justify-between gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-border/50 bg-background/40 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--coral)]/40 hover:bg-[var(--coral)]/4 hover:shadow-[0_12px_28px_rgba(225,29,72,0.1)]"
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-10 size-28 rounded-full opacity-30 blur-3xl transition-opacity group-hover/asb:opacity-60"
+            style={{
+              background:
+                "radial-gradient(circle, oklch(0.78 0.18 25 / 0.4), transparent 70%)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-10 -left-10 size-24 rounded-full opacity-25 blur-3xl transition-opacity group-hover/asb:opacity-50"
+            style={{
+              background:
+                "radial-gradient(circle, oklch(0.7 0.15 280 / 0.4), transparent 70%)",
+            }}
+          />
+          <span className="relative grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_8px_18px_rgba(225,29,72,0.35)]">
+            <Wand2 size={18} strokeWidth={2.5} />
+          </span>
+          <div className="relative flex-1">
+            <p className="font-heading text-[15px] font-bold leading-tight text-foreground">
+              Mau belajar mapel lain?
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              Spark AI bisa bikin outline + soal pretest sesuai mapel yang kamu
+              mau.
+            </p>
+          </div>
+          <div className="relative inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--coral)]">
+            <Plus size={11} strokeWidth={2.8} />
+            Tambah mapel custom
+          </div>
+        </button>
+      }
+    />
   );
 }
 
