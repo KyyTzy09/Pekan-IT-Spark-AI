@@ -297,6 +297,96 @@ Untuk menjawab realita sehari-hari di mana guru sering membagikan materi, soal, 
 - Mengurangi beban guru untuk menulis ulang soal atau materi ke dalam aplikasi.
 - Membuat setiap dokumen dari guru menjadi bahan latihan yang adaptif dan interaktif.
 
+### 4.9 Sistem Mata Pelajaran Hybrid (3-Lapis)
+
+Untuk menjawab realita bahwa siswa SMA/SMK belajar 9–13 mata pelajaran (bukan hanya 4 yang tersedia di seed awal) dan bahwa tidak semua mapel bisa atau layak di-*seed* secara manual, Spark Ai mengadopsi **pendekatan hybrid tiga lapis** untuk ekspansi kurikulum:
+
+#### 4.9.1 Lapis 1 — Kurikulum Nasional Seeded (Curated)
+- **Apa:** Mata pelajaran utama SMA/SMK (Matematika, Bahasa Indonesia, Bahasa Inggris, IPA, IPS-Sejarah/Geografi/Ekonomi/Sosiologi, PPKN, Seni Budaya, PJOK) di-*seed* ke database dengan *concept graph* lengkap dan *question bank* yang tervalidasi.
+- **Siapa yang buat:** Tim internal atau kontributor terverifikasi, **bukan AI generate**.
+- **Mengapa:** Kurikulum nasional adalah *single source of truth*. Kesalahan di fase ini akan merusak seluruh *knowledge profile* siswa ke depannya. Validasi manual memastikan keselarasan dengan Capaian Pembelajaran (CP) dan Alur Tujuan Pembelajaran (ATP) Kurikulum Merdeka.
+- **Kapan:** Bertahap (4 mapel inti sudah di-seed, sisanya menyusul di Phase 6+).
+- **Indikator:** Setiap mapel seeded punya minimal 30 konsep, 30+ soal, dan struktur prerequisite yang jelas.
+
+#### 4.9.2 Lapis 2 — Adaptive Difficulty Engine (Inti "Adaptif")
+Inilah yang membuat Spark Ai benar-benar *adaptive learning* dan bukan sekadar "AI bimbel":
+- **Mastery score per konsep** (0–1) dihitung menggunakan *exponential moving average* (EMA, learning rate 0.2) dari riwayat jawaban siswa.
+- **Difficulty selector**: rolling accuracy 5 attempt terakhir. Akurasi ≥ 70% → naik difficulty. 3 jawaban salah berturut-turut → turun difficulty. Algoritma ini menghasilkan adaptasi yang halus, bukan "naik/turun" yang kasar.
+- **Concept status**: ≥ 80% → MASTERED, 40–80% → LEARNING, < 40% tapi > 0 → STRUGGLING, 0 → NOT_STARTED.
+- **Prerequisite check**: sebelum membuka konsep baru, sistem memvalidasi bahwa prasyaratnya sudah dikuasai (default threshold 60%, configurable per prasyarat).
+- **Implementasi:** `src/server/learning/adaptive.ts` — pure functions, tidak ada side effect, mudah di-*unit test* dan di-*audit*.
+- **Mengapa bukan AI:** Aturan adaptif deterministik lebih transparan dan dapat dijelaskan kepada siswa ("Kamu benar 5 dari 5, naik ke level HARD!") dibanding model ML yang *black box*. Ini juga sesuai prinsip 4.5 PRD tentang *literasi dan kemandirian belajar* — siswa paham *mengapa* mereka mendapat soal tertentu.
+
+#### 4.9.3 Lapis 3 — Custom Subjects oleh Siswa (AI-Generated, Isolated)
+- **Apa:** Siswa bisa menambah mata pelajaran *custom* di luar kurikulum nasional (mis. Bahasa Jawa, Bahasa Arab, Coding, Musik, Desain Grafis, Bahasa Korea).
+- **Bagaimana:** AI (`src/server/ai/curriculum.ts` dengan Vercel AI SDK `generateObject` + Zod schema) men-*generate*:
+  - Deskripsi mapel + icon emoji + warna tema.
+  - 3–6 topik utama, masing-masing 3–6 konsep.
+  - 5–8 soal pretest pilihan ganda untuk mengukur kemampuan awal siswa.
+- **Validasi keras:** `correctAnswer` harus persis ada di `options` (case-sensitive). `topicIndex` harus merujuk topik yang ada. Validasi di level server, bukan hanya prompt.
+- **Scope terisolasi:** Mapel *custom* di-scope ke akun siswa yang membuatnya (`Subject.createdById`). Tidak masuk kurikulum global, tidak bisa diakses siswa lain. Flag `isVerified: false` untuk membedakan dengan mapel nasional.
+- **Disclaimer eksplisit:** UI menampilkan label "AI" dengan tooltip "Mapel ini dibuat pakai Spark AI" — siswa dan orang tua paham bahwa konten ini *AI-generated*, bukan kurikulum resmi.
+- **Mengapa AI OK di sini, tapi tidak di Lapis 1:** Pertanyaan di pretest *custom* dipakai untuk eksplorasi personal, bukan sebagai *benchmark* standar. Risiko "salah konsep" di-*mitigasi* dengan: (a) prompt ketat yang melarang soal ambigu, (b) Zod validation, (c) Socratic prompting saat siswa belajar (miskonsepsi akan tertangkap lewat dialog). Peta konsep lengkap baru benar-benar krusial di kurikulum nasional; di mapel eksplorasi, *progressive disclosure* (ungkap materi sedikit demi sedikit lewat chat & soal) lebih penting.
+
+#### 4.9.4 Diagram Alur Hybrid
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ SISWA PILIH / BUAT MAPEL                                          │
+│   • Dari daftar nasional (Lapis 1) → siap pretest pakai seed     │
+│   • Custom (Lapis 3) → AI generate outline + 5-8 soal pretest   │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ PRETEST: Adaptive Difficulty (Lapis 2)                            │
+│   • Start dari EASY, naik/turun via rolling accuracy             │
+│   • Update mastery score EMA                                      │
+│   • Tentukan concept status per konsep                            │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ LEARN LOOP: Socratic Chat + Adaptive Practice                    │
+│   • Spark ngobrol pake Socratic method                            │
+│   • Practice page pilih soal berdasarkan mastery + prereq check   │
+│   • Streak, XP, badges triggered                                 │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 4.9.5 Yang TIDAK Boleh Dilakukan
+- ❌ **Jangan auto-generate soal pretest untuk mapel nasional** — kualitas terlalu kritis.
+- ❌ **Jangan biarkan mapel *custom* masuk kurikulum global** — inkonsistensi & susah di-maintain.
+- ❌ **Jangan pakai ML/RL untuk difficulty selection** — aturan deterministik sudah cukup, transparan, dan *debuggable*.
+- ❌ **Jangan skip prerequisite check** — siswa akan loncat-loncat dan bingung.
+
+### 4.10 Adaptive Learning Engine (Detail Teknis)
+
+Engine adaptif adalah pondasi dari personalisasi di Spark Ai. Berbeda dengan LMS konvensional yang menyajikan materi secara *linear*, Spark Ai menyesuaikan **kesulitan, urutan, dan jenis penjelasan** dengan kondisi nyata siswa.
+
+#### 4.10.1 Mastery Score (0–1) per Konsep
+- **Update rule:** `newScore = oldScore + 0.2 * (target - oldScore)` di mana `target = 1` jika benar, `0` jika salah.
+- **Properti:** Cepat konvergen (sekitar 5 attempt untuk akurasi tinggi), tahan terhadap fluktuasi (EMA smoothing).
+- **Dipakai untuk:** menentukan `ConceptStatus` (mastered/learning/struggling), membuka konsep berikutnya, merekomendasikan topik.
+
+#### 4.10.2 Difficulty Selection
+- **Window:** 5 attempt terakhir per konsep.
+- **Promote:** akurasi rolling ≥ 70% dan attempt count ≥ 5 → naik 1 level.
+- **Demote (wrong-streak):** 3 jawaban salah berturut-turut → turun 1 level.
+- **Demote (low-accuracy):** akurasi rolling < 40% → turun 1 level.
+- **Level:** EASY (1) → MEDIUM (2) → HARD (3) → ADVANCED (4).
+
+#### 4.10.3 Prerequisite Check
+- Setiap konsep bisa mendefinisikan prasyarat via `ConceptPrerequisite` (dengan `minMasteryScore` per edge, default 0.6).
+- Saat siswa masuk ke konsep baru, sistem cek apakah semua prasyarat sudah lewat threshold.
+- Prasyarat yang lemah di-*list* dan disarankan untuk dipelajari dulu.
+
+#### 4.10.4 Knowledge Graph
+- Setiap konsep adalah *node*, prerequisite adalah *directed edge*.
+- Topik mengelompokkan konsep (3–8 konsep per topik).
+- Mata pelajaran mengelompokkan topik (3–8 topik per mapel).
+- Visualisasi sebagai konstelasi bintang (lihat 4.7.e) sudah diimplementasikan.
+
 ---
 
 ## 5. Manfaat yang Diharapkan

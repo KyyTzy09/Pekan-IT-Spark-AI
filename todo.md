@@ -122,7 +122,10 @@
 - [x] 🔴 Buat service layer AI di `src/server/ai/`:
   - `tutor.ts` — generate Socratic response (streaming)
   - `evaluator.ts` — evaluate answer and give feedback
-  - `rag.ts` — retrieve relevant context (pgvector similarity, fallback token-based)
+  - `rag.ts` — retrieve relevant context (pgvector similarity, fallback keyword-based)
+  - `curriculum.ts` — **AI curriculum designer**: generate outline + 5–8 soal pretest pilihan ganda untuk mapel *custom* (Zod-validated, Vercel AI SDK `generateObject`)
+- [x] 🔴 Buat service layer Adaptive Learning di `src/server/learning/`:
+  - `adaptive.ts` — pure functions: `selectNextDifficulty`, `computeMasteryUpdate` (EMA), `deriveConceptStatus`, `checkPrerequisites`, `summarizeSession`
 - [ ] 🟠 Setup rate limiting untuk API AI
 
 ### 0.6 UI Foundation
@@ -278,20 +281,77 @@
 - [ ] 🟡 Input suara (voice-to-text)
 - [ ] 🟡 Render LaTeX / MathML untuk rumus
 
-### 4.6 Hybrid Subject System (NEW — keputusan post-Phase 4)
-- [x] 🔴 Schema: `Subject.isCustom` + `createdById` + `SubjectSource` enum (OFFICIAL/AI_GENERATED/USER_CREATED) + `isVerified` flag
-- [x] 🔴 Schema: tambah `SubjectSlug` enum: SEJARAH, GEOGRAFI, EKONOMI, SOSIOLOGI, PPKN, SENI_BUDAYA, PJOK, PRAKARYA, BAHASA_DAERAH, CODING, CUSTOM
-- [x] 🔴 Schema: `Topic.isCustom` + `Concept.isCustom` untuk track AI-generated content
-- [x] 🔴 Adaptive difficulty algorithm di `src/server/learning/adaptive.ts`: `selectNextDifficulty`, `computeMasteryUpdate`, `deriveConceptStatus`, `checkPrerequisites`, `summarizeSession`
-- [x] 🔴 AI curriculum designer `src/server/ai/curriculum.ts`: generate outline + 5-8 pretest questions untuk custom subject (Zod schema validated)
-- [x] 🔴 Server action `addCustomSubject`: full transaction (subject + topics + concepts + 5-8 pretest questions + slug unique)
-- [x] 🔴 Server action `recordQuestionAttempt`: catat attempt + update `StudentKnowledgeProfile.masteryScore` pakai `computeMasteryUpdate`
-- [x] 🔴 Server action `selectNextQuestionDifficulty`: panggil `selectNextDifficulty` based on rolling 5 attempts
-- [x] 🔴 UI `AddSubjectDialog` di `/subjects`: tab "Mapel nasional" (suggested) + "Custom + AI" (input name + context)
-- [x] 🔴 UI: section "Mapel kamu" di `/subjects` page untuk custom subjects (badge AI)
-- [x] 🔴 UI: "Tambah Mapel" tile di dashboard progress section
-- [ ] 🟠 Seed tambahan: 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi) + PPKN (effort curation, bukan AI generate)
-- [ ] 🟠 Integrate adaptive selectDifficulty ke practice page (Phase 6.1)
+### 4.6 Hybrid Subject System (NEW — keputusan post-Phase 4, Juni 2026)
+> **Konteks:** Realita siswa SMA/SMK belajar 9–13 mapel (bukan 4 yang seed awal). Diskusi panjang dengan user menghasilkan keputusan: **hybrid 3-lapis** — seed nasional curated + adaptive engine + custom AI per-user (terisolasi).
+
+#### 4.6.1 Lapis 1 — Schema Foundation (DONE)
+- [x] 🔴 `Subject`: +`isCustom` (bool), +`createdById` (FK User, SetNull on delete), +`source` (`SubjectSource` enum: `OFFICIAL`/`AI_GENERATED`/`USER_CREATED`), +`isVerified` (bool, default true)
+- [x] 🔴 `SubjectSlug` enum diperluas: +`SEJARAH`, +`GEOGRAFI`, +`EKONOMI`, +`SOSIOLOGI`, +`PPKN`, +`SENI_BUDAYA`, +`PJOK`, +`PRAKARYA`, +`BAHASA_DAERAH`, +`CODING`, +`CUSTOM`
+- [x] 🔴 `Topic` & `Concept`: +`isCustom` (bool) untuk track AI-generated content
+- [x] 🔴 `User`: +`customSubjects` reverse relation
+- [x] 🔴 Indexes: `isCustom`, `source`, `createdById` untuk query performant
+- [x] 🔴 Push schema via `bunx prisma db push --accept-data-loss` + regenerate client
+
+#### 4.6.2 Lapis 2 — Adaptive Difficulty Engine (DONE — siap dipakai Phase 6)
+- [x] 🔴 `src/server/learning/adaptive.ts` — pure functions, 0 side effect
+- [x] 🔴 `selectNextDifficulty(attempts, baseline)`: rolling accuracy 5 attempt, promote ≥70%, demote 3 wrong streak atau rolling accuracy <40%
+- [x] 🔴 `computeMasteryUpdate(prevScore, newAttempt)`: EMA learning rate 0.2, target 1/0
+- [x] 🔴 `deriveConceptStatus(masteryScore)`: ≥80% MASTERED, 40–80% LEARNING, <40% tapi >0 STRUGGLING, 0 NOT_STARTED
+- [x] 🔴 `checkPrerequisites(prerequisites, masteryByConcept, threshold)`: weak prereqs detection by `minMasteryScore`
+- [x] 🔴 `summarizeSession(attempts, currentDifficulty, masteryByConcept)`: total, streak, recommended difficulty
+- [x] 🔴 Exported `ADAPTIVE_CONFIG` constants untuk audit
+
+#### 4.6.3 Lapis 3 — AI Curriculum Designer (DONE)
+- [x] 🔴 `src/server/ai/curriculum.ts` — Vercel AI SDK `generateObject` + Zod schema
+- [x] 🔴 Output schema: description, icon (emoji), color (hex), 3–6 topik, 3–6 konsep/topic, 5–8 pretest questions
+- [x] 🔴 Hard validation: `correctAnswer` harus persis di `options` (case-sensitive)
+- [x] 🔴 Hard validation: `topicIndex` harus merujuk topik yang ada
+- [x] 🔴 System prompt: "Jelas, tidak ambigu, 1 jawaban benar pasti, no gambar/diagram needed, relevan dengan nama mapel"
+- [x] 🔴 Temperature 0.4 (deterministic-ish, tidak terlalu random)
+
+#### 4.6.4 Server Actions (DONE)
+- [x] 🔴 `addCustomSubject(name, context?)`: full transaction (subject + topics + concepts + 5–8 pretest questions + unique slug suffix)
+- [x] 🔴 `addCustomSubject` cek duplikat (case-insensitive): kalau mapel nasional udah ada → error, kalau custom user sendiri udah ada → return existing
+- [x] 🔴 `recordQuestionAttempt(questionId, answer, isCorrect, timeSpent?)`: catat attempt + update `StudentKnowledgeProfile` via EMA
+- [x] 🔴 `selectNextQuestionDifficulty(conceptId, baseline)`: rolling accuracy → next difficulty
+- [x] 🔴 Zod validation di semua input
+- [x] 🔴 `revalidatePath('/subjects', '/dashboard', '/onboarding')` setelah mutasi
+
+#### 4.6.5 UI (DONE)
+- [x] 🔴 `AddSubjectDialog` (CC): bottom-sheet on mobile, modal on desktop
+  - Tab 1 "Mapel nasional": 6 suggested cards (Sejarah, Geografi, Ekonomi, Sosiologi, PPKN, Seni Budaya) dengan state "Segera hadir" + tip ke tab custom
+  - Tab 2 "Custom + AI": input nama + context (280 char counter) + 8 popular suggestions (Bahasa Jawa, Arab, Coding, Desain Grafis, Musik, dll)
+  - Loading state: "Spark lagi mikir keras…" dengan `Loader2` + `Wand2` icons
+  - Success state: animasi checkmark + auto-redirect ke subject detail
+- [x] 🔴 `SubjectsListView`: section pisah "Mapel kamu · Custom + AI" untuk mapel `isCustom` (purple theme), section utama untuk mapel nasional (coral theme)
+- [x] 🔴 Subject card: badge "AI" (Wand2 icon) untuk custom subjects, badge "Fokus" untuk mapel di `focusedSubjects`
+- [x] 🔴 Dashboard "Progress per mapel" section: tombol "Tambah mapel" (Wand2) di header + tile "Mau belajar mapel lain?" dengan blob gradient coral/purple di grid
+
+#### 4.6.6 Seed Tambahan (PENDING — effort curation bukan AI)
+- [ ] 🟠 Seed 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi): masing-masing ~30 konsep, ~40 soal, prerequisite chains — butuh effort kurasi manual, ~2-3 hari kerja
+- [ ] 🟠 Seed PPKN: ~25 konsep, ~35 soal
+- [ ] 🟠 Update `prisma/seed.ts` untuk include mapel-mapel baru
+- [ ] 🟠 Generate embeddings (pgvector) untuk concept baru (incremental)
+
+#### 4.6.7 Integrasi Adaptive Engine ke Practice (Phase 6)
+- [ ] 🟠 Practice page: query `selectNextQuestionDifficulty()` saat load
+- [ ] 🟠 Practice page: select question by concept mastery + prereq satisfied
+- [ ] 🟠 Submit answer → panggil `recordQuestionAttempt()` → display new mastery + status
+- [ ] 🟠 UI: tampilkan "Difficulty: MEDIUM (akurasimu 75%)" feedback ke siswa (transparansi)
+- [ ] 🟠 Trigger: kalau status berubah ke MASTERED → unlock concept dependent + celebrate
+
+#### 4.6.8 Admin Review untuk Custom Subjects (Phase 10)
+- [ ] 🟢 Admin page: list custom subjects dengan `isVerified: false`
+- [ ] 🟢 Approve → set `isVerified: true` + `isCustom: false` (promote ke kurikulum global)
+- [ ] 🟢 Reject → soft delete (atau set `isActive: false`) + kasih feedback ke siswa
+- [ ] 🟢 Audit log: siapa yang approve/reject kapan
+
+#### 4.6.9 Anti-Pattern (Sama seperti 7.10)
+- [ ] 🔴 Tidak boleh auto-generate soal pretest untuk mapel nasional (kualitas terlalu kritis)
+- [ ] 🔴 Tidak boleh biarkan mapel custom masuk kurikulum global
+- [ ] 🔴 Tidak boleh pakai ML/RL untuk difficulty selection (aturan deterministik lebih transparan)
+- [ ] 🔴 Tidak boleh skip prerequisite check
+- [ ] 🔴 Mapel custom harus tetap ditampilkan dengan disclaimer "AI-generated"
 
 ---
 
