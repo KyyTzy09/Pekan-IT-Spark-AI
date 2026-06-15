@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   GraduationCap,
   Heart,
@@ -7,6 +6,7 @@ import {
   Twitter,
   Youtube,
 } from "lucide-react";
+import Link from "next/link";
 
 const links = {
   produk: [

@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-15 (v0.6 — Phase 0 done, Phase 1 done, Phase 2.1 done: login + register + role selection + Google OAuth + Zod validation)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; ready for Phase 2.2 (student onboarding flow)
+> **Last updated:** 2026-06-15 (v0.9 — Phase 4 done: Socratic AI chat, **NEW**: hybrid subject system — seed kurikulum nasional + AI-generated custom subjects per user, adaptive difficulty algorithm ready untuk Phase 6)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; ready for Phase 5 (Document Upload)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 
@@ -23,19 +23,20 @@
    - Event handler (`onClick`, `onSubmit`, `onChange`, dll)
    - Framer Motion / animasi JS
    - Context Provider (`SessionProvider`, `ThemeProvider`, dll)
-   - tRPC hooks atau TanStack Query hooks di client
+   - Real-time client data fetching (bisa pake `useEffect` + `fetch()` atau RSC revalidate)
 
 ### 2. DILARANG:
    - ❌ Pake `"use client"` cuma karena males mikir — itu dosa performa
    - ❌ Bikin Route Handler (`route.ts`) cuma buat baca data dari Prisma — panggil Prisma langsung di Server Component
-   - ❌ Pake `fetch()` dari client kalo bisa Server Action atau tRPC
+   - ❌ Pake `fetch()` dari client kalo bisa Server Action atau Server Component
 
 ### 3. WAJIB:
-   - ✅ Mutasi data → Server Action atau tRPC mutation, bukan fetch manual
+   - ✅ **Mutasi data → Server Action** (form action atau dipanggil dari form) — type-safe end-to-end, no API layer needed
+   - ✅ **Read data → Server Component** (langsung query Prisma di SC) — no need for tRPC, REST, atau custom API
    - ✅ Halaman publik (landing, courses, about, help) → Server Component → SEO optimal
-   - ✅ Halaman private (dashboard, chat, onboarding) → boleh Client Component — gak butuh SEO
-   - ✅ tRPC + TanStack Query untuk data fetching kompleks di client
+   - ✅ Halaman private (dashboard, chat, onboarding) → tetap Server Component, interactive parts di-extract jadi CC
    - ✅ Server Component untuk initial fetch, client hydration minimal
+   - ✅ Pakai `revalidatePath()` / `revalidateTag()` setelah mutation biar cache tetap fresh
 
 ### 4. Hukumannya:
    - Langgar aturan 1 → JS bundle bengkak → loading lama → user kabur
@@ -51,11 +52,10 @@
 | Framework | Next.js 16+ App Router |
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui |
-| State Management | Zustand (client state minimal), TanStack Query (server state) |
 | Database | PostgreSQL (Neon / local) |
 | ORM | Prisma |
 | Auth | Auth.js v5 (NextAuth.js beta) atau Better Auth |
-| API | tRPC + Server Actions |
+| API | **Next.js Server Actions + Server Components** (no tRPC, no custom API layer) |
 | AI | Vercel AI SDK + OpenAI / Groq / Google Gemini |
 | Vector DB | pgvector (PostgreSQL extension) |
 | Forms | React Hook Form + Zod |
@@ -105,17 +105,16 @@
 - [x] 🔴 Extend Session type via `src/types/next-auth.d.ts` dengan role
 - [x] 🔴 Setup Credentials provider (email + password dengan bcrypt)
 - [x] 🔴 Setup route handler auth `src/app/api/auth/[...nextauth]/route.ts`
-- [x] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `admin`) di `src/middleware.ts`
+- [x] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `admin`) di `src/middleware.ts` (`src/proxy.ts`)
 - [x] 🔴 Halaman login `/auth/login` dan register `/auth/register` + API register
 - [x] 🟠 Setup OAuth provider opsional (Google) untuk kemudahan login — env-gated, auto-disable kalau env kosong
 
-### 0.4 tRPC + TanStack Query Setup
-- [x] 🔴 Install tRPC: `@trpc/server`, `@trpc/client`, `@trpc/tanstack-react-query`, `@tanstack/react-query`
-- [x] 🔴 Setup tRPC router di `src/trpc/routers/_app.ts`
-- [x] 🔴 Setup context dengan auth session
-- [x] 🔴 Setup provider di `src/app/providers.tsx`
-- [x] 🔴 Buat procedure protected (`authedProcedure`) dan admin procedure
-- [x] 🔴 Setup React Query client dengan default staleTime
+### 0.4 Server Actions + Server Components Data Layer
+- [x] 🔴 Pakai Server Actions (`"use server"`) di `src/server/actions/` untuk semua mutasi (onboarding, invite, dashboard)
+- [x] 🔴 Pakai Server Components untuk read data langsung via Prisma (no API layer)
+- [x] 🔴 Validasi semua Server Action input dengan Zod
+- [x] 🔴 Pakai `revalidatePath()` setelah mutasi biar cache SC tetap fresh
+- [x] 🔴 ~~Setup tRPC + TanStack Query (DIBUANG)~~ — Next.js Server Actions + SC udah cukup untuk semua use case
 
 ### 0.5 AI SDK Setup
 - [x] 🔴 Install Vercel AI SDK: `ai` + `@ai-sdk/openai`
@@ -123,7 +122,10 @@
 - [x] 🔴 Buat service layer AI di `src/server/ai/`:
   - `tutor.ts` — generate Socratic response (streaming)
   - `evaluator.ts` — evaluate answer and give feedback
-  - `rag.ts` — retrieve relevant context (pgvector similarity, fallback token-based)
+  - `rag.ts` — retrieve relevant context (pgvector similarity, fallback keyword-based)
+  - `curriculum.ts` — **AI curriculum designer**: generate outline + 5–8 soal pretest pilihan ganda untuk mapel *custom* (Zod-validated, Vercel AI SDK `generateObject`)
+- [x] 🔴 Buat service layer Adaptive Learning di `src/server/learning/`:
+  - `adaptive.ts` — pure functions: `selectNextDifficulty`, `computeMasteryUpdate` (EMA), `deriveConceptStatus`, `checkPrerequisites`, `summarizeSession`
 - [ ] 🟠 Setup rate limiting untuk API AI
 
 ### 0.6 UI Foundation
@@ -195,23 +197,22 @@
 - [x] 🔴 Form registrasi siswa: nama, email, password, jenjang (SMA/SMK), kelas, sekolah
 - [x] 🔴 Form registrasi orang tua: nama, email, password, kode undangan anak (validasi `parent_student_links`)
 - [x] 🔴 Validasi semua form dengan Zod (discriminated union per role)
-- [x] 🟠 Shared `AuthShell` component — left/right split dengan floating background, hero, trust signals, dan footer terms
 - [x] 🟠 Auto-redirect onboarded baru ke `/onboarding` (middleware + JWT `isOnboarded` flag)
 
 > **Catatan:** Role "Guru" dihapus dari registrasi publik. Guru tidak lagi jadi target user Spark Ai (lihat Phase 9 dihapus).
 
 ### 2.2 Student Onboarding Flow
-- [ ] 🔴 Welcome screen dengan karakter Spark
-- [ ] 🔴 Pilih mata pelajaran fokus
-- [ ] 🔴 Pretest ringkas untuk menentukan level awal (5–10 soal per mapel)
-- [ ] 🔴 Pilih gaya belajar preferensi
-- [ ] 🔴 Generate initial knowledge profile dari pretest
-- [ ] 🔴 Setup daily learning reminder (opsional)
+- [x] 🔴 Welcome screen dengan karakter Spark
+- [x] 🔴 Pilih mata pelajaran fokus
+- [x] 🔴 Pretest ringkas untuk menentukan level awal (5–10 soal per mapel)
+- [x] 🔴 Pilih gaya belajar preferensi
+- [x] 🔴 Generate initial knowledge profile dari pretest
+- [x] 🔴 Setup daily learning reminder (opsional)
 
 ### 2.3 Parent-Child Linking
-- [ ] 🟠 Generate invitation code dari akun siswa
-- [ ] 🟠 Orang tua input kode untuk hubungkan
-- [ ] 🟠 Model `ParentStudentLink` dengan status pending/accepted
+- [x] 🟠 Generate invitation code dari akun siswa
+- [x] 🟠 Orang tua input kode untuk hubungkan
+- [x] 🟠 Model `ParentStudentLink` dengan status pending/accepted
 
 ### 2.4 (Removed)
 > **Catatan:** Fitur teacher-class dihapus dari scope awal. Spark Ai fokus ke siswa + monitoring orang tua. Tidak ada teacher dashboard, tidak ada invite code untuk guru.
@@ -221,23 +222,23 @@
 ## Phase 3 — Student Home & Dashboard (Minggu 2–3)
 
 ### 3.1 Student Dashboard Layout
-- [ ] 🔴 Buat layout dashboard siswa dengan sidebar/bottom nav mobile-friendly
-- [ ] 🔴 Section: continue learning, daily quest, streak, level progress
-- [ ] 🔴 Quick access: chat dengan Spark, latihan, jelajah topik
-- [ ] 🔴 Optimized for mobile (Android low-mid spec)
+- [x] 🔴 Buat layout dashboard siswa dengan sidebar/bottom nav mobile-friendly
+- [x] 🔴 Section: continue learning, daily quest, streak, level progress
+- [x] 🔴 Quick access: chat dengan Spark, latihan, jelajah topik
+- [x] 🔴 Optimized for mobile (Android low-mid spec)
 
 ### 3.2 Home Feed
-- [ ] 🔴 Tampilkan rekomendasi belajar harian
-- [ ] 🔴 Tampilkan sapaan personal dari Spark
-- [ ] 🔴 Tampilkan progress ringkasan per mata pelajaran
-- [ ] 🔴 Tombol aksi utama: "Tanya Spark", "Latihan Hari Ini", "Lanjutkan Topik"
+- [x] 🔴 Tampilkan rekomendasi belajar harian
+- [x] 🔴 Tampilkan sapaan personal dari Spark
+- [x] 🔴 Tampilkan progress ringkasan per mata pelajaran
+- [x] 🔴 Tombol aksi utama: "Tanya Spark", "Latihan Hari Ini", "Lanjutkan Topik"
 
 ### 3.3 Subject & Topic Explorer
-- [ ] 🔴 Halaman daftar mata pelajaran
-- [ ] 🔴 Halaman detail topik dengan skill tree
-- [ ] 🔴 Progress bar per topik (0–100%)
-- [ ] 🔴 Tandai konsep yang sudah dikuasai, sedang dipelajari, belum
-- [ ] 🔴 Visualisasi konstelasi bintang (Knowledge Star) per mapel
+- [x] 🔴 Halaman daftar mata pelajaran
+- [x] 🔴 Halaman detail topik dengan skill tree
+- [x] 🔴 Progress bar per topik (0–100%)
+- [x] 🔴 Tandai konsep yang sudah dikuasai, sedang dipelajari, belum
+- [x] 🔴 Visualisasi konstelasi bintang (Knowledge Star) per mapel
 
 ### 3.4 Learning Plan
 - [ ] 🟠 Generate rencana belajar mingguan personal
@@ -249,36 +250,108 @@
 ## Phase 4 — AI Tutor Chat (Socratic) (Minggu 3–4)
 
 ### 4.1 Chat Interface
-- [ ] 🔴 Halaman chat `/chat` dengan UI mirip chat app
-- [ ] 🔴 Tampilkan avatar Spark yang bisa dikustomisasi
-- [ ] 🔴 Input teks untuk pertanyaan siswa
-- [ ] 🔴 Bubble chat dengan styling berbeda untuk siswa dan Spark
-- [ ] 🔴 Loading state saat AI merespons
-- [ ] 🔴 Chat history persistent di database
+- [x] 🔴 Halaman chat `/chat` dengan UI mirip chat app
+- [x] 🔴 Tampilkan avatar Spark yang bisa dikustomisasi
+- [x] 🔴 Input teks untuk pertanyaan siswa
+- [x] 🔴 Bubble chat dengan styling berbeda untuk siswa dan Spark
+- [x] 🔴 Loading state saat AI merespons
+- [x] 🔴 Chat history persistent di database
 
 ### 4.2 Socratic Tutoring Engine
-- [ ] 🔴 System prompt untuk karakter Spark: sabar, suportif, tidak menghakimi
-- [ ] 🔴 Prompt strategy: jangan langsung kasih jawaban, tanya balik pemandu
-- [ ] 🔴 Personifikasi bahasa Indonesia kasual yang ramah anak muda
-- [ ] 🔴 Adaptive response berdasarkan knowledge profile siswa
-- [ ] 🔴 Kontekstualisasi dengan kurikulum dan konsep yang sedang dipelajari
+- [x] 🔴 System prompt untuk karakter Spark: sabar, suportif, tidak menghakimi
+- [x] 🔴 Prompt strategy: jangan langsung kasih jawaban, tanya balik pemandu
+- [x] 🔴 Personifikasi bahasa Indonesia kasual yang ramah anak muda
+- [x] 🔴 Adaptive response berdasarkan knowledge profile siswa
+- [x] 🔴 Kontekstualisasi dengan kurikulum dan konsep yang sedang dipelajari
 
 ### 4.3 Chat Session Management
-- [ ] 🔴 Model `ChatSession` dan `ChatMessage`
-- [ ] 🔴 List chat session sebelumnya
-- [ ] 🔴 Bisa melanjutkan chat lama atau mulai chat baru
-- [ ] 🔴 Auto-title chat dari topik pertama
+- [x] 🔴 Model `ChatSession` dan `ChatMessage`
+- [x] 🔴 List chat session sebelumnya
+- [x] 🔴 Bisa melanjutkan chat lama atau mulai chat baru
+- [x] 🔴 Auto-title chat dari topik pertama
 
 ### 4.4 Anti-Cheating Guardrails
-- [ ] 🔴 Deteksi jika siswa minta jawaban langsung untuk PR/ujian
-- [ ] 🔴 Respon dengan bimbingan Socratic, bukan jawaban instan
-- [ ] 🔴 Refuse topik di luar edukasi
-- [ ] 🔴 Disclaimer bahwa ini AI, bukan manusia
+- [x] 🔴 Deteksi jika siswa minta jawaban langsung untuk PR/ujian
+- [x] 🔴 Respon dengan bimbingan Socratic, bukan jawaban instan
+- [x] 🔴 Refuse topik di luar edukasi
+- [x] 🔴 Disclaimer bahwa ini AI, bukan manusia
 
 ### 4.5 Multimodal Input (P2)
 - [ ] 🟡 Upload gambar soal matematika
 - [ ] 🟡 Input suara (voice-to-text)
 - [ ] 🟡 Render LaTeX / MathML untuk rumus
+
+### 4.6 Hybrid Subject System (NEW — keputusan post-Phase 4, Juni 2026)
+> **Konteks:** Realita siswa SMA/SMK belajar 9–13 mapel (bukan 4 yang seed awal). Diskusi panjang dengan user menghasilkan keputusan: **hybrid 3-lapis** — seed nasional curated + adaptive engine + custom AI per-user (terisolasi).
+
+#### 4.6.1 Lapis 1 — Schema Foundation (DONE)
+- [x] 🔴 `Subject`: +`isCustom` (bool), +`createdById` (FK User, SetNull on delete), +`source` (`SubjectSource` enum: `OFFICIAL`/`AI_GENERATED`/`USER_CREATED`), +`isVerified` (bool, default true)
+- [x] 🔴 `SubjectSlug` enum diperluas: +`SEJARAH`, +`GEOGRAFI`, +`EKONOMI`, +`SOSIOLOGI`, +`PPKN`, +`SENI_BUDAYA`, +`PJOK`, +`PRAKARYA`, +`BAHASA_DAERAH`, +`CODING`, +`CUSTOM`
+- [x] 🔴 `Topic` & `Concept`: +`isCustom` (bool) untuk track AI-generated content
+- [x] 🔴 `User`: +`customSubjects` reverse relation
+- [x] 🔴 Indexes: `isCustom`, `source`, `createdById` untuk query performant
+- [x] 🔴 Push schema via `bunx prisma db push --accept-data-loss` + regenerate client
+
+#### 4.6.2 Lapis 2 — Adaptive Difficulty Engine (DONE — siap dipakai Phase 6)
+- [x] 🔴 `src/server/learning/adaptive.ts` — pure functions, 0 side effect
+- [x] 🔴 `selectNextDifficulty(attempts, baseline)`: rolling accuracy 5 attempt, promote ≥70%, demote 3 wrong streak atau rolling accuracy <40%
+- [x] 🔴 `computeMasteryUpdate(prevScore, newAttempt)`: EMA learning rate 0.2, target 1/0
+- [x] 🔴 `deriveConceptStatus(masteryScore)`: ≥80% MASTERED, 40–80% LEARNING, <40% tapi >0 STRUGGLING, 0 NOT_STARTED
+- [x] 🔴 `checkPrerequisites(prerequisites, masteryByConcept, threshold)`: weak prereqs detection by `minMasteryScore`
+- [x] 🔴 `summarizeSession(attempts, currentDifficulty, masteryByConcept)`: total, streak, recommended difficulty
+- [x] 🔴 Exported `ADAPTIVE_CONFIG` constants untuk audit
+
+#### 4.6.3 Lapis 3 — AI Curriculum Designer (DONE)
+- [x] 🔴 `src/server/ai/curriculum.ts` — Vercel AI SDK `generateObject` + Zod schema
+- [x] 🔴 Output schema: description, icon (emoji), color (hex), 3–6 topik, 3–6 konsep/topic, 5–8 pretest questions
+- [x] 🔴 Hard validation: `correctAnswer` harus persis di `options` (case-sensitive)
+- [x] 🔴 Hard validation: `topicIndex` harus merujuk topik yang ada
+- [x] 🔴 System prompt: "Jelas, tidak ambigu, 1 jawaban benar pasti, no gambar/diagram needed, relevan dengan nama mapel"
+- [x] 🔴 Temperature 0.4 (deterministic-ish, tidak terlalu random)
+
+#### 4.6.4 Server Actions (DONE)
+- [x] 🔴 `addCustomSubject(name, context?)`: full transaction (subject + topics + concepts + 5–8 pretest questions + unique slug suffix)
+- [x] 🔴 `addCustomSubject` cek duplikat (case-insensitive): kalau mapel nasional udah ada → error, kalau custom user sendiri udah ada → return existing
+- [x] 🔴 `recordQuestionAttempt(questionId, answer, isCorrect, timeSpent?)`: catat attempt + update `StudentKnowledgeProfile` via EMA
+- [x] 🔴 `selectNextQuestionDifficulty(conceptId, baseline)`: rolling accuracy → next difficulty
+- [x] 🔴 Zod validation di semua input
+- [x] 🔴 `revalidatePath('/subjects', '/dashboard', '/onboarding')` setelah mutasi
+
+#### 4.6.5 UI (DONE)
+- [x] 🔴 `AddSubjectDialog` (CC): bottom-sheet on mobile, modal on desktop
+  - Tab 1 "Mapel nasional": 6 suggested cards (Sejarah, Geografi, Ekonomi, Sosiologi, PPKN, Seni Budaya) dengan state "Segera hadir" + tip ke tab custom
+  - Tab 2 "Custom + AI": input nama + context (280 char counter) + 8 popular suggestions (Bahasa Jawa, Arab, Coding, Desain Grafis, Musik, dll)
+  - Loading state: "Spark lagi mikir keras…" dengan `Loader2` + `Wand2` icons
+  - Success state: animasi checkmark + auto-redirect ke subject detail
+- [x] 🔴 `SubjectsListView`: section pisah "Mapel kamu · Custom + AI" untuk mapel `isCustom` (purple theme), section utama untuk mapel nasional (coral theme)
+- [x] 🔴 Subject card: badge "AI" (Wand2 icon) untuk custom subjects, badge "Fokus" untuk mapel di `focusedSubjects`
+- [x] 🔴 Dashboard "Progress per mapel" section: tombol "Tambah mapel" (Wand2) di header + tile "Mau belajar mapel lain?" dengan blob gradient coral/purple di grid
+
+#### 4.6.6 Seed Tambahan (PENDING — effort curation bukan AI)
+- [ ] 🟠 Seed 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi): masing-masing ~30 konsep, ~40 soal, prerequisite chains — butuh effort kurasi manual, ~2-3 hari kerja
+- [ ] 🟠 Seed PPKN: ~25 konsep, ~35 soal
+- [ ] 🟠 Update `prisma/seed.ts` untuk include mapel-mapel baru
+- [ ] 🟠 Generate embeddings (pgvector) untuk concept baru (incremental)
+
+#### 4.6.7 Integrasi Adaptive Engine ke Practice (Phase 6)
+- [ ] 🟠 Practice page: query `selectNextQuestionDifficulty()` saat load
+- [ ] 🟠 Practice page: select question by concept mastery + prereq satisfied
+- [ ] 🟠 Submit answer → panggil `recordQuestionAttempt()` → display new mastery + status
+- [ ] 🟠 UI: tampilkan "Difficulty: MEDIUM (akurasimu 75%)" feedback ke siswa (transparansi)
+- [ ] 🟠 Trigger: kalau status berubah ke MASTERED → unlock concept dependent + celebrate
+
+#### 4.6.8 Admin Review untuk Custom Subjects (Phase 10)
+- [ ] 🟢 Admin page: list custom subjects dengan `isVerified: false`
+- [ ] 🟢 Approve → set `isVerified: true` + `isCustom: false` (promote ke kurikulum global)
+- [ ] 🟢 Reject → soft delete (atau set `isActive: false`) + kasih feedback ke siswa
+- [ ] 🟢 Audit log: siapa yang approve/reject kapan
+
+#### 4.6.9 Anti-Pattern (Sama seperti 7.10)
+- [ ] 🔴 Tidak boleh auto-generate soal pretest untuk mapel nasional (kualitas terlalu kritis)
+- [ ] 🔴 Tidak boleh biarkan mapel custom masuk kurikulum global
+- [ ] 🔴 Tidak boleh pakai ML/RL untuk difficulty selection (aturan deterministik lebih transparan)
+- [ ] 🔴 Tidak boleh skip prerequisite check
+- [ ] 🔴 Mapel custom harus tetap ditampilkan dengan disclaimer "AI-generated"
 
 ---
 

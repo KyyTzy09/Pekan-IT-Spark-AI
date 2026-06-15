@@ -1,26 +1,27 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowRight,
   GraduationCap,
   HeartHandshake,
   Loader2,
-  Mail,
-  Sparkles,
-  User as UserIcon,
+  Rocket,
 } from "lucide-react";
-import { z } from "zod";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import {
+  AuthDivider,
+  AuthError,
+  AuthField,
+  GoogleIcon,
+} from "@/components/auth/auth-form";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AuthShell, GoogleIcon } from "@/components/auth/auth-shell";
-import { AuthDivider, AuthError, AuthField } from "@/components/auth/auth-form";
 
 const studentSchema = z.object({
   role: z.literal("STUDENT"),
@@ -59,28 +60,27 @@ const registerSchema = z.discriminatedUnion("role", [
 
 type RegisterValues = z.infer<typeof registerSchema>;
 
-const ROLE_CARDS = [
+const ROLES = [
   {
-    value: "STUDENT" as const,
-    title: "Siswa",
-    description: "Aku mau belajar bareng Spark",
+    id: "STUDENT" as const,
     icon: GraduationCap,
-    accent: "from-[var(--coral)] to-[var(--orange)]",
+    label: "Siswa",
+    desc: "Belajar dengan tutor AI",
+    color: "var(--coral)",
   },
   {
-    value: "PARENT" as const,
-    title: "Orang Tua",
-    description: "Aku mau pantau belajar anak",
+    id: "PARENT" as const,
     icon: HeartHandshake,
-    accent: "from-[var(--blue)] to-[var(--teal)]",
+    label: "Orang Tua",
+    desc: "Pantau progress anak",
+    color: "var(--blue)",
   },
-] as const;
+];
 
 export default function RegisterPage() {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = React.useState(false);
-
   const [role, setRole] = React.useState<"STUDENT" | "PARENT">("STUDENT");
 
   const {
@@ -88,7 +88,6 @@ export default function RegisterPage() {
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-    reset,
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -102,7 +101,6 @@ export default function RegisterPage() {
   const handleRoleChange = (next: "STUDENT" | "PARENT") => {
     setRole(next);
     setServerError(null);
-    reset({}, { keepValues: false });
     setValue("role" as never, next as never, { shouldValidate: false });
   };
 
@@ -153,83 +151,124 @@ export default function RegisterPage() {
     await signIn("google", { callbackUrl: "/onboarding" });
   };
 
-  return (
-    <AuthShell side="right">
-      <div className="space-y-5">
-        <header className="space-y-1.5">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--purple)_22%,transparent)] bg-[color-mix(in_oklch,var(--purple)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
-            <Sparkles size={10} strokeWidth={2.5} />
-            Daftar gratis
-          </span>
-          <h1 className="font-heading text-[26px] font-bold leading-tight tracking-tight">
-            Mulai perjalanan belajarmu
-          </h1>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Gratis untuk siswa. Daftar sekarang, langsung dapat tutor AI 24/7.
-          </p>
-        </header>
+  const activeRole = ROLES.find((r) => r.id === role);
 
-        <div className="space-y-2">
-          <span className="text-[12px] font-semibold text-foreground/80">
-            Daftar sebagai
-          </span>
-          <div
-            role="radiogroup"
-            aria-label="Pilih peran"
-            className="grid grid-cols-2 gap-2.5"
-          >
-            {ROLE_CARDS.map((card) => {
-              const Icon = card.icon;
-              const active = role === card.value;
-              return (
-                <button
-                  key={card.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => handleRoleChange(card.value)}
+  return (
+    <div className="space-y-5">
+      {/* ── Header ── */}
+      <header className="space-y-2">
+        <h1 className="font-heading text-[28px] font-extrabold leading-[1.1] tracking-tight text-foreground anim-slide-up gpu">
+          Buat akun{" "}
+          <span className="text-gradient">Spark</span>
+        </h1>
+        <p
+          className="text-[13.5px] leading-relaxed text-muted-foreground anim-slide-up gpu"
+          style={{ animationDelay: "80ms" }}
+        >
+          Gratis, tanpa batas, langsung bisa belajar.
+        </p>
+      </header>
+
+      {/* ── Role Selector — Card style ── */}
+      <div
+        className="anim-slide-up gpu"
+        style={{ animationDelay: "120ms" }}
+      >
+        <div className="grid grid-cols-2 gap-2.5">
+          {ROLES.map((r) => {
+            const active = role === r.id;
+            const Icon = r.icon;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => handleRoleChange(r.id)}
+                className={cn(
+                  "group relative flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 cursor-pointer focus:outline-none",
+                  active
+                    ? "border-transparent shadow-md"
+                    : "border-border/40 bg-card/20 hover:bg-card/50 hover:border-border/60",
+                )}
+                style={
+                  active
+                    ? {
+                        background: `color-mix(in oklch, ${r.color} 8%, var(--background))`,
+                        borderColor: `color-mix(in oklch, ${r.color} 25%, transparent)`,
+                      }
+                    : undefined
+                }
+              >
+                <span
                   className={cn(
-                    "group/role relative flex flex-col items-start gap-1.5 rounded-2xl border bg-background/70 p-3 text-left transition-all hover:-translate-y-0.5",
-                    active
-                      ? "border-transparent shadow-[0_8px_24px_rgba(80,20,50,0.12)] ring-2 ring-[var(--coral)]/40"
-                      : "border-border/40 hover:border-border/70",
+                    "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+                    active ? "shadow-sm" : "",
                   )}
+                  style={{
+                    backgroundColor: active
+                      ? `color-mix(in oklch, ${r.color} 15%, transparent)`
+                      : undefined,
+                    color: active ? r.color : undefined,
+                  }}
                 >
-                  <span
+                  <Icon
+                    size={20}
+                    strokeWidth={active ? 2.2 : 1.8}
                     className={cn(
-                      "grid size-9 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-transform group-hover/role:-translate-y-0.5",
-                      card.accent,
+                      "transition-all duration-200",
+                      !active && "text-muted-foreground",
+                    )}
+                  />
+                </span>
+                <div>
+                  <p
+                    className={cn(
+                      "text-[13px] font-bold transition-colors",
+                      active ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
-                    <Icon size={16} strokeWidth={2.5} />
-                  </span>
-                  <span className="font-heading text-[14px] font-bold text-foreground">
-                    {card.title}
-                  </span>
-                  <span className="text-[11.5px] leading-tight text-muted-foreground">
-                    {card.description}
-                  </span>
-                  {active && (
-                    <span
-                      aria-hidden
-                      className="absolute right-2.5 top-2.5 grid size-5 place-items-center rounded-full bg-[var(--coral)] text-white"
+                    {r.label}
+                  </p>
+                  <p className="text-[10.5px] text-muted-foreground/70">
+                    {r.desc}
+                  </p>
+                </div>
+                {/* Active indicator dot */}
+                {active && (
+                  <span
+                    className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-white shadow-sm animate-bounce-in"
+                    style={{ backgroundColor: r.color }}
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      className="size-3"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      <Sparkles size={11} strokeWidth={2.5} />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                      <path d="M4 8.5 6.5 11 12 5" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+      </div>
 
+      {/* ── Google ── */}
+      <div
+        className="anim-slide-up gpu"
+        style={{ animationDelay: "180ms" }}
+      >
         <Button
           type="button"
           variant="outline"
           size="xl"
           disabled={googleLoading || isSubmitting}
           onClick={handleGoogle}
-          className="w-full rounded-2xl border-border/60 bg-background/70 text-[14px] font-semibold shadow-[0_2px_8px_rgba(80,20,50,0.04)] hover:bg-background"
+          className="group w-full flex items-center justify-center gap-2.5 rounded-2xl border-border/50 bg-card/40 text-[13.5px] font-bold shadow-sm hover:bg-card hover:shadow-md hover:border-border/80 transition-all cursor-pointer active:scale-[0.98]"
         >
           {googleLoading ? (
             <Loader2 size={16} className="animate-spin" />
@@ -238,57 +277,53 @@ export default function RegisterPage() {
           )}
           Daftar dengan Google
         </Button>
+      </div>
 
+      <div className="anim-slide-up gpu" style={{ animationDelay: "210ms" }}>
         <AuthDivider
-          label={`atau daftar dengan email${
-            role === "PARENT" ? " + kode undangan" : ""
-          }`}
+          label={`atau isi form${role === "PARENT" ? " + kode undangan" : ""}`}
+        />
+      </div>
+
+      {/* ── Form ── */}
+      <form
+        onSubmit={onSubmit}
+        className="space-y-3.5 anim-slide-up gpu"
+        style={{ animationDelay: "240ms" }}
+        noValidate
+      >
+        <input type="hidden" {...register("role" as never)} value={role} />
+
+        <AuthField
+          id="name"
+          label="Nama Lengkap"
+          autoComplete="name"
+          placeholder="Nama kamu"
+          layout="horizontal"
+          error={(errors as Record<string, { message?: string }>).name?.message}
+          {...register("name" as never)}
         />
 
-        <form onSubmit={onSubmit} className="space-y-3.5" noValidate>
-          <input type="hidden" {...register("role" as never)} value={role} />
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="kamu@email.com"
+          layout="horizontal"
+          error={
+            (errors as Record<string, { message?: string }>).email?.message
+          }
+          {...register("email" as never)}
+        />
 
-          <AuthField
-            id="name"
-            label="Nama"
-            autoComplete="name"
-            placeholder="Nama kamu"
-            layout="horizontal"
-            error={
-              (errors as Record<string, { message?: string }>).name?.message
-            }
-            rightSlot={
-              <span className="grid size-8 place-items-center text-muted-foreground">
-                <UserIcon size={15} />
-              </span>
-            }
-            {...register("name" as never)}
-          />
-
-          <AuthField
-            id="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="kamu@email.com"
-            layout="horizontal"
-            error={
-              (errors as Record<string, { message?: string }>).email?.message
-            }
-            rightSlot={
-              <span className="grid size-8 place-items-center text-muted-foreground">
-                <Mail size={15} />
-              </span>
-            }
-            {...register("email" as never)}
-          />
-
-          {role === "PARENT" && (
+        {role === "PARENT" && (
+          <div className="animate-fade-in">
             <AuthField
               id="inviteCode"
-              label="Kode"
-              placeholder="Kode undangan"
+              label="Kode Undangan Siswa"
+              placeholder="Contoh: SPARK-12"
               autoComplete="off"
               layout="horizontal"
               error={
@@ -297,52 +332,60 @@ export default function RegisterPage() {
               }
               {...register("inviteCode" as never)}
             />
+          </div>
+        )}
+
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          placeholder="Minimal 8 karakter"
+          layout="horizontal"
+          error={
+            (errors as Record<string, { message?: string }>).password?.message
+          }
+          {...register("password" as never)}
+        />
+
+        <AuthError message={serverError ?? undefined} />
+
+        <Button
+          type="submit"
+          size="xl"
+          disabled={isSubmitting || googleLoading}
+          className="group w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[var(--coral)] to-[color-mix(in_oklch,var(--coral)_80%,var(--orange))] text-[14px] font-extrabold text-white shadow-[0_4px_16px_rgba(225,29,72,0.25)] hover:shadow-[0_8px_24px_rgba(225,29,72,0.35)] hover:brightness-105 transition-all duration-300 cursor-pointer active:scale-[0.97]"
+        >
+          {isSubmitting ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Rocket
+              size={16}
+              strokeWidth={2.2}
+              className="transition-transform duration-200 group-hover:-translate-y-0.5"
+            />
           )}
+          {isSubmitting
+            ? "Mendaftarkan..."
+            : role === "STUDENT"
+              ? "Mulai Belajar"
+              : "Daftar sebagai Orang Tua"}
+        </Button>
+      </form>
 
-          <AuthField
-            id="password"
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Minimal 8 karakter"
-            layout="horizontal"
-            error={
-              (errors as Record<string, { message?: string }>).password?.message
-            }
-            {...register("password" as never)}
-          />
-
-          <AuthError message={serverError ?? undefined} />
-
-          <Button
-            type="submit"
-            size="xl"
-            disabled={isSubmitting || googleLoading}
-            className="w-full rounded-2xl bg-[var(--coral)] text-[14px] font-bold text-white shadow-[0_8px_24px_rgba(225,29,72,0.35)] hover:bg-[var(--coral)]/90 hover:shadow-[0_12px_32px_rgba(225,29,72,0.5)]"
-          >
-            {isSubmitting ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <ArrowRight size={16} strokeWidth={2.5} />
-            )}
-            {isSubmitting
-              ? "Membuat akun..."
-              : role === "STUDENT"
-                ? "Daftar & mulai belajar"
-                : "Daftar sebagai orang tua"}
-          </Button>
-        </form>
-
-        <p className="text-center text-[13px] text-muted-foreground">
-          Sudah punya akun?{" "}
-          <Link
-            href="/auth/login"
-            className="font-bold text-[var(--coral)] underline-offset-4 hover:underline"
-          >
-            Masuk
-          </Link>
-        </p>
-      </div>
-    </AuthShell>
+      {/* ── Bottom ── */}
+      <p
+        className="text-center text-[13px] text-muted-foreground anim-slide-up gpu"
+        style={{ animationDelay: "300ms" }}
+      >
+        Sudah punya akun?{" "}
+        <Link
+          href="/auth/login"
+          className="font-bold text-[var(--coral)] hover:underline underline-offset-4 transition-all"
+        >
+          Masuk
+        </Link>
+      </p>
+    </div>
   );
 }

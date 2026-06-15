@@ -1,8 +1,8 @@
 import "server-only";
 
-import { prisma } from "@/lib/prisma";
-import { embedMany, embed } from "ai";
+import { embed, embedMany } from "ai";
 import { embeddingModel } from "@/lib/ai";
+import { prisma } from "@/lib/prisma";
 
 interface RetrievedDocument {
   id: string;

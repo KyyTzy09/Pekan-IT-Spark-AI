@@ -1,7 +1,10 @@
-import Link from "next/link";
+"use client";
+
+import { useSession } from "next-auth/react";
 import { ArrowRight, Check, Heart, Rocket, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Reveal } from "./reveal";
+import { Reveal } from "../../shared/reveal";
 
 const benefits = [
   "Gratis selamanya untuk siswa",
@@ -11,6 +14,16 @@ const benefits = [
 ];
 
 export function CTASection() {
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated" && session?.user;
+  const role = session?.user?.role as string | undefined;
+  const home =
+    role === "PARENT"
+      ? "/parent"
+      : role === "ADMIN"
+        ? "/admin"
+        : "/dashboard";
+
   return (
     <section className="container-px py-16 md:py-24">
       <Reveal>
@@ -26,17 +39,32 @@ export function CTASection() {
           <div className="grid items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
             <div className="flex flex-col gap-6">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color-mix(in_oklch,var(--coral)_22%,transparent)] bg-[color-mix(in_oklch,var(--coral)_10%,transparent)] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--coral)]">
-                <Heart size={13} /> Gratis, tanpa syarat
+                <Heart size={13} />{" "}
+                {isLoggedIn
+                  ? "Lanjut dari posisi terakhir kamu"
+                  : "Gratis, tanpa syarat"}
               </div>
               <h2 className="font-heading text-3xl font-bold leading-[1.1] tracking-tight md:text-[44px]">
-                Siap belajar dengan cara yang{" "}
-                <span className="text-gradient-warm">bener-bener ngertiin</span>{" "}
-                kamu?
+                {isLoggedIn ? (
+                  <>
+                    Halo, siap lanjut{" "}
+                    <span className="text-gradient-warm">belajar</span> bareng
+                    Spark?
+                  </>
+                ) : (
+                  <>
+                    Siap belajar dengan cara yang{" "}
+                    <span className="text-gradient-warm">
+                      bener-bener ngertiin
+                    </span>{" "}
+                    kamu?
+                  </>
+                )}
               </h2>
               <p className="max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                Daftar sekarang, pilih mata pelajaran fokus kamu, dan mulai
-                ngobrol sama Spark. Cuma butuh email — gak ada biaya, gak ada
-                iklan, gak ada jebakan.
+                {isLoggedIn
+                  ? "Masuk lagi ke dashboard, lanjut streak, atau buka topik yang tadi sempat kamu tinggalin. Spark udah nunggu."
+                  : "Daftar sekarang, pilih mata pelajaran fokus kamu, dan mulai ngobrol sama Spark. Cuma butuh email — gak ada biaya, gak ada iklan, gak ada jebakan."}
               </p>
 
               <ul className="grid gap-2.5 sm:grid-cols-2">
@@ -59,16 +87,26 @@ export function CTASection() {
                   size="xl"
                   className="shadow-[0_6px_20px_rgba(225,29,72,0.4)] hover:shadow-[0_8px_24px_rgba(225,29,72,0.5)]"
                 >
-                  <Link href="/auth/register">
-                    <Rocket size={18} /> Daftar Gratis Sekarang
+                  <Link href={isLoggedIn ? home : "/auth/register"}>
+                    {isLoggedIn ? (
+                      <>
+                        <ArrowRight size={18} /> Lanjut ke Dashboard
+                      </>
+                    ) : (
+                      <>
+                        <Rocket size={18} /> Daftar Gratis Sekarang
+                      </>
+                    )}
                   </Link>
                 </Button>
-                <Button asChild size="xl" variant="secondary">
-                  <Link href="/auth/login">
-                    Aku udah punya akun
-                    <ArrowRight size={16} />
-                  </Link>
-                </Button>
+                {!isLoggedIn && (
+                  <Button asChild size="xl" variant="secondary">
+                    <Link href="/auth/login">
+                      Aku udah punya akun
+                      <ArrowRight size={16} />
+                    </Link>
+                  </Button>
+                )}
               </div>
 
               <p className="text-[12px] font-semibold text-muted-foreground">

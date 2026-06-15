@@ -23,6 +23,17 @@ enum SubjectSlug {
   BAHASA_INDONESIA
   BAHASA_INGGRIS
   IPA
+  SEJARAH
+  GEOGRAFI
+  EKONOMI
+  SOSIOLOGI
+  PPKN
+  SENI_BUDAYA
+  PJOK
+  PRAKARYA
+  BAHASA_DAERAH
+  CODING
+  CUSTOM
 }
 
 enum ConceptStatus {
@@ -30,6 +41,12 @@ enum ConceptStatus {
   LEARNING
   MASTERED
   STRUGGLING
+}
+
+enum SubjectSource {
+  OFFICIAL
+  AI_GENERATED
+  USER_CREATED
 }
 
 enum QuestionType {
@@ -95,38 +112,39 @@ enum ChatRole {
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String   @unique
+  email         String    @unique
   emailVerified DateTime?
   image         String?
   passwordHash  String?
-  role          Role     @default(STUDENT)
-  isOnboarded   Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  role          Role      @default(STUDENT)
+  isOnboarded   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  studentProfile         StudentProfile?
-  parentProfile          ParentProfile?
-  parentStudentLinks     ParentStudentLink[]  @relation("ParentLinks")
-  childLinks             ParentStudentLink[]  @relation("ChildLinks")
-  questionAttempts       QuestionAttempt[]
-  quizAttempts           QuizAttempt[]
-  chatSessions           ChatSession[]
-  userBadges             UserBadge[]
-  userAchievements       UserAchievement[]
-  xpTransactions         XpTransaction[]
-  streak                 Streak?
-  dailyQuests            DailyQuest[]
-  weeklyChallenges       WeeklyChallenge[]
-  studyBuddy             StudyBuddy?
-  avatarCustomization    AvatarCustomization?
-  learningPlans          LearningPlan[]
-  learningActivities     LearningActivity[]
-  documents              Document[]
-  knowledgeProfiles      StudentKnowledgeProfile[]
-  accounts               Account[]
-  sessions               Session[]
+  studentProfile      StudentProfile?
+  parentProfile       ParentProfile?
+  parentStudentLinks  ParentStudentLink[]       @relation("ParentLinks")
+  childLinks          ParentStudentLink[]       @relation("ChildLinks")
+  questionAttempts    QuestionAttempt[]
+  quizAttempts        QuizAttempt[]
+  chatSessions        ChatSession[]
+  userBadges          UserBadge[]
+  userAchievements    UserAchievement[]
+  xpTransactions      XpTransaction[]
+  streak              Streak?
+  dailyQuests         DailyQuest[]
+  weeklyChallenges    WeeklyChallenge[]
+  studyBuddy          StudyBuddy?
+  avatarCustomization AvatarCustomization?
+  learningPlans       LearningPlan[]
+  learningActivities  LearningActivity[]
+  documents           Document[]
+  knowledgeProfiles   StudentKnowledgeProfile[]
+  customSubjects      Subject[]                 @relation("CustomSubjects")
+  accounts            Account[]
+  sessions            Session[]
 
   @@map("users")
 }
@@ -177,6 +195,9 @@ model StudentProfile {
   school          String?
   learningStyle   LearningStyle?
   responseDepth   ResponseDepth   @default(MENENGAH)
+  focusedSubjects String[]        @default([])
+  reminderEnabled Boolean         @default(false)
+  reminderTime    String?
   totalXp         Int             @default(0)
   level           Int             @default(1)
 
@@ -192,33 +213,42 @@ model ParentProfile {
 }
 
 model ParentStudentLink {
-  id          String     @id @default(cuid())
-  parentId    String
-  parent      User       @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
-  studentId   String
-  student     User       @relation("ChildLinks", fields: [studentId], references: [id], onDelete: Cascade)
-  inviteCode  String
-  status      LinkStatus @default(PENDING)
-  createdAt   DateTime   @default(now())
-  expiresAt   DateTime
+  id         String     @id @default(cuid())
+  parentId   String?
+  parent     User?      @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    User       @relation("ChildLinks", fields: [studentId], references: [id], onDelete: Cascade)
+  inviteCode String
+  status     LinkStatus @default(PENDING)
+  createdAt  DateTime   @default(now())
+  expiresAt  DateTime
 
   @@unique([inviteCode])
   @@map("parent_student_links")
 }
 
 model Subject {
-  id          String       @id @default(cuid())
-  slug        SubjectSlug  @unique
+  id          String        @id @default(cuid())
+  slug        SubjectSlug   @unique
   name        String
   description String?
   icon        String?
   color       String?
-  order       Int          @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  order       Int           @default(0)
+  isCustom    Boolean       @default(false)
+  source      SubjectSource @default(OFFICIAL)
+  createdById String?
+  createdBy   User?         @relation("CustomSubjects", fields: [createdById], references: [id], onDelete: SetNull)
+  isVerified  Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  topics Topic[]
+  topics       Topic[]
+  chatSessions ChatSession[]
 
+  @@index([isCustom])
+  @@index([source])
+  @@index([createdById])
   @@map("subjects")
 }
 
@@ -230,30 +260,33 @@ model Topic {
   description String?
   slug        String
   order       Int      @default(0)
+  isCustom    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  concepts Concept[]
+  concepts     Concept[]
+  chatSessions ChatSession[]
 
   @@unique([subjectId, slug])
   @@map("topics")
 }
 
 model Concept {
-  id          String        @id @default(cuid())
+  id          String   @id @default(cuid())
   topicId     String
-  topic       Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
   name        String
   description String?
   slug        String
-  order       Int           @default(0)
-  contentMd   String?       @db.Text
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  order       Int      @default(0)
+  contentMd   String?  @db.Text
+  isCustom    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  prerequisites ConceptPrerequisite[]  @relation("ConceptPrerequisites")
-  dependents    ConceptPrerequisite[]  @relation("ConceptDependents")
-  questions     Question[]
+  prerequisites     ConceptPrerequisite[]     @relation("ConceptPrerequisites")
+  dependents        ConceptPrerequisite[]     @relation("ConceptDependents")
+  questions         Question[]
   knowledgeProfiles StudentKnowledgeProfile[]
   embeddings        ConceptEmbedding[]
 
@@ -262,35 +295,35 @@ model Concept {
 }
 
 model ConceptPrerequisite {
-  prerequisiteId String
-  conceptId      String
-  prerequisite   Concept @relation("ConceptPrerequisites", fields: [prerequisiteId], references: [id], onDelete: Cascade)
-  dependent      Concept @relation("ConceptDependents", fields: [conceptId], references: [id], onDelete: Cascade)
-  minMasteryScore Float? @default(0.7)
+  prerequisiteId  String
+  conceptId       String
+  prerequisite    Concept @relation("ConceptPrerequisites", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  dependent       Concept @relation("ConceptDependents", fields: [conceptId], references: [id], onDelete: Cascade)
+  minMasteryScore Float?  @default(0.7)
 
   @@id([prerequisiteId, conceptId])
   @@map("concept_prerequisites")
 }
 
 model Question {
-  id              String        @id @default(cuid())
-  conceptId       String
-  concept         Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
-  type            QuestionType
-  difficulty      Difficulty    @default(MEDIUM)
-  bloomTaxonomy   BloomTaxonomy @default(UNDERSTAND)
-  questionText    String        @db.Text
-  options         Json?         @db.JsonB
-  correctAnswer   String        @db.Text
-  explanation     String?       @db.Text
-  hint            String?       @db.Text
-  commonMisconceptions String?  @db.Text
-  tags            String[]      @default([])
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  conceptId            String
+  concept              Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  type                 QuestionType
+  difficulty           Difficulty    @default(MEDIUM)
+  bloomTaxonomy        BloomTaxonomy @default(UNDERSTAND)
+  questionText         String        @db.Text
+  options              Json?         @db.JsonB
+  correctAnswer        String        @db.Text
+  explanation          String?       @db.Text
+  hint                 String?       @db.Text
+  commonMisconceptions String?       @db.Text
+  tags                 String[]      @default([])
+  isActive             Boolean       @default(true)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
-  attempts QuestionAttempt[]
+  attempts      QuestionAttempt[]
   quizQuestions QuizQuestion[]
 
   @@map("questions")
@@ -338,14 +371,14 @@ model QuizQuestion {
 }
 
 model QuizAttempt {
-  id         String   @id @default(cuid())
-  quizId     String
-  quiz       Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  score      Float?
-  maxScore   Float?
-  startedAt  DateTime @default(now())
+  id          String    @id @default(cuid())
+  quizId      String
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score       Float?
+  maxScore    Float?
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
 
   @@map("quiz_attempts")
@@ -357,7 +390,9 @@ model ChatSession {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String   @default("Chat Baru")
   topicId   String?
+  topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
   subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -368,13 +403,13 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   role      ChatRole
-  content   String   @db.Text
-  metadata  Json?    @db.JsonB
-  createdAt DateTime @default(now())
+  content   String      @db.Text
+  metadata  Json?       @db.JsonB
+  createdAt DateTime    @default(now())
 
   @@map("chat_messages")
 }
@@ -395,12 +430,12 @@ model Badge {
 }
 
 model UserBadge {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badgeId   String
-  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  earnedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  earnedAt DateTime @default(now())
 
   @@unique([userId, badgeId])
   @@map("user_badges")
@@ -422,12 +457,12 @@ model Achievement {
 }
 
 model UserAchievement {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievementId String
   achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-  earnedAt      DateTime @default(now())
+  earnedAt      DateTime    @default(now())
 
   @@unique([userId, achievementId])
   @@map("user_achievements")
@@ -446,36 +481,36 @@ model XpTransaction {
 }
 
 model Level {
-  level     Int    @id
-  name      String
-  minXp     Int
-  maxXp     Int
+  level Int    @id
+  name  String
+  minXp Int
+  maxXp Int
 
   @@map("levels")
 }
 
 model Streak {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak   Int       @default(0)
+  longestStreak   Int       @default(0)
   lastActivityAt  DateTime?
-  freezeAvailable Int      @default(1)
-  updatedAt       DateTime @updatedAt
+  freezeAvailable Int       @default(1)
+  updatedAt       DateTime  @updatedAt
 
   @@map("streaks")
 }
 
 model DailyQuest {
-  id          String          @id @default(cuid())
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date        DateTime        @default(now())
-  quests      Json            @db.JsonB
-  completed   Boolean         @default(false)
-  xpRewarded  Boolean         @default(false)
-  createdAt   DateTime        @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime @default(now())
+  quests     Json     @db.JsonB
+  completed  Boolean  @default(false)
+  xpRewarded Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   @@unique([userId, date])
   @@map("daily_quests")
@@ -512,25 +547,25 @@ model StudyBuddy {
 }
 
 model AvatarCustomization {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  color     String   @default("default")
-  accessory String?
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  color      String   @default("default")
+  accessory  String?
   background String?
-  updatedAt DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   @@map("avatar_customizations")
 }
 
 model LearningPlan {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  weekStart   DateTime
-  plan        Json     @db.JsonB
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart DateTime
+  plan      Json     @db.JsonB
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@unique([userId, weekStart])
   @@map("learning_plans")
@@ -549,16 +584,16 @@ model LearningActivity {
 }
 
 model Document {
-  id           String           @id @default(cuid())
+  id           String              @id @default(cuid())
   userId       String
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   originalName String
   mimeType     DocumentMimeType
   size         Int
   pageCount    Int?
-  content      String           @db.Text
-  summary      String?          @db.Text
-  createdAt    DateTime         @default(now())
+  content      String              @db.Text
+  summary      String?             @db.Text
+  createdAt    DateTime            @default(now())
   embeddings   DocumentEmbedding[]
 
   @@map("documents")
@@ -588,16 +623,16 @@ model DocumentEmbedding {
 }
 
 model StudentKnowledgeProfile {
-  id              String        @id @default(cuid())
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conceptId       String
-  concept         Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
-  masteryScore    Float         @default(0)
-  status          ConceptStatus @default(NOT_STARTED)
-  attemptCount    Int           @default(0)
-  lastAttemptAt   DateTime?
-  updatedAt       DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conceptId     String
+  concept       Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  masteryScore  Float         @default(0)
+  status        ConceptStatus @default(NOT_STARTED)
+  attemptCount  Int           @default(0)
+  lastAttemptAt DateTime?
+  updatedAt     DateTime      @updatedAt
 
   @@unique([userId, conceptId])
   @@map("student_knowledge_profiles")

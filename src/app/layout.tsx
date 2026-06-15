@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fredoka, Nunito, Geist, Geist_Mono } from "next/font/google";
+import { Fredoka, Geist, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "./providers";

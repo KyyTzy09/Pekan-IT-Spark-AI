@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,15 +10,29 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Reveal } from "./reveal";
+import { Reveal } from "../../shared/reveal";
 
 const SUBJECTS = ["Matematika", "B. Indonesia", "B. Inggris", "IPA"];
 
 export function Hero() {
   const [pause, setPause] = React.useState(false);
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated" && session?.user;
+  const role = session?.user?.role as string | undefined;
+  const home =
+    role === "PARENT"
+      ? "/parent"
+      : role === "ADMIN"
+        ? "/admin"
+        : "/dashboard";
+  const ctaHref = isLoggedIn ? home : "/auth/register";
+  const ctaLabel = isLoggedIn ? "Lanjut Belajar" : "Mulai Belajar Gratis";
+  const CtaIcon = isLoggedIn ? ArrowRight : Rocket;
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -124,9 +137,9 @@ export function Hero() {
               size="xl"
               className="rounded-full shadow-[0_8px_24px_rgba(225,29,72,0.45)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(225,29,72,0.55)]"
             >
-              <Link href="/auth/register">
-                <Rocket size={18} />
-                Mulai Belajar Gratis
+              <Link href={ctaHref}>
+                <CtaIcon size={18} />
+                {ctaLabel}
                 <ArrowRight size={16} />
               </Link>
             </Button>

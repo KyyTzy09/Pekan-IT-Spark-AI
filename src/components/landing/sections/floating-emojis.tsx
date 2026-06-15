@@ -1,7 +1,7 @@
 "use client";
 
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import * as React from "react";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 
 interface EmojiConfig {
   emoji: string;
