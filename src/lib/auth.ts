@@ -1,16 +1,17 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { authConfig } from "./auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  pages: {
-    signIn: "/auth/login",
-  },
   providers: [
-    Credentials({
+    {
+      id: "credentials",
+      name: "Credentials",
+      type: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
@@ -37,26 +38,67 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           role: user.role,
           image: user.image,
+          isOnboarded: user.isOnboarded,
         };
       },
-    }),
+    },
+    ...authConfig.providers.filter((p) => p.id !== "credentials"),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    ...authConfig.callbacks,
+    async jwt({ token, user, trigger }) {
+      if (user?.id) {
         token.id = user.id;
-        token.role = (user as { role: string }).role;
+        token.role = (user as { role?: string }).role ?? "STUDENT";
+        token.isOnboarded = Boolean(
+          (user as { isOnboarded?: boolean }).isOnboarded,
+        );
+        return token;
+      }
+
+      if (token.id && (trigger === "update" || !token.role)) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, isOnboarded: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.isOnboarded = dbUser.isOnboarded;
+        }
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user.email) {
+        const email = user.email.toLowerCase();
+        const existing = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true },
+        });
+        if (!existing) {
+          await prisma.user.create({
+            data: {
+              email,
+              name: user.name ?? null,
+              image: user.image ?? null,
+              role: "STUDENT",
+              studentProfile: { create: {} },
+            },
+          });
+        } else {
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: {
+              image: user.image ?? undefined,
+              name: user.name ?? undefined,
+            },
+          });
+        }
       }
-      return session;
+      return true;
     },
   },
 });
 
 export const getServerAuthSession = auth;
+export { isGoogleEnabled } from "./auth.config";

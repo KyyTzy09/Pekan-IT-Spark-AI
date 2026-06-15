@@ -1,7 +1,7 @@
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
+import { chatModel } from "@/lib/ai";
 
 interface TutorOptions {
   subject?: string;
@@ -61,7 +61,7 @@ ${
 }`;
 
   return streamText({
-    model: openai("gpt-4o-mini"),
+    model: chatModel,
     system: systemPrompt,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });

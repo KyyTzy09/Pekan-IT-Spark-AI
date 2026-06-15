@@ -1,7 +1,7 @@
 import "server-only";
 
-import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
+import { chatModel } from "@/lib/ai";
 
 interface EvaluationResult {
   isCorrect: boolean;
@@ -54,7 +54,7 @@ Evaluasi jawaban siswa. Berikan:
 Jawab dalam format JSON.`;
 
   const { text } = await generateText({
-    model: openai("gpt-4o-mini"),
+    model: chatModel,
     system:
       "Kamu adalah asisten evaluasi pembelajaran yang membantu guru mengevaluasi jawaban siswa. Jawab selalu dalam Bahasa Indonesia.",
     prompt,

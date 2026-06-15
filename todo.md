@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-15 (v0.4 — Phase 0 done, schema + seed + auth + middleware + Neon deployed)
-> **Status:** Phase 0 ✅; Phase 1 schema & seed ✅; ready for Phase 2
+> **Last updated:** 2026-06-15 (v0.6 — Phase 0 done, Phase 1 done, Phase 2.1 done: login + register + role selection + Google OAuth + Zod validation)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; ready for Phase 2.2 (student onboarding flow)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 
@@ -107,7 +107,7 @@
 - [x] 🔴 Setup route handler auth `src/app/api/auth/[...nextauth]/route.ts`
 - [x] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `admin`) di `src/middleware.ts`
 - [x] 🔴 Halaman login `/auth/login` dan register `/auth/register` + API register
-- [ ] 🟠 Setup OAuth provider opsional (Google) untuk kemudahan login
+- [x] 🟠 Setup OAuth provider opsional (Google) untuk kemudahan login — env-gated, auto-disable kalau env kosong
 
 ### 0.4 tRPC + TanStack Query Setup
 - [x] 🔴 Install tRPC: `@trpc/server`, `@trpc/client`, `@trpc/tanstack-react-query`, `@tanstack/react-query`
@@ -123,7 +123,7 @@
 - [x] 🔴 Buat service layer AI di `src/server/ai/`:
   - `tutor.ts` — generate Socratic response (streaming)
   - `evaluator.ts` — evaluate answer and give feedback
-  - `rag.ts` — retrieve relevant context (token-based similarity)
+  - `rag.ts` — retrieve relevant context (pgvector similarity, fallback token-based)
 - [ ] 🟠 Setup rate limiting untuk API AI
 
 ### 0.6 UI Foundation
@@ -179,22 +179,24 @@
 - [x] 🔴 Setup Bloom taxonomy level
 - [x] 🔴 Setup tagging: concept, topic, skill (via `conceptId` + `tags` array)
 - [x] 🔴 Setup correct answer, explanation, hint, common misconceptions
-- [ ] 🔴 Seed 50+ questions across subjects
+- [x] 🔴 Seed 50+ questions across subjects
 
 ### 1.4 Vector Embeddings for RAG
-- [ ] 🟠 Setup `ConceptEmbedding` atau `DocumentEmbedding` model
-- [ ] 🟠 Generate embeddings untuk konsep dan materi
-- [ ] 🟠 Implement similarity search untuk kontekstualisasi jawaban AI
+- [x] 🟠 Setup `ConceptEmbedding` dan `DocumentEmbedding` model
+- [x] 🟠 Generate embeddings untuk 44 konsep (pgvector + HNSW index)
+- [x] 🟠 Implement similarity search (cosine distance) dengan fallback keyword search
 
 ---
 
 ## Phase 2 — Authentication & Onboarding (Minggu 2)
 
 ### 2.1 Role-Based Registration
-- [ ] 🔴 Halaman pilih role saat register: Siswa, Orang Tua
-- [ ] 🔴 Form registrasi siswa: nama, email, password, jenjang (SMA/SMK), kelas, sekolah
-- [ ] 🔴 Form registrasi orang tua: nama, email, password, kode/link hubungkan ke anak
-- [ ] 🔴 Validasi semua form dengan Zod
+- [x] 🔴 Halaman pilih role saat register: Siswa, Orang Tua (card-style dengan role-aware form)
+- [x] 🔴 Form registrasi siswa: nama, email, password, jenjang (SMA/SMK), kelas, sekolah
+- [x] 🔴 Form registrasi orang tua: nama, email, password, kode undangan anak (validasi `parent_student_links`)
+- [x] 🔴 Validasi semua form dengan Zod (discriminated union per role)
+- [x] 🟠 Shared `AuthShell` component — left/right split dengan floating background, hero, trust signals, dan footer terms
+- [x] 🟠 Auto-redirect onboarded baru ke `/onboarding` (middleware + JWT `isOnboarded` flag)
 
 > **Catatan:** Role "Guru" dihapus dari registrasi publik. Guru tidak lagi jadi target user Spark Ai (lihat Phase 9 dihapus).
 

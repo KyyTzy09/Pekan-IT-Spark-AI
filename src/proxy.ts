@@ -1,6 +1,8 @@
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { authConfig } from "@/lib/auth.config";
+
+const { auth: proxyAuth } = NextAuth(authConfig);
 
 const publicPaths = [
   "/",
@@ -40,7 +42,7 @@ const roleHome: Record<string, string> = {
   ADMIN: "/admin",
 };
 
-export default auth((req) => {
+export default proxyAuth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
@@ -51,12 +53,17 @@ export default auth((req) => {
   const isStudentRoute = studentPaths.some((p) => pathname.startsWith(p));
   const isParentRoute = pathname.startsWith("/parent");
   const isAdminRoute = pathname.startsWith("/admin");
+  const isOnboarding = pathname.startsWith("/onboarding");
 
   if (isPublic) return NextResponse.next();
 
   if (isAuth) {
     if (session?.user) {
-      const home = roleHome[session.user.role as string] || "/dashboard";
+      const role = session.user.role as string;
+      if (role === "STUDENT" && !session.user.isOnboarded) {
+        return NextResponse.redirect(new URL("/onboarding", req.url));
+      }
+      const home = roleHome[role] || "/dashboard";
       return NextResponse.redirect(new URL(home, req.url));
     }
     return NextResponse.next();
@@ -69,6 +76,10 @@ export default auth((req) => {
   }
 
   const role = session.user.role as string;
+
+  if (role === "STUDENT" && !session.user.isOnboarded && !isOnboarding) {
+    return NextResponse.redirect(new URL("/onboarding", req.url));
+  }
 
   if (role === "ADMIN" && isAdminRoute) return NextResponse.next();
   if (role === "PARENT" && isParentRoute) return NextResponse.next();

@@ -255,6 +255,7 @@ model Concept {
   dependents    ConceptPrerequisite[]  @relation("ConceptDependents")
   questions     Question[]
   knowledgeProfiles StudentKnowledgeProfile[]
+  embeddings        ConceptEmbedding[]
 
   @@unique([topicId, slug])
   @@map("concepts")
@@ -558,8 +559,32 @@ model Document {
   content      String           @db.Text
   summary      String?          @db.Text
   createdAt    DateTime         @default(now())
+  embeddings   DocumentEmbedding[]
 
   @@map("documents")
+}
+
+model ConceptEmbedding {
+  id        String   @id @default(cuid())
+  conceptId String   @unique
+  concept   Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  embedding String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("concept_embeddings")
+}
+
+model DocumentEmbedding {
+  id           String   @id @default(cuid())
+  documentId   String
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex   Int
+  chunkContent String   @db.Text
+  embedding    String   @db.Text
+  createdAt    DateTime @default(now())
+
+  @@unique([documentId, chunkIndex])
+  @@map("document_embeddings")
 }
 
 model StudentKnowledgeProfile {
