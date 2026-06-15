@@ -74,17 +74,14 @@ export function Features() {
         {features.map((f, i) => {
           const Icon = f.icon;
           return (
-            <Reveal
-              key={f.title}
-              delay={i * 50}
-              className={f.span}
-            >
+            <Reveal key={f.title} delay={i * 50} className={f.span}>
               <div className="clay group relative h-full overflow-hidden p-6">
                 <div
                   aria-hidden
                   className="absolute -right-12 -top-12 size-32 rounded-full opacity-15 blur-2xl transition-opacity group-hover:opacity-30"
                   style={{
-                    background: "linear-gradient(135deg, var(--coral), var(--purple))",
+                    background:
+                      "linear-gradient(135deg, var(--coral), var(--purple))",
                   }}
                 />
                 <div

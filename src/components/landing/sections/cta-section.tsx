@@ -57,7 +57,7 @@ export function CTASection() {
                 <Button
                   asChild
                   size="xl"
-                  className="shadow-[0_6px_20px_rgba(255,107,107,0.4)] hover:shadow-[0_8px_24px_rgba(255,107,107,0.5)]"
+                  className="shadow-[0_6px_20px_rgba(225,29,72,0.4)] hover:shadow-[0_8px_24px_rgba(225,29,72,0.5)]"
                 >
                   <Link href="/auth/register">
                     <Rocket size={18} /> Daftar Gratis Sekarang
@@ -99,29 +99,35 @@ export function CTASection() {
                 style={{ animation: "spin 36s linear infinite reverse" }}
                 aria-hidden
               />
-              <div className="absolute left-1/2 top-1/2 flex h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-[var(--purple)] via-[var(--pink)] to-[var(--coral)] text-white shadow-[0_20px_60px_rgba(168,85,247,0.4),inset_0_-10px_30px_rgba(0,0,0,0.15)] anim-float">
+              <div className="absolute left-1/2 top-1/2 flex h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-[var(--purple)] via-[var(--pink)] to-[var(--coral)] text-white shadow-[0_20px_60px_rgba(139,92,246,0.4),inset_0_-10px_30px_rgba(0,0,0,0.15)] anim-float">
                 <div
                   aria-hidden
                   className="absolute inset-3 rounded-full bg-gradient-to-br from-white/30 to-transparent"
                 />
                 <div className="relative flex flex-col items-center gap-2 text-center">
-                  <span className="font-heading text-[44px] font-bold leading-none">A+</span>
+                  <span className="font-heading text-[44px] font-bold leading-none">
+                    A+
+                  </span>
                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-90">
                     Mulai sekarang
                   </span>
                 </div>
               </div>
 
-              <div className="absolute -right-2 top-[18%] flex items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(45,27,105,0.12)] backdrop-blur-md anim-float">
+              <div className="absolute -right-2 top-[18%] flex items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(80,20,50,0.12)] backdrop-blur-md anim-float">
                 <Sparkles size={16} className="text-[var(--coral)]" />
-                <span className="text-[12px] font-bold text-foreground">+150 XP</span>
+                <span className="text-[12px] font-bold text-foreground">
+                  +150 XP
+                </span>
               </div>
               <div
-                className="absolute -left-2 bottom-[18%] flex items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(45,27,105,0.12)] backdrop-blur-md anim-float"
+                className="absolute -left-2 bottom-[18%] flex items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(80,20,50,0.12)] backdrop-blur-md anim-float"
                 style={{ animationDelay: "1.4s" }}
               >
                 <Heart size={16} className="text-[var(--coral)]" />
-                <span className="text-[12px] font-bold text-foreground">Streak 7 hari</span>
+                <span className="text-[12px] font-bold text-foreground">
+                  Streak 7 hari
+                </span>
               </div>
             </div>
           </div>

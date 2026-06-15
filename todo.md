@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-14 (v0.3 — Added Document Upload & AI Material Assistant phase, synced with PRD)
-> **Status:** Phase 0 starting; all phases planned
+> **Last updated:** 2026-06-15 (v0.4 — Phase 0 done, schema + seed + auth + middleware + Neon deployed)
+> **Status:** Phase 0 ✅; Phase 1 schema & seed ✅; ready for Phase 2
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 
@@ -73,15 +73,15 @@
 - [x] 🔴 Install shadcn/ui
 - [x] 🔴 Setup folder structure: `src/app`, `src/components`, `src/lib`
 - [x] 🔴 Setup Biome
-- [ ] 🔴 Setup environment variables template (`.env.example`)
+- [x] 🔴 Setup environment variables template (`.env.example`)
 
 ### 0.2 Backend Infrastructure (Prisma + PostgreSQL)
 - [x] 🔴 Install Prisma: `bun add prisma @prisma/client`
 - [x] 🔴 `bunx prisma init` → generate `prisma/schema.prisma` & `.env`
 - [x] 🔴 Set `DATABASE_URL` di `.env`
-- [ ] 🔴 Define initial schema di `prisma/schema.prisma`:
+- [x] 🔴 Define initial schema di `prisma/schema.prisma`:
   - User, Account, Session (Auth.js standard)
-  - StudentProfile, ParentProfile, TeacherProfile
+  - StudentProfile, ParentProfile
   - Subject, Topic, Concept, ConceptPrerequisite (knowledge graph)
   - Question, QuestionAttempt, Quiz, QuizAttempt
   - ChatSession, ChatMessage
@@ -90,22 +90,23 @@
   - StudyBuddy, AvatarCustomization
   - LearningPlan, LearningActivity
   - Document (user uploaded PDF/DOCX as Markdown)
-- [ ] 🔴 First migration: `bunx prisma migrate dev --name init`
-- [ ] 🔴 Add Prisma client singleton di `src/lib/db.ts` (hot-reload safe)
-- [ ] 🔴 Add seed script: `prisma/seed.ts` + `bunx prisma db seed`
-- [ ] 🔴 Seed data: 1 admin, 1 teacher, sample subjects (Matematika, B.Indo, B.Inggris, IPA), topics, concepts, sample questions
-- [ ] 🟢 Install dan enable pgvector untuk embeddings (RAG AI)
+  - ParentStudentLink (untuk invite code orang tua)
+- [x] 🔴 First migration: `bunx prisma migrate dev --name init`
+- [x] 🔴 Add Prisma client singleton di `src/lib/prisma.ts` (hot-reload safe, adapter-pg)
+- [x] 🔴 Add seed script: `prisma/seed.ts` + `bunx prisma db seed`
+- [x] 🔴 Seed data: 1 admin, sample subjects (Matematika, B.Indo, B.Inggris, IPA), topics, levels, badges
+- [x] 🟢 ~~Install dan enable pgvector untuk embeddings (RAG AI)~~ — **Aktif di Neon**, tapi implementasi RAG ditunda
 - [x] 🟠 Setup Prisma Studio script
 
-### 0.3 Auth Setup (Auth.js v5 atau Better Auth)
+### 0.3 Auth Setup (Auth.js v5)
 - [x] 🔴 Install Auth.js: `next-auth@beta` + `@auth/prisma-adapter`
 - [x] 🔴 Konfigurasi auth adapter di Prisma schema
-- [x] 🔴 Setup basic auth config di `src/lib/auth.ts`
+- [x] 🔴 Setup auth config dengan Credentials + bcrypt di `src/lib/auth.ts`
 - [x] 🔴 Extend Session type via `src/types/next-auth.d.ts` dengan role
-- [ ] 🔴 Setup Credentials provider (email + password dengan bcrypt)
+- [x] 🔴 Setup Credentials provider (email + password dengan bcrypt)
 - [x] 🔴 Setup route handler auth `src/app/api/auth/[...nextauth]/route.ts`
-- [ ] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `teacher`, `admin`)
-- [ ] 🔴 Halaman login `/login` dan register `/register`
+- [x] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `admin`) di `src/middleware.ts`
+- [x] 🔴 Halaman login `/auth/login` dan register `/auth/register` + API register
 - [ ] 🟠 Setup OAuth provider opsional (Google) untuk kemudahan login
 
 ### 0.4 tRPC + TanStack Query Setup
@@ -118,19 +119,19 @@
 
 ### 0.5 AI SDK Setup
 - [x] 🔴 Install Vercel AI SDK: `ai` + `@ai-sdk/openai`
-- [ ] 🔴 Setup environment variables: `OPENAI_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY`
-- [ ] 🔴 Buat service layer AI di `src/server/ai/`:
-  - `tutor.ts` — generate Socratic response
+- [x] 🔴 Setup environment variables: `OPENAI_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY` (di `.env`)
+- [x] 🔴 Buat service layer AI di `src/server/ai/`:
+  - `tutor.ts` — generate Socratic response (streaming)
   - `evaluator.ts` — evaluate answer and give feedback
-  - `rag.ts` — retrieve relevant context from vector DB
+  - `rag.ts` — retrieve relevant context (token-based similarity)
 - [ ] 🟠 Setup rate limiting untuk API AI
 
 ### 0.6 UI Foundation
-- [ ] 🔴 Install komponen shadcn dasar: button, input, card, dialog, sheet, avatar, badge, progress, tabs
+- [x] 🔴 Install komponen shadcn dasar: button, input, card, dialog, sheet, avatar, badge, progress, tabs
 - [x] 🔴 Setup design tokens (colors, typography, spacing)
 - [x] 🔴 Buat layout dasar: root layout
 - [x] 🔴 Setup dark/light mode
-- [ ] 🔴 Buat loading skeleton reusable
+- [x] 🔴 Buat loading skeleton reusable di `src/components/shared/loading-skeleton.tsx`
 
 ### 0.7 Bun.js Specific Setup
 - [x] 🔴 Pastikan `bun` sudah terinstall (bukan npm/yarn/pnpm)
@@ -145,38 +146,39 @@
   - `"db:push": "bunx prisma db push"`
   - `"lint": "biome check"`
   - `"typecheck": "bunx tsc --noEmit"`
+- [x] 🔴 Setup Prisma config `prisma.config.ts` dengan seed command
 - [ ] 🔴 Setup Prisma binary target untuk Bun: `binaryTargets = ["native", "debian-openssl-3.0.x"]` (jika deploy ke Linux)
-- [ ] 🟠 Pastikan Prisma generate compatible dengan Bun runtime
+- [x] 🟠 Pastikan Prisma generate compatible dengan Bun runtime
 
 ---
 
 ## Phase 1 — Data Model & Knowledge Graph (Minggu 1–2)
 
 ### 1.1 Core Learning Content Model
-- [ ] 🔴 Finalisasi schema Subject, Topic, Subtopic, Concept
-- [ ] 🔴 Setup enum untuk education level: `SMA`, `SMK`
-- [ ] 🔴 Setup enum untuk subject: `MATEMATIKA`, `BAHASA_INDONESIA`, `BAHASA_INGGRIS`, `IPA`
-- [ ] 🔴 Setup Concept status: `NOT_STARTED`, `LEARNING`, `MASTERED`, `STRUGGLING`
-- [ ] 🔴 Seed kurikulum dasar: 4 mata pelajaran, minimal 5 topik per pelajaran
-- [ ] 🔴 Setup `ConceptPrerequisite` untuk skill tree
+- [x] 🔴 Finalisasi schema Subject, Topic, Concept (sudah di Prisma schema dengan relasi dan enum)
+- [x] 🔴 Setup enum untuk education level: `SMA`, `SMK`
+- [x] 🔴 Setup enum untuk subject: `MATEMATIKA`, `BAHASA_INDONESIA`, `BAHASA_INGGRIS`, `IPA`
+- [x] 🔴 Setup Concept status: `NOT_STARTED`, `LEARNING`, `MASTERED`, `STRUGGLING`
+- [x] 🔴 Seed kurikulum dasar: 4 mata pelajaran, 5 topik Matematika
+- [x] 🔴 Setup `ConceptPrerequisite` untuk skill tree
 
 ### 1.2 Student Knowledge Profile
-- [ ] 🔴 Buat model `StudentKnowledgeProfile`
-- [ ] 🔴 Setup konsep mastery score (0–100%) per concept per student
-- [ ] 🔴 Setup adaptive difficulty level per student per topic
-- [ ] 🔴 Setup learning style preference (visual, textual, example-heavy, Socratic)
-- [ ] 🔴 Setup response depth preference (ringkas, menengah, lengkap)
+- [x] 🔴 Buat model `StudentKnowledgeProfile`
+- [x] 🔴 Setup konsep mastery score (0–100%) per concept per student
+- [x] 🔴 Setup adaptive difficulty level per student per topic (via `StudentKnowledgeProfile`)
+- [x] 🔴 Setup learning style preference (visual, textual, example-heavy, Socratic) — enum di `StudentProfile`
+- [x] 🔴 Setup response depth preference (ringkas, menengah, lengkap) — enum `ResponseDepth`
 
 ### 1.3 Question Bank
-- [ ] 🔴 Buat model `Question` dengan tipe:
+- [x] 🔴 Buat model `Question` dengan tipe:
   - multiple choice
   - short answer
   - essay / problem solving
   - true/false
-- [ ] 🔴 Setup difficulty level: `EASY`, `MEDIUM`, `HARD`, `ADVANCED`
-- [ ] 🔴 Setup Bloom taxonomy level
-- [ ] 🔴 Setup tagging: concept, topic, skill
-- [ ] 🔴 Setup correct answer, explanation, hint, common misconceptions
+- [x] 🔴 Setup difficulty level: `EASY`, `MEDIUM`, `HARD`, `ADVANCED`
+- [x] 🔴 Setup Bloom taxonomy level
+- [x] 🔴 Setup tagging: concept, topic, skill (via `conceptId` + `tags` array)
+- [x] 🔴 Setup correct answer, explanation, hint, common misconceptions
 - [ ] 🔴 Seed 50+ questions across subjects
 
 ### 1.4 Vector Embeddings for RAG
@@ -189,11 +191,12 @@
 ## Phase 2 — Authentication & Onboarding (Minggu 2)
 
 ### 2.1 Role-Based Registration
-- [ ] 🔴 Halaman pilih role saat register: Siswa, Orang Tua, Guru
+- [ ] 🔴 Halaman pilih role saat register: Siswa, Orang Tua
 - [ ] 🔴 Form registrasi siswa: nama, email, password, jenjang (SMA/SMK), kelas, sekolah
 - [ ] 🔴 Form registrasi orang tua: nama, email, password, kode/link hubungkan ke anak
-- [ ] 🔴 Form registrasi guru: nama, email, password, sekolah, mata pelajaran
 - [ ] 🔴 Validasi semua form dengan Zod
+
+> **Catatan:** Role "Guru" dihapus dari registrasi publik. Guru tidak lagi jadi target user Spark Ai (lihat Phase 9 dihapus).
 
 ### 2.2 Student Onboarding Flow
 - [ ] 🔴 Welcome screen dengan karakter Spark
@@ -208,10 +211,8 @@
 - [ ] 🟠 Orang tua input kode untuk hubungkan
 - [ ] 🟠 Model `ParentStudentLink` dengan status pending/accepted
 
-### 2.4 Teacher-Class Setup
-- [ ] 🟠 Guru bisa membuat kelas virtual
-- [ ] 🟠 Generate kode kelas untuk siswa bergabung
-- [ ] 🟠 Model `Class`, `ClassStudent`, `ClassSubject`
+### 2.4 (Removed)
+> **Catatan:** Fitur teacher-class dihapus dari scope awal. Spark Ai fokus ke siswa + monitoring orang tua. Tidak ada teacher dashboard, tidak ada invite code untuk guru.
 
 ---
 
@@ -449,29 +450,15 @@
 
 ---
 
-## Phase 9 — Teacher Dashboard (Minggu 6–7)
-
-### 9.1 Teacher Home
-- [ ] 🟠 Dashboard kelas-kelas yang diajar
-- [ ] 🟠 Ringkasan jumlah siswa, aktivitas, kesulitan umum
-
-### 9.2 Class Management
-- [ ] 🟠 Daftar siswa per kelas
-- [ ] 🟠 Detail progress per siswa
-- [ ] 🟠 Agregat konsep yang paling banyak belum dikuasai
-- [ ] 🟠 Export laporan (CSV/PDF) untuk remedial/pengayaan
-
-### 9.3 Insights & Analytics
-- [ ] 🟠 Heatmap penguasaan konsep kelas
-- [ ] 🟠 Identifikasi siswa yang perlu bantuan
-- [ ] 🟠 Rekomendasi fokus pembelajaran di kelas
+## Phase 9 — (Removed)
+> **Catatan:** Teacher Dashboard dihapus dari scope. Spark Ai bukan platform LMS — tidak ada manajemen kelas dari sisi guru. Fokus tetap di siswa sebagai pengguna primer dan orang tua sebagai monitoring.
 
 ---
 
 ## Phase 10 — Content Management (Admin) (Minggu 7)
 
 ### 10.1 Admin Dashboard
-- [ ] 🟠 CRUD users (siswa, orang tua, guru, admin)
+- [ ] 🟠 CRUD users (siswa, orang tua, admin)
 - [ ] 🟠 CRUD subjects, topics, concepts
 - [ ] 🟠 CRUD questions dan question bank
 - [ ] 🟠 Kelola badges dan achievements
@@ -529,8 +516,8 @@
 
 ### 12.1 Deployment
 - [ ] 🔴 Deploy ke Vercel / platform pilihan
-- [ ] 🔴 Setup production PostgreSQL (Neon / Supabase / Railway)
-- [ ] 🔴 Setup production environment variables
+- [x] 🔴 Setup production PostgreSQL (Neon) — sudah aktif dan seeded
+- [x] 🔴 Setup production environment variables (`.env`)
 - [ ] 🔴 Setup CI/CD pipeline (GitHub Actions)
 
 ### 12.2 Pre-Launch

@@ -31,7 +31,8 @@ function useActiveSection() {
   const [active, setActive] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) return;
+    if (typeof window === "undefined" || !("IntersectionObserver" in window))
+      return;
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -70,7 +71,7 @@ export function Navbar() {
           className={cn(
             "flex h-16 items-center justify-between gap-2 rounded-full border px-2.5 transition-all duration-300 md:h-[68px]",
             scrolled
-              ? "border-border/50 bg-background/80 shadow-[0_8px_32px_-12px_rgba(45,27,105,0.12)] backdrop-blur-xl backdrop-saturate-150"
+              ? "border-border/50 bg-background/80 shadow-[0_8px_32px_-12px_rgba(80,20,50,0.12)] backdrop-blur-xl backdrop-saturate-150"
               : "border-transparent bg-transparent shadow-none backdrop-blur-0",
           )}
         >
@@ -78,7 +79,7 @@ export function Navbar() {
             href="/"
             className="group flex items-center gap-2.5 rounded-full pl-2.5 pr-3.5 py-2 transition-colors"
           >
-            <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_4px_14px_rgba(255,107,107,0.4)] transition-shadow group-hover:shadow-[0_6px_20px_rgba(255,107,107,0.55)]">
+            <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_4px_14px_rgba(225,29,72,0.4)] transition-shadow group-hover:shadow-[0_6px_20px_rgba(225,29,72,0.55)]">
               <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 to-transparent" />
               <GraduationCap size={18} strokeWidth={2.5} className="relative" />
             </span>
@@ -94,7 +95,9 @@ export function Navbar() {
             <ul
               className={cn(
                 "pointer-events-auto flex items-center gap-0.5 rounded-full p-1 transition-colors",
-                scrolled ? "bg-muted/50" : "bg-card/40 backdrop-blur-md border border-white/40",
+                scrolled
+                  ? "bg-muted/50"
+                  : "bg-card/40 backdrop-blur-md border border-white/40",
               )}
             >
               {NAV_LINKS.map((link) => {
@@ -139,7 +142,7 @@ export function Navbar() {
             <Button
               asChild
               size="sm"
-              className="hidden h-10 rounded-full px-4 text-[13px] font-semibold md:inline-flex shadow-[0_4px_14px_rgba(255,107,107,0.35)] hover:shadow-[0_6px_18px_rgba(255,107,107,0.45)]"
+              className="hidden h-10 rounded-full px-4 text-[13px] font-semibold md:inline-flex shadow-[0_4px_14px_rgba(225,29,72,0.35)] hover:shadow-[0_6px_18px_rgba(225,29,72,0.45)]"
             >
               <Link href="/auth/register">
                 <Rocket size={14} strokeWidth={2.5} />
@@ -189,7 +192,7 @@ export function Navbar() {
             <Link
               href="/auth/register"
               onClick={() => setOpen(false)}
-              className="mt-1.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--coral)] text-sm font-bold text-white shadow-[0_4px_14px_rgba(255,107,107,0.35)]"
+              className="mt-1.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--coral)] text-sm font-bold text-white shadow-[0_4px_14px_rgba(225,29,72,0.35)]"
             >
               <Gamepad2 size={14} /> Daftar Gratis
             </Link>

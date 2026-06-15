@@ -121,7 +121,10 @@ export function Testimonials() {
             <figure className="clay h-full p-5">
               <div className="mb-3 flex items-center justify-between">
                 <Quote className="size-6 text-[var(--coral)]" />
-                <div className="flex items-center gap-0.5" aria-label="Rating 5 dari 5">
+                <div
+                  className="flex items-center gap-0.5"
+                  aria-label="Rating 5 dari 5"
+                >
                   {Array.from({ length: 5 }).map((_, j) => (
                     <Star
                       key={j}

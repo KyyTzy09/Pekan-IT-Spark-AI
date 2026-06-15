@@ -1,17 +1,56 @@
-import { CheckCircle2, Flame, GraduationCap, Sparkles, Trophy, Zap } from "lucide-react";
+import {
+  CheckCircle2,
+  Flame,
+  GraduationCap,
+  Sparkles,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import { Reveal } from "./reveal";
 
 const subjectProgress = [
-  { name: "Matematika", value: 78, color: "from-[var(--coral)] to-[var(--orange)]", topics: "12/15 konsep" },
-  { name: "Bahasa Indonesia", value: 92, color: "from-[var(--blue)] to-[var(--teal)]", topics: "23/25 konsep" },
-  { name: "Bahasa Inggris", value: 64, color: "from-[var(--teal)] to-[var(--green)]", topics: "16/25 konsep" },
-  { name: "IPA", value: 41, color: "from-[var(--yellow)] to-[var(--orange)]", topics: "8/20 konsep" },
+  {
+    name: "Matematika",
+    value: 78,
+    color: "from-[var(--coral)] to-[var(--orange)]",
+    topics: "12/15 konsep",
+  },
+  {
+    name: "Bahasa Indonesia",
+    value: 92,
+    color: "from-[var(--blue)] to-[var(--teal)]",
+    topics: "23/25 konsep",
+  },
+  {
+    name: "Bahasa Inggris",
+    value: 64,
+    color: "from-[var(--teal)] to-[var(--green)]",
+    topics: "16/25 konsep",
+  },
+  {
+    name: "IPA",
+    value: 41,
+    color: "from-[var(--yellow)] to-[var(--orange)]",
+    topics: "8/20 konsep",
+  },
 ];
 
 const recentBadges = [
-  { name: "Penakluk Aljabar", icon: Trophy, color: "bg-gradient-to-br from-[var(--coral)] to-[var(--orange)]" },
-  { name: "Streak 7 Hari", icon: Flame, color: "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]" },
-  { name: "Penanya Ulung", icon: Sparkles, color: "bg-gradient-to-br from-[var(--teal)] to-[var(--green)]" },
+  {
+    name: "Penakluk Aljabar",
+    icon: Trophy,
+    color: "bg-gradient-to-br from-[var(--coral)] to-[var(--orange)]",
+  },
+  {
+    name: "Streak 7 Hari",
+    icon: Flame,
+    color: "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]",
+  },
+  {
+    name: "Penanya Ulung",
+    icon: Sparkles,
+    color: "bg-gradient-to-br from-[var(--teal)] to-[var(--green)]",
+  },
 ];
 
 export function ProgressDemo() {
@@ -22,8 +61,8 @@ export function ProgressDemo() {
           <Trophy size={13} /> Progress Tracking
         </div>
         <h2 className="mb-3 font-heading text-3xl font-bold tracking-tight md:text-[44px]">
-          Liat sendiri{" "}
-          <span className="text-gradient">seberapa jauh</span> kamu udah jalan.
+          Liat sendiri <span className="text-gradient">seberapa jauh</span> kamu
+          udah jalan.
         </h2>
         <p className="mx-auto max-w-[600px] text-sm text-muted-foreground md:text-base">
           Dashboard yang nunjukin progress per mapel, streak harian, level, dan
@@ -31,7 +70,10 @@ export function ProgressDemo() {
         </p>
       </Reveal>
 
-      <Reveal delay={80} className="mx-auto mt-12 grid max-w-6xl gap-5 lg:grid-cols-3">
+      <Reveal
+        delay={80}
+        className="mx-auto mt-12 grid max-w-6xl gap-5 lg:grid-cols-3"
+      >
         <div className="clay p-6 lg:col-span-2">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="font-heading text-lg font-bold text-foreground">
@@ -152,18 +194,25 @@ export function ProgressDemo() {
         </div>
       </Reveal>
 
-      <Reveal delay={140} className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-[13px] font-semibold text-muted-foreground">
+      <Reveal
+        delay={140}
+        className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-[13px] font-semibold text-muted-foreground"
+      >
         <span className="flex items-center gap-1.5">
-          <CheckCircle2 size={14} className="text-[var(--teal)]" /> Tanpa batasan energi
+          <CheckCircle2 size={14} className="text-[var(--teal)]" /> Tanpa
+          batasan energi
         </span>
         <span className="flex items-center gap-1.5">
-          <CheckCircle2 size={14} className="text-[var(--teal)]" /> Streak bukan hukuman
+          <CheckCircle2 size={14} className="text-[var(--teal)]" /> Streak bukan
+          hukuman
         </span>
         <span className="flex items-center gap-1.5">
-          <CheckCircle2 size={14} className="text-[var(--teal)]" /> Reward transparan
+          <CheckCircle2 size={14} className="text-[var(--teal)]" /> Reward
+          transparan
         </span>
         <span className="flex items-center gap-1.5">
-          <GraduationCap size={14} className="text-[var(--coral)]" /> No pay-to-win
+          <GraduationCap size={14} className="text-[var(--coral)]" /> No
+          pay-to-win
         </span>
       </Reveal>
     </section>

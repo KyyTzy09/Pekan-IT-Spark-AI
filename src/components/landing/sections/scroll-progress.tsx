@@ -16,7 +16,7 @@ export function ScrollProgress() {
       className="pointer-events-none fixed inset-x-0 top-0 z-[200] h-[3px] origin-left bg-gradient-to-r from-[var(--coral)] via-[var(--orange)] via-[var(--yellow)] via-[var(--teal)] to-[var(--purple)]"
       style={{
         scaleX,
-        boxShadow: "0 0 10px rgba(255, 107, 107, 0.5)",
+        boxShadow: "0 0 10px rgba(225, 29, 72, 0.5)",
       }}
     />
   );

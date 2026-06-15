@@ -13,9 +13,7 @@ export function EnrollProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/auth/register";
   }, []);
   return (
-    <EnrollContext.Provider value={{ open }}>
-      {children}
-    </EnrollContext.Provider>
+    <EnrollContext.Provider value={{ open }}>{children}</EnrollContext.Provider>
   );
 }
 

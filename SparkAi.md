@@ -87,7 +87,7 @@ Spark Ai dirancang dengan empat tujuan utama yang saling terkait untuk menjawab 
 
 ## 3. Target Pengguna
 
-Spark Ai dirancang untuk melayani tiga kelompok pengguna dengan peran yang berbeda:
+Spark Ai dirancang untuk melayani **dua kelompok pengguna**:
 
 ### 3.1 Pengguna Utama: Siswa SMK/SMA Kelas X–XII
 **Karakteristik umum:**
@@ -105,7 +105,7 @@ Spark Ai dirancang untuk melayani tiga kelompok pengguna dengan peran yang berbe
 **Contoh persona:**
 > **Rina (16 tahun)** — Siswi kelas 11 SMK Jurusan TKJ. Nilai matematika 70, bahasa Inggris 60. Suka menonton tutorial YouTube. Target: lulus UTBK-SNBT dan masuk D4 IT. Frustrasi karena tidak ada yang bisa mengajari matematika di rumah, malu bertanya ke guru, dan bingung mengerjakan PR sendirian.
 
-### 3.2 Pengguna Sekunder: Orang Tua Siswa
+### 3.2 Pengguna Pendukung: Orang Tua Siswa
 **Karakteristik umum:**
 - Bekerja penuh waktu, memiliki keterbatasan waktu dan kemampuan untuk mendampingi anak belajar.
 - Menggunakan smartphone berbasis WhatsApp sebagai kanal komunikasi utama.
@@ -116,16 +116,7 @@ Spark Ai dirancang untuk melayani tiga kelompok pengguna dengan peran yang berbe
 - Notifikasi jika ada hal yang perlu diperhatikan (misalnya anak tidak belajar selama beberapa hari).
 - Keyakinan bahwa anaknya belajar dengan benar dan aman.
 
-### 3.3 Pengguna Sekunder: Guru Pembimbing
-**Karakteristik umum:**
-- Mengajar banyak siswa (umumnya 100–150 siswa) dengan waktu yang terbatas.
-- Bertanggung jawab atas kemajuan akademik siswa di kelas.
-- Terbuka terhadap teknologi yang dapat membantu pekerjaannya.
-
-**Kebutuhan utama:**
-- Informasi tentang kesulitan belajar siswa secara agregat (misalnya konsep mana yang paling banyak belum dikuasai).
-- Bahan pertimbangan untuk memberikan remedial atau pengayaan.
-- Validasi bahwa siswa mendapatkan pendampingan belajar tambahan di luar kelas.
+**Catatan:** Orang tua **bukan pengguna primer**. Mereka hanya memiliki akses monitoring terhadap akun anak yang sudah di-link, tanpa kemampuan mengelola konten atau memodifikasi pembelajaran.
 
 ---
 
@@ -326,17 +317,12 @@ Spark Ai diharapkan memberikan manfaat nyata bagi seluruh pemangku kepentingan:
 - **Ketenangan pikiran:** Orang tua tidak perlu khawatir anak tidak mendapat pendampingan belajar, meskipun orang tua sibuk atau tidak menguasai materi.
 - **Terlibat secara proporsional:** Orang tua dapat memberikan dukungan yang tepat berdasarkan informasi yang diterima, tanpa harus menjadi "guru" di rumah.
 
-### 5.3 Manfaat bagi Guru
-- **Informasi untuk remedial dan pengayaan:** Data tentang konsep yang banyak belum dikuasai siswa dapat menjadi dasar guru untuk menentukan fokus pembelajaran di kelas.
-- **Pengurangan beban答疑:** Siswa yang sudah mendapat penjelasan dari Spark Ai tidak perlu mengganggu guru untuk pertanyaan-pertanyaan dasar.
-- **Kolaborasi yang lebih baik dengan siswa:** Guru dapat fokus pada hal-hal yang membutuhkan interaksi manusiawi (diskusi, proyek, karakter), sementara latihan dan penjelasan dasar ditangani AI.
-
-### 5.4 Manfaat bagi Sistem Pendidikan
+### 5.3 Manfaat bagi Sistem Pendidikan
 - **Mengurangi kesenjangan pendidikan:** Akses gratis ke pendamping belajar berkualitas membantu siswa di daerah dan dari keluarga kurang mampu untuk tidak tertinggal.
 - **Mendorong adopsi teknologi secara sehat di kalangan pelajar:** AI digunakan sebagai alat belajar, bukan sebagai jalan pintas untuk contekan.
 - **Mendukung implementasi Kurikulum Merdeka:** Pendekatan personal dan adaptif selaras dengan semangat diferensiasi pembelajaran dalam Kurikulum Merdeka.
 
-### 5.5 Dampak Jangka Panjang yang Diharapkan
+### 5.4 Dampak Jangka Panjang yang Diharapkan
 - Peningkatan literasi dan numerasi siswa Indonesia secara bertahap.
 - Terbentuknya generasi pembelajar mandiri yang adaptif terhadap perubahan.
 - Berkontribusi pada peningkatan kualitas sumber daya manusia Indonesia di masa depan.
