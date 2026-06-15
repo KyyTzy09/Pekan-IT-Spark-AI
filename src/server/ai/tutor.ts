@@ -2,67 +2,277 @@ import "server-only";
 
 import { streamText } from "ai";
 import { chatModel } from "@/lib/ai";
+import { prisma } from "@/lib/prisma";
+import type {
+  LearningStyle,
+  ResponseDepth,
+} from "../../../generated/prisma/client";
+import { retrieveContext } from "./rag";
+
+interface ConceptMastery {
+  id: string;
+  name: string;
+  status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
+  masteryScore: number;
+  topicName: string;
+  subjectName: string;
+}
 
 interface TutorOptions {
-  subject?: string;
-  topic?: string;
-  conceptMastery?: Record<string, number>;
-  learningStyle?: string;
-  responseDepth?: string;
+  subject?: { id: string; name: string; slug: string };
+  topic?: { id: string; name: string };
+  learningStyle?: LearningStyle | null;
+  responseDepth?: ResponseDepth | null;
+  grade?: number | null;
+  school?: string | null;
 }
 
-export function generateTutorResponse(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-  options?: TutorOptions,
+function buildSystemPrompt(
+  options: TutorOptions,
+  mastery: ConceptMastery[],
+  contextSnippets: string[],
+  userName?: string,
+): string {
+  const mastered = mastery.filter((c) => c.status === "MASTERED");
+  const learning = mastery.filter(
+    (c) => c.status === "LEARNING" || c.status === "STRUGGLING",
+  );
+  const newOnes = mastery.filter((c) => c.status === "NOT_STARTED").slice(0, 5);
+
+  const subjectLine = options.subject
+    ? `Mata pelajaran: ${options.subject.name}.`
+    : "Topik umum: mata pelajaran SMA/SMK Indonesia.";
+  const topicLine = options.topic ? `Topik saat ini: ${options.topic.name}.` : "";
+  const gradeLine = options.grade ? `Kelas siswa: ${options.grade}.` : "";
+  const schoolLine = options.school ? `Asal sekolah: ${options.school}.` : "";
+  const styleLine = options.learningStyle
+    ? `Gaya belajar siswa: ${styleLabel(options.learningStyle)}.`
+    : "";
+
+  const responseDepthLine =
+    options.responseDepth === "RINGKAS"
+      ? "Beri respons ringkas (1–2 kalimat)."
+      : options.responseDepth === "LENGKAP"
+        ? "Beri respons lengkap dan terstruktur."
+        : "Beri respons dengan panjang sedang (2–4 kalimat).";
+
+  return `Kamu adalah Spark, tutor AI pribadi untuk siswa SMA/SMK Indonesia.
+
+## KARAKTER
+- Sabar, suportif, tidak menghakimi
+- Pakai bahasa Indonesia kasual yang ramah anak muda (pake "kamu", "aku", bukan formal)
+- Sesekali kasih semangat dan motivasi yang genuine
+- Kalau siswa salah, jangan judge — bantu mereka paham kenapa
+- Selalu akhiri respons dengan pertanyaan terbuka untuk lanjutin dialog (kecuali konteksnya sudah clear)
+
+## PROFIL SISWA
+${userName ? `Nama: ${userName}` : ""}
+${subjectLine}
+${topicLine}
+${gradeLine}
+${schoolLine}
+${styleLine}
+${responseDepthLine}
+
+## PENDEKATAN MENGAJAR (Socratic Method — INI PENTING)
+1. JANGAN PERNAH kasih jawaban final langsung. Kalau siswa minta jawaban PR/ujian, tolak dengan halus dan tawarkan untuk bantu memahami konsepnya.
+2. SELALU mulai dengan pertanyaan probing untuk tau apa yang siswa udah tau.
+3. Kalau siswa bingung, PECAH konsep jadi bagian kecil. Tanya satu hal pada satu waktu.
+4. Kalau siswa salah, JANGAN langsung koreksi. Tanya "Apa yang bikin kamu mikir begitu?" atau "Coba jelasin langkah kamu" untuk gali miskonsepsi.
+5. Kalau siswa bener, AKUI usaha mereka sebelum lanjut. ("Nice! Nah, kalo gitu gimana kalo...")
+6. SELALU akhiri dengan pertanyaan terbuka untuk lanjutin dialog.
+
+## KONTEKS KURIKULUM
+${contextSnippets.length > 0
+  ? `Berikut materi kurikulum yang relevan:\n${contextSnippets
+      .slice(0, 3)
+      .map((s, i) => `[${i + 1}] ${s}`)
+      .join("\n\n")}`
+  : "(Belum ada materi kurikulum yang match — jawab dari pengetahuan umum yang sesuai)."}
+
+## KONSEP YANG SUDAH DIKUASAI SISWA
+${mastered.length > 0
+  ? mastered.map((c) => `- ${c.name} (${c.subjectName})`).join("\n")
+  : "(Belum ada)"}
+
+## KONSEP YANG LAGI DIPELAJARI / STRUGGLE
+${learning.length > 0
+  ? learning
+      .map(
+        (c) =>
+          `- ${c.name} (${c.subjectName}) — ${c.status} ${Math.round(c.masteryScore * 100)}%`,
+      )
+      .join("\n")
+  : "(Belum ada)"}
+
+${
+  newOnes.length > 0
+    ? `## KONSEP YANG BELUM DIMULAI
+${newOnes.map((c) => `- ${c.name}`).join("\n")}`
+    : ""
+}
+
+## ATURAN KERAS (JANGAN DILANGGAR)
+- JANGAN kasih jawaban langsung untuk PR/ujian. Bimbing dengan Socratic.
+- JANGAN bahas topik di luar edukasi SMA/SMK.
+- JANGAN kasih konten berbahaya, menyesatkan, atau tidak sesuai untuk pelajar.
+- Kalau siswa tanya hal yang bukan edukasi, tolak dengan halus: "Aku cuma bisa bantu untuk pelajaran sekolah ya."
+- Kalau siswa nanya apa kamu AI, jawab jujur: "Iya, aku Spark AI, temen belajar virtual kamu."
+- JANGAN claim kamu manusia.
+- Pakai bahasa Indonesia. Kalau siswa mix English, boleh aja.
+
+## FORMAT
+- Maksimal 3-4 kalimat per respons
+- Pake bahasa percakapan, bukan bahasa buku
+- Kadang pake emoji untuk feel friendly, tapi jangan berlebihan`;
+}
+
+function styleLabel(s: LearningStyle): string {
+  switch (s) {
+    case "VISUAL":
+      return "visual (suka gambar, diagram)";
+    case "TEXTUAL":
+      return "tekstual (suka bacaan)";
+    case "EXAMPLE_HEAVY":
+      return "contoh (suka belajar lewat contoh soal)";
+    case "SOCRATIC":
+      return "Socratic (suka dipandu lewat pertanyaan)";
+    default:
+      return s;
+  }
+}
+
+async function loadUserContext(
+  userId: string,
+  subjectSlug?: string,
+  topicId?: string,
 ) {
-  const systemPrompt = `Kamu adalah Spark, tutor AI yang sabar, suportif, dan tidak menghakimi untuk siswa SMA/SMK Indonesia.
+  const [profile, concepts] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        educationLevel: true,
+        grade: true,
+        school: true,
+        learningStyle: true,
+        responseDepth: true,
+        focusedSubjects: true,
+      },
+    }),
+    prisma.studentKnowledgeProfile.findMany({
+      where: { userId },
+      include: {
+        concept: {
+          include: {
+            topic: { include: { subject: true } },
+          },
+        },
+      },
+      take: 50,
+    }),
+  ]);
 
-KEPRIBADIAN:
-- Gunakan bahasa Indonesia kasual yang ramah anak muda (pake "kamu", bukan "Anda")
-- Sabar dan tidak menghakimi - wajar kalo belum paham
-- Panggil dirimu "Spark"
-- Sesekali kasih motivasi dan semangat
+  const subject = subjectSlug
+    ? await prisma.subject.findUnique({
+        where: { slug: subjectSlug as never },
+        select: { id: true, name: true, slug: true },
+      })
+    : null;
+  const topic = topicId
+    ? await prisma.topic.findUnique({
+        where: { id: topicId },
+        select: { id: true, name: true },
+      })
+    : null;
 
-METODE MENGAJAR (Socratic):
-- JANGAN langsung kasih jawaban
-- Ajukan pertanyaan balik yang memandu siswa menemukan jawabannya sendiri
-- Bimbing langkah demi langkah
-- Kalo siswa udah deket sama jawaban, akui usaha mereka
+  const mastery: ConceptMastery[] = concepts
+    .filter((c) => c.concept?.topic?.subject)
+    .map((c) => ({
+      id: c.conceptId,
+      name: c.concept.name,
+      status: c.status as ConceptMastery["status"],
+      masteryScore: c.masteryScore,
+      topicName: c.concept.topic.name,
+      subjectName: c.concept.topic.subject.name,
+    }));
 
-ATURAN:
-- JANGAN berikan jawaban langsung untuk PR/ujian
-- Jika siswa minta jawaban instan, bimbing dengan pertanyaan Socratic
-- Jika topik di luar pelajaran SMA/SMK, tolak dengan sopan
-- Jika siswa bertanya tentang hal berbahaya, tolak tegas
-- Selalu ingatkan bahwa kamu AI, bukan manusia, jika siswa bertanya
-
-${options?.subject ? `Mata pelajaran: ${options.subject}` : ""}
-${options?.topic ? `Topik: ${options.topic}` : ""}
-${options?.responseDepth === "RINGKAS" ? "Beri penjelasan ringkas (1-2 paragraf)" : options?.responseDepth === "LENGKAP" ? "Beri penjelasan lengkap dan detail" : "Beri penjelasan dengan panjang sedang, sesuai kebutuhan"}
-
-KONSEP YANG SUDAH DIKUASAI SISWA:
-${
-  options?.conceptMastery
-    ? Object.entries(options.conceptMastery)
-        .filter(([, v]) => v >= 0.7)
-        .map(([k]) => `- ${k}: sudah dikuasai`)
-        .join("\n")
-    : "Belum ada data"
+  return {
+    profile: profile
+      ? {
+          grade: profile.grade,
+          school: profile.school,
+          learningStyle: profile.learningStyle,
+          responseDepth: profile.responseDepth,
+        }
+      : null,
+    subject,
+    topic,
+    mastery,
+  };
 }
 
-KONSEP YANG SEDANG DIPELAJARI:
-${
-  options?.conceptMastery
-    ? Object.entries(options.conceptMastery)
-        .filter(([, v]) => v > 0 && v < 0.7)
-        .map(([k, v]) => `- ${k}: ${Math.round(v * 100)}%`)
-        .join("\n")
-    : "Belum ada data"
-}`;
+export async function generateTutorStream(input: {
+  userId: string;
+  userName?: string;
+  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
+  subjectSlug?: string;
+  topicId?: string;
+  lastUserMessage?: string;
+}) {
+  const ctx = await loadUserContext(
+    input.userId,
+    input.subjectSlug,
+    input.topicId,
+  );
+
+  let contextSnippets: string[] = [];
+  if (input.lastUserMessage) {
+    try {
+      const retrieved = await retrieveContext({
+        userId: input.userId,
+        query: input.lastUserMessage,
+        subjectId: ctx.subject?.id,
+        topicId: ctx.topic?.id,
+        limit: 3,
+      });
+      contextSnippets = retrieved.map((r) =>
+        r.type === "concept"
+          ? `${r.title}: ${r.content}`
+          : `[Dokumen] ${r.title}: ${r.content}`,
+      );
+    } catch (e) {
+      console.warn("RAG context failed:", e);
+    }
+  }
+
+  const systemPrompt = buildSystemPrompt(
+    {
+      subject: ctx.subject
+        ? { id: ctx.subject.id, name: ctx.subject.name, slug: ctx.subject.slug }
+        : undefined,
+      topic: ctx.topic ?? undefined,
+      learningStyle: ctx.profile?.learningStyle ?? null,
+      responseDepth: ctx.profile?.responseDepth ?? null,
+      grade: ctx.profile?.grade ?? null,
+      school: ctx.profile?.school ?? null,
+    },
+    ctx.mastery,
+    contextSnippets,
+    input.userName,
+  );
 
   return streamText({
     model: chatModel,
     system: systemPrompt,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    messages: input.messages,
+    temperature: 0.7,
   });
+}
+
+export async function generateChatTitle(
+  firstMessage: string,
+): Promise<string> {
+  const trimmed = firstMessage.trim();
+  if (trimmed.length <= 48) return trimmed;
+  return `${trimmed.slice(0, 45).trimEnd()}…`;
 }

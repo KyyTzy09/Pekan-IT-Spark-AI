@@ -210,17 +210,18 @@ model ParentStudentLink {
 }
 
 model Subject {
-  id          String      @id @default(cuid())
-  slug        SubjectSlug @unique
+  id          String       @id @default(cuid())
+  slug        SubjectSlug  @unique
   name        String
   description String?
   icon        String?
   color       String?
-  order       Int         @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   topics Topic[]
+  chatSessions ChatSession[]
 
   @@map("subjects")
 }
@@ -237,6 +238,7 @@ model Topic {
   updatedAt   DateTime @updatedAt
 
   concepts Concept[]
+  chatSessions ChatSession[]
 
   @@unique([subjectId, slug])
   @@map("topics")
@@ -360,7 +362,9 @@ model ChatSession {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String   @default("Chat Baru")
   topicId   String?
+  topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
   subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
