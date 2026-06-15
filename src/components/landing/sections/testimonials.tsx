@@ -1,5 +1,5 @@
 import { MessageCircle, Quote, Star } from "lucide-react";
-import { Reveal } from "./reveal";
+import { Reveal } from "../../shared/reveal";
 
 const featured = {
   quote:

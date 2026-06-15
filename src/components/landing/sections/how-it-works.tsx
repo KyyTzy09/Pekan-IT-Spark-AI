@@ -1,5 +1,5 @@
 import { Compass, MessageCircle, Target, TrendingUp } from "lucide-react";
-import { Reveal } from "./reveal";
+import { Reveal } from "../../shared/reveal";
 
 const steps = [
   {

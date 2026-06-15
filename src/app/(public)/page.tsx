@@ -1,10 +1,9 @@
 import dynamic from "next/dynamic";
-
-import { Navbar } from "@/components/landing/sections/navbar";
-import { Hero } from "@/components/landing/sections/hero";
 import { Features } from "@/components/landing/sections/features";
 import { FloatingBackground } from "@/components/landing/sections/floating-background";
 import { Footer } from "@/components/landing/sections/footer";
+import { Hero } from "@/components/landing/sections/hero";
+import { Navbar } from "@/components/landing/sections/navbar";
 
 const FloatingEmojis = dynamic(
   () =>

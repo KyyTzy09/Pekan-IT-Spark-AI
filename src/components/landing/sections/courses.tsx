@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
@@ -9,7 +8,8 @@ import {
   GraduationCap,
   Sparkles,
 } from "lucide-react";
-import { Reveal } from "./reveal";
+import Link from "next/link";
+import { Reveal } from "../../shared/reveal";
 
 const subjects = [
   {

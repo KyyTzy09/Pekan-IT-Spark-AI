@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-15 (v0.6 — Phase 0 done, Phase 1 done, Phase 2.1 done: login + register + role selection + Google OAuth + Zod validation)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; ready for Phase 2.2 (student onboarding flow)
+> **Last updated:** 2026-06-15 (v0.8 — Phase 0 done, Phase 1 done, Phase 2.1 done: login + register + role selection + Google OAuth + Zod validation, Phase 2.2 done: 5-step student onboarding flow dengan pretest-based knowledge profile, Phase 2.3 done: invite code + parent-child linking, Phase 3.1–3.3 done: student dashboard layout + home feed + subject/topic explorer dengan konstelasi bintang)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; ready for Phase 4 (AI Tutor Chat)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 
@@ -23,19 +23,20 @@
    - Event handler (`onClick`, `onSubmit`, `onChange`, dll)
    - Framer Motion / animasi JS
    - Context Provider (`SessionProvider`, `ThemeProvider`, dll)
-   - tRPC hooks atau TanStack Query hooks di client
+   - Real-time client data fetching (bisa pake `useEffect` + `fetch()` atau RSC revalidate)
 
 ### 2. DILARANG:
    - ❌ Pake `"use client"` cuma karena males mikir — itu dosa performa
    - ❌ Bikin Route Handler (`route.ts`) cuma buat baca data dari Prisma — panggil Prisma langsung di Server Component
-   - ❌ Pake `fetch()` dari client kalo bisa Server Action atau tRPC
+   - ❌ Pake `fetch()` dari client kalo bisa Server Action atau Server Component
 
 ### 3. WAJIB:
-   - ✅ Mutasi data → Server Action atau tRPC mutation, bukan fetch manual
+   - ✅ **Mutasi data → Server Action** (form action atau dipanggil dari form) — type-safe end-to-end, no API layer needed
+   - ✅ **Read data → Server Component** (langsung query Prisma di SC) — no need for tRPC, REST, atau custom API
    - ✅ Halaman publik (landing, courses, about, help) → Server Component → SEO optimal
-   - ✅ Halaman private (dashboard, chat, onboarding) → boleh Client Component — gak butuh SEO
-   - ✅ tRPC + TanStack Query untuk data fetching kompleks di client
+   - ✅ Halaman private (dashboard, chat, onboarding) → tetap Server Component, interactive parts di-extract jadi CC
    - ✅ Server Component untuk initial fetch, client hydration minimal
+   - ✅ Pakai `revalidatePath()` / `revalidateTag()` setelah mutation biar cache tetap fresh
 
 ### 4. Hukumannya:
    - Langgar aturan 1 → JS bundle bengkak → loading lama → user kabur
@@ -51,11 +52,10 @@
 | Framework | Next.js 16+ App Router |
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui |
-| State Management | Zustand (client state minimal), TanStack Query (server state) |
 | Database | PostgreSQL (Neon / local) |
 | ORM | Prisma |
 | Auth | Auth.js v5 (NextAuth.js beta) atau Better Auth |
-| API | tRPC + Server Actions |
+| API | **Next.js Server Actions + Server Components** (no tRPC, no custom API layer) |
 | AI | Vercel AI SDK + OpenAI / Groq / Google Gemini |
 | Vector DB | pgvector (PostgreSQL extension) |
 | Forms | React Hook Form + Zod |
@@ -105,17 +105,16 @@
 - [x] 🔴 Extend Session type via `src/types/next-auth.d.ts` dengan role
 - [x] 🔴 Setup Credentials provider (email + password dengan bcrypt)
 - [x] 🔴 Setup route handler auth `src/app/api/auth/[...nextauth]/route.ts`
-- [x] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `admin`) di `src/middleware.ts`
+- [x] 🔴 Middleware proteksi route berdasarkan role (`student`, `parent`, `admin`) di `src/middleware.ts` (`src/proxy.ts`)
 - [x] 🔴 Halaman login `/auth/login` dan register `/auth/register` + API register
 - [x] 🟠 Setup OAuth provider opsional (Google) untuk kemudahan login — env-gated, auto-disable kalau env kosong
 
-### 0.4 tRPC + TanStack Query Setup
-- [x] 🔴 Install tRPC: `@trpc/server`, `@trpc/client`, `@trpc/tanstack-react-query`, `@tanstack/react-query`
-- [x] 🔴 Setup tRPC router di `src/trpc/routers/_app.ts`
-- [x] 🔴 Setup context dengan auth session
-- [x] 🔴 Setup provider di `src/app/providers.tsx`
-- [x] 🔴 Buat procedure protected (`authedProcedure`) dan admin procedure
-- [x] 🔴 Setup React Query client dengan default staleTime
+### 0.4 Server Actions + Server Components Data Layer
+- [x] 🔴 Pakai Server Actions (`"use server"`) di `src/server/actions/` untuk semua mutasi (onboarding, invite, dashboard)
+- [x] 🔴 Pakai Server Components untuk read data langsung via Prisma (no API layer)
+- [x] 🔴 Validasi semua Server Action input dengan Zod
+- [x] 🔴 Pakai `revalidatePath()` setelah mutasi biar cache SC tetap fresh
+- [x] 🔴 ~~Setup tRPC + TanStack Query (DIBUANG)~~ — Next.js Server Actions + SC udah cukup untuk semua use case
 
 ### 0.5 AI SDK Setup
 - [x] 🔴 Install Vercel AI SDK: `ai` + `@ai-sdk/openai`
@@ -195,23 +194,22 @@
 - [x] 🔴 Form registrasi siswa: nama, email, password, jenjang (SMA/SMK), kelas, sekolah
 - [x] 🔴 Form registrasi orang tua: nama, email, password, kode undangan anak (validasi `parent_student_links`)
 - [x] 🔴 Validasi semua form dengan Zod (discriminated union per role)
-- [x] 🟠 Shared `AuthShell` component — left/right split dengan floating background, hero, trust signals, dan footer terms
 - [x] 🟠 Auto-redirect onboarded baru ke `/onboarding` (middleware + JWT `isOnboarded` flag)
 
 > **Catatan:** Role "Guru" dihapus dari registrasi publik. Guru tidak lagi jadi target user Spark Ai (lihat Phase 9 dihapus).
 
 ### 2.2 Student Onboarding Flow
-- [ ] 🔴 Welcome screen dengan karakter Spark
-- [ ] 🔴 Pilih mata pelajaran fokus
-- [ ] 🔴 Pretest ringkas untuk menentukan level awal (5–10 soal per mapel)
-- [ ] 🔴 Pilih gaya belajar preferensi
-- [ ] 🔴 Generate initial knowledge profile dari pretest
-- [ ] 🔴 Setup daily learning reminder (opsional)
+- [x] 🔴 Welcome screen dengan karakter Spark
+- [x] 🔴 Pilih mata pelajaran fokus
+- [x] 🔴 Pretest ringkas untuk menentukan level awal (5–10 soal per mapel)
+- [x] 🔴 Pilih gaya belajar preferensi
+- [x] 🔴 Generate initial knowledge profile dari pretest
+- [x] 🔴 Setup daily learning reminder (opsional)
 
 ### 2.3 Parent-Child Linking
-- [ ] 🟠 Generate invitation code dari akun siswa
-- [ ] 🟠 Orang tua input kode untuk hubungkan
-- [ ] 🟠 Model `ParentStudentLink` dengan status pending/accepted
+- [x] 🟠 Generate invitation code dari akun siswa
+- [x] 🟠 Orang tua input kode untuk hubungkan
+- [x] 🟠 Model `ParentStudentLink` dengan status pending/accepted
 
 ### 2.4 (Removed)
 > **Catatan:** Fitur teacher-class dihapus dari scope awal. Spark Ai fokus ke siswa + monitoring orang tua. Tidak ada teacher dashboard, tidak ada invite code untuk guru.
@@ -221,23 +219,23 @@
 ## Phase 3 — Student Home & Dashboard (Minggu 2–3)
 
 ### 3.1 Student Dashboard Layout
-- [ ] 🔴 Buat layout dashboard siswa dengan sidebar/bottom nav mobile-friendly
-- [ ] 🔴 Section: continue learning, daily quest, streak, level progress
-- [ ] 🔴 Quick access: chat dengan Spark, latihan, jelajah topik
-- [ ] 🔴 Optimized for mobile (Android low-mid spec)
+- [x] 🔴 Buat layout dashboard siswa dengan sidebar/bottom nav mobile-friendly
+- [x] 🔴 Section: continue learning, daily quest, streak, level progress
+- [x] 🔴 Quick access: chat dengan Spark, latihan, jelajah topik
+- [x] 🔴 Optimized for mobile (Android low-mid spec)
 
 ### 3.2 Home Feed
-- [ ] 🔴 Tampilkan rekomendasi belajar harian
-- [ ] 🔴 Tampilkan sapaan personal dari Spark
-- [ ] 🔴 Tampilkan progress ringkasan per mata pelajaran
-- [ ] 🔴 Tombol aksi utama: "Tanya Spark", "Latihan Hari Ini", "Lanjutkan Topik"
+- [x] 🔴 Tampilkan rekomendasi belajar harian
+- [x] 🔴 Tampilkan sapaan personal dari Spark
+- [x] 🔴 Tampilkan progress ringkasan per mata pelajaran
+- [x] 🔴 Tombol aksi utama: "Tanya Spark", "Latihan Hari Ini", "Lanjutkan Topik"
 
 ### 3.3 Subject & Topic Explorer
-- [ ] 🔴 Halaman daftar mata pelajaran
-- [ ] 🔴 Halaman detail topik dengan skill tree
-- [ ] 🔴 Progress bar per topik (0–100%)
-- [ ] 🔴 Tandai konsep yang sudah dikuasai, sedang dipelajari, belum
-- [ ] 🔴 Visualisasi konstelasi bintang (Knowledge Star) per mapel
+- [x] 🔴 Halaman daftar mata pelajaran
+- [x] 🔴 Halaman detail topik dengan skill tree
+- [x] 🔴 Progress bar per topik (0–100%)
+- [x] 🔴 Tandai konsep yang sudah dikuasai, sedang dipelajari, belum
+- [x] 🔴 Visualisasi konstelasi bintang (Knowledge Star) per mapel
 
 ### 3.4 Learning Plan
 - [ ] 🟠 Generate rencana belajar mingguan personal

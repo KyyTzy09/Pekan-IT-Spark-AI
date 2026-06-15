@@ -1,18 +1,21 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
 import {
   BookMarked,
   Compass,
   Gamepad2,
   GraduationCap,
+  LogIn,
   Menu,
   MessageCircle,
   Rocket,
   Sparkles,
+  User,
   X,
 } from "lucide-react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,6 +27,12 @@ const NAV_LINKS = [
   { href: "#progress", label: "Progress", id: "progress", icon: GraduationCap },
   { href: "#cerita", label: "Cerita Siswa", id: "cerita", icon: MessageCircle },
 ] as const;
+
+const ROLE_HOME: Record<string, string> = {
+  STUDENT: "/dashboard",
+  PARENT: "/parent",
+  ADMIN: "/admin",
+};
 
 const SECTION_IDS = NAV_LINKS.map((l) => l.id);
 
@@ -53,6 +62,7 @@ function useActiveSection() {
 }
 
 export function Navbar() {
+  const { data: session, status } = useSession();
   const [scrolled, setScrolled] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const active = useActiveSection();
@@ -63,6 +73,14 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const isLoggedIn = status === "authenticated" && session?.user;
+  const role = session?.user?.role as string | undefined;
+  const home = role ? (ROLE_HOME[role] ?? "/dashboard") : "/dashboard";
+  const initial = (session?.user?.name ?? session?.user?.email ?? "S")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 w-full pt-4 md:pt-5">
@@ -131,24 +149,52 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-1.5 pr-1.5">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="hidden h-10 rounded-full px-4 text-[13px] font-semibold md:inline-flex"
-            >
-              <Link href="/auth/login">Masuk</Link>
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              className="hidden h-10 rounded-full px-4 text-[13px] font-semibold md:inline-flex shadow-[0_4px_14px_rgba(225,29,72,0.35)] hover:shadow-[0_6px_18px_rgba(225,29,72,0.45)]"
-            >
-              <Link href="/auth/register">
-                <Rocket size={14} strokeWidth={2.5} />
-                Mulai
-              </Link>
-            </Button>
+            {isLoggedIn ? (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="hidden h-10 rounded-full px-3 text-[13px] font-semibold md:inline-flex"
+                >
+                  <Link href={home}>
+                    <User size={14} />
+                    Lanjut
+                  </Link>
+                </Button>
+                <Link
+                  href={home}
+                  aria-label="Buka dashboard"
+                  className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-[14px] font-bold text-white shadow-[0_4px_14px_rgba(225,29,72,0.35)] transition-transform hover:-translate-y-0.5"
+                >
+                  {initial}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="hidden h-10 rounded-full px-4 text-[13px] font-semibold md:inline-flex"
+                >
+                  <Link href="/auth/login">
+                    <LogIn size={14} />
+                    Masuk
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="sm"
+                  className="hidden h-10 rounded-full px-4 text-[13px] font-semibold md:inline-flex shadow-[0_4px_14px_rgba(225,29,72,0.35)] hover:shadow-[0_6px_18px_rgba(225,29,72,0.45)]"
+                >
+                  <Link href="/auth/register">
+                    <Rocket size={14} strokeWidth={2.5} />
+                    Mulai
+                  </Link>
+                </Button>
+              </>
+            )}
             <button
               type="button"
               aria-label="Toggle menu"
@@ -182,20 +228,33 @@ export function Navbar() {
                 </Link>
               );
             })}
-            <Link
-              href="/auth/login"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Masuk
-            </Link>
-            <Link
-              href="/auth/register"
-              onClick={() => setOpen(false)}
-              className="mt-1.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--coral)] text-sm font-bold text-white shadow-[0_4px_14px_rgba(225,29,72,0.35)]"
-            >
-              <Gamepad2 size={14} /> Daftar Gratis
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href={home}
+                onClick={() => setOpen(false)}
+                className="mt-1.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--coral)] text-sm font-bold text-white shadow-[0_4px_14px_rgba(225,29,72,0.35)]"
+              >
+                <User size={14} /> Lanjut ke{" "}
+                {home.replace("/", "") || "beranda"}
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  Masuk
+                </Link>
+                <Link
+                  href="/auth/register"
+                  onClick={() => setOpen(false)}
+                  className="mt-1.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--coral)] text-sm font-bold text-white shadow-[0_4px_14px_rgba(225,29,72,0.35)]"
+                >
+                  <Gamepad2 size={14} /> Daftar Gratis
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
