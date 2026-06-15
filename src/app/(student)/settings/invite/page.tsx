@@ -1,7 +1,6 @@
 import { ArrowLeft, Heart, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { InviteManager } from "@/components/student/invite-manager";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
@@ -16,16 +15,10 @@ export const metadata: Metadata = {
 
 export default async function InvitePage() {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
-  if (session.user.role !== "STUDENT") {
-    redirect("/");
-  }
 
   const [profile, active, history] = await Promise.all([
     prisma.studentProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: session!.user!.id },
       select: { user: { select: { name: true } } },
     }),
     getActiveInvite(),
@@ -70,7 +63,7 @@ export default async function InvitePage() {
       </header>
 
       <InviteManager
-        studentName={profile?.user.name ?? session.user.name ?? null}
+        studentName={profile?.user.name ?? session!.user!.name ?? null}
         activeInvite={active ? { ...active, status: "PENDING" as const } : null}
         history={history}
       />

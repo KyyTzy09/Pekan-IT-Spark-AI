@@ -15,12 +15,8 @@ const PRETEST_LIMIT = 5;
 
 export default async function OnboardingPage() {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
-  if (session.user.role !== "STUDENT") {
-    redirect("/");
-  }
+  if (!session?.user?.id) redirect("/auth/login");
+  if (session.user.role !== "STUDENT") redirect("/");
 
   const [subjects, pretestQuestions, correctAnswers] = await Promise.all([
     prisma.subject.findMany({
