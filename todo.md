@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-17 (v0.96 — Phase 7 partial: XP/Level unbounded + Streak + Badge check + 50 badges seeded. UI mini-celebration belum di-wire)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; Phase 6 ✅; Phase 7 (7.1 ✅ 7.2 ✅ 7.3 partial)
+> **Last updated:** 2026-06-17 (v0.97 — Phase 7 done (XP/Level unbounded + Streak + 50 badges + Activity page + Cloudinary), Phase 8 parent dashboard done, **Phase 10.0 foundation done** + Custom Subject Verification per §4.6.6.8, Audit log write side ready)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; Phase 6 ✅; Phase 7 ✅; Phase 8 ✅; Phase 10 (10.0 ✅, 10.1–10.3 mostly pending)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 > **⚠️ WAJIB pakai `rtk` prefix:** Setiap command `bun` / `bunx` WAJIB ditulis `rtk bun` / `rtk bunx` (cth: `rtk bunx prisma migrate dev`, bukan `bunx prisma migrate dev`). Ini untuk konsistensi tooling environment.
@@ -634,11 +634,27 @@
 
 ## Phase 10 — Content Management (Admin) (Minggu 7)
 
+### 10.0 Foundation (DONE — commit `e04767e`)
+- [x] 🟠 `(admin)` route group di `src/app/(admin)/admin/`
+- [x] 🟠 `proxy.ts` — `/admin/*` requires role `ADMIN` (sudah ada sebelumnya)
+- [x] 🟠 `requireAdmin()` helper di `src/server/actions/admin.ts`
+- [x] 🟠 `AdminNav` component (slate-900 theme, distinct dari student/parent)
+- [x] 🟠 Admin dashboard `/admin` dengan stats overview
+- [x] 🟠 Schema additions: `User.isActive`, `Subject.isActive`, `AdminAuditLog` model, `AdminAction` enum
+- [x] 🟠 Migration `20260617000000_admin_foundation`
+- [x] 🟠 **Custom Subject Verification** (per §4.6.6.8) — approve/reject dengan audit log
+  - `/admin/custom-subjects` (list + filter pending/verified/rejected)
+  - `/admin/custom-subjects/[id]` (detail + approve/reject actions)
+  - Approve: set `isVerified: true`, **TETAP `isCustom: true`** (JANGAN promote ke global)
+  - Reject: soft delete (set `isActive: false`), reason wajib min 3 char
+- [x] 🟠 Audit log WRITE side — setiap approve/reject bikin `AdminAuditLog` entry dalam transaction
+- [ ] 🟠 Audit log READ side + UI — belum ada `getAuditLogs()` + `/admin/audit` page
+
 ### 10.1 Admin Dashboard
-- [ ] 🟠 CRUD users (siswa, orang tua, admin)
+- [ ] 🟠 CRUD users (siswa, orang tua, admin) — `User.isActive` sudah ready untuk ban/suspend
 - [ ] 🟠 CRUD subjects, topics, concepts
 - [ ] 🟠 CRUD questions dan question bank
-- [ ] 🟠 Kelola badges dan achievements
+- [x] 🟠 Kelola badges dan achievements — **partial**: audit log mechanism ready, badges CRUD belum
 
 ### 10.2 Content Quality
 - [ ] 🟠 Validasi soal sesuai kurikulum
@@ -648,8 +664,8 @@
 
 ### 10.3 Moderation
 - [ ] 🟠 Review flagged chat messages
-- [ ] 🟠 Ban / suspend user jika diperlukan
-- [ ] 🟠 Audit log aktivitas admin
+- [ ] 🟠 Ban / suspend user jika diperlukan — schema field `User.isActive` ready
+- [x] 🟠 Audit log aktivitas admin — **partial**: write side done (per approve/reject), read UI pending
 
 ---
 
