@@ -6,8 +6,10 @@ import {
   CheckCircle2,
   CircleDashed,
   Flame,
+  Lightbulb,
   Loader2,
   Lock,
+  MessageCircle,
   PartyPopper,
   Sparkles,
   Target,
@@ -15,12 +17,15 @@ import {
   TrendingUp,
   XCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { startNewChat } from "@/server/actions/chat";
 import {
   getNextPracticeQuestion,
   getPracticeStats,
+  getQuestionHint,
   type PracticeSession,
   type PracticeStats,
   type SubmitPracticeResult,
@@ -97,11 +102,14 @@ export function PracticePlayer({
   initialSession,
   initialStats,
   subjectSlug,
+  topicId,
 }: {
   initialSession: PracticeSession;
   initialStats: PracticeStats;
   subjectSlug?: string;
+  topicId?: string;
 }) {
+  const router = useRouter();
   const [session, setSession] = React.useState<PracticeSession>(initialSession);
   const [stats, setStats] = React.useState<PracticeStats>(initialStats);
   const [selected, setSelected] = React.useState<string | null>(null);
@@ -111,6 +119,10 @@ export function PracticePlayer({
   const [error, setError] = React.useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = React.useState(0);
   const [showCelebration, setShowCelebration] = React.useState(false);
+  const [hintRevealed, setHintRevealed] = React.useState(false);
+  const [hintText, setHintText] = React.useState<string | null>(null);
+  const [hintLoading, setHintLoading] = React.useState(false);
+  const [socraticLoading, setSocraticLoading] = React.useState(false);
   const startedAt = React.useRef<number>(Date.now());
 
   React.useEffect(() => {
@@ -119,6 +131,8 @@ export function PracticePlayer({
     setSelected(null);
     setResult(null);
     setShowCelebration(false);
+    setHintRevealed(false);
+    setHintText(null);
   }, [session.question.id]);
 
   React.useEffect(() => {
@@ -154,11 +168,40 @@ export function PracticePlayer({
     }
   };
 
+  const onRevealHint = async () => {
+    if (hintRevealed || hintLoading) return;
+    setHintLoading(true);
+    try {
+      const r = await getQuestionHint({ questionId: session.question.id });
+      if (r.ok) setHintText(r.hint);
+    } finally {
+      setHintLoading(false);
+      setHintRevealed(true);
+    }
+  };
+
+  const onSocraticChat = async () => {
+    if (socraticLoading) return;
+    setSocraticLoading(true);
+    try {
+      const q = session.question;
+      const firstMessage = `Aku lagi latihan soal ini di topik ${q.topicName} (${q.subjectName}):\n\n"${q.questionText}"\n\nBoleh bantu aku pecah lewat pertanyaan? Aku belum ngerti konsep "${q.conceptName}".`;
+      const res = await startNewChat({ firstMessage });
+      router.push(`/chat/${res.sessionId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mulai chat.");
+      setSocraticLoading(false);
+    }
+  };
+
   const onNext = async () => {
     setLoadingNext(true);
     setError(null);
     try {
-      const next = await getNextPracticeQuestion(subjectSlug);
+      const next = await getNextPracticeQuestion({
+        subjectSlug,
+        topicId,
+      });
       if (!next.ok) {
         setError(next.error);
         return;
@@ -304,6 +347,35 @@ export function PracticePlayer({
                   </>
                 )}
               </Button>
+              {!isAnswered && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRevealHint}
+                  disabled={hintRevealed || hintLoading}
+                  className="rounded-full"
+                >
+                  {hintLoading ? (
+                    <>
+                      <Loader2 size={12} className="mr-1 animate-spin" />
+                      Nyiapin hint…
+                    </>
+                  ) : hintRevealed ? (
+                    <>
+                      <Lightbulb
+                        size={12}
+                        className="mr-1 text-[var(--yellow)]"
+                      />
+                      Hint udah dibuka
+                    </>
+                  ) : (
+                    <>
+                      <Lightbulb size={12} className="mr-1" />
+                      Minta hint
+                    </>
+                  )}
+                </Button>
+              )}
               {error && (
                 <p className="text-[12px] font-medium text-destructive">
                   {error}
@@ -312,6 +384,53 @@ export function PracticePlayer({
             </div>
           ) : (
             <FeedbackPanel result={result} session={session} />
+          )}
+
+          {!isAnswered && (hintText || session.socraticHint) && (
+            <div className="relative mt-3 space-y-2">
+              {hintText && (
+                <div className="rounded-2xl border border-[var(--yellow)]/30 bg-[var(--yellow)]/8 p-3 text-[12.5px] leading-relaxed text-foreground/85">
+                  <div className="flex items-center gap-1.5 font-bold text-[var(--yellow)]">
+                    <Lightbulb size={12} />
+                    Hint
+                  </div>
+                  <p className="mt-1 whitespace-pre-line">{hintText}</p>
+                </div>
+              )}
+              {!hintText && session.socraticHint && (
+                <div className="rounded-2xl border border-border/40 bg-background/40 p-3 text-[12px] leading-relaxed text-muted-foreground">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground/80">
+                    <Sparkles size={11} className="text-[var(--purple)]" />
+                    Socratic nudge
+                  </div>
+                  <p className="mt-1">{session.socraticHint}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isAnswered && result?.ok && !result.isCorrect && (
+            <div className="relative mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSocraticChat}
+                disabled={socraticLoading}
+                className="rounded-full"
+              >
+                {socraticLoading ? (
+                  <>
+                    <Loader2 size={12} className="mr-1 animate-spin" />
+                    Nyiapin chat…
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={12} className="mr-1" />
+                    Diskusiin sama Spark (Socratic)
+                  </>
+                )}
+              </Button>
+            </div>
           )}
 
           {isAnswered && (

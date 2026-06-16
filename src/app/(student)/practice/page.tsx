@@ -35,6 +35,8 @@ async function loadEmptySession(): Promise<PracticeSession> {
     accuracyPct: 0,
     recentTotal: 0,
     weakPrereqs: [],
+    topicContext: null,
+    socraticHint: null,
   };
 }
 
@@ -50,7 +52,11 @@ async function loadEmptyStats(): Promise<PracticeStats> {
   };
 }
 
-export default async function PracticePage() {
+export default async function PracticePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topicId?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "STUDENT") {
     return (
@@ -82,8 +88,10 @@ export default async function PracticePage() {
     );
   }
 
+  const { topicId } = await searchParams;
+
   const [nextResult, stats] = await Promise.all([
-    getNextPracticeQuestion(),
+    getNextPracticeQuestion(topicId ? { topicId } : undefined),
     getPracticeStats(),
   ]);
 
@@ -161,6 +169,7 @@ export default async function PracticePage() {
           <PracticePlayer
             initialSession={practiceSession}
             initialStats={practiceStats}
+            topicId={topicId}
           />
         </Reveal>
       )}

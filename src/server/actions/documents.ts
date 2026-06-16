@@ -6,16 +6,16 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logDocumentEvent } from "@/server/documents/audit";
 import { validateEducationalContent } from "@/server/documents/content-check";
+import { embedDocumentChunks } from "@/server/documents/embeddings";
 import {
   DocumentExtractionError,
   extractFromDocx,
   extractFromPdf,
 } from "@/server/documents/extract";
-import { embedDocumentChunks } from "@/server/documents/embeddings";
 import {
+  buildDocumentChatContext,
   type DocumentSummary as GeneratedDocSummary,
   type GeneratedQuiz,
-  buildDocumentChatContext,
   generateDocumentSummary,
   generateQuizFromDocument,
 } from "@/server/documents/features";
@@ -378,7 +378,10 @@ export async function getDocumentSummary(
   }
 
   try {
-    const summary = await generateDocumentSummary(doc.content, doc.originalName);
+    const summary = await generateDocumentSummary(
+      doc.content,
+      doc.originalName,
+    );
     await prisma.document.update({
       where: { id: doc.id },
       data: { summary: JSON.stringify(summary) },
@@ -562,7 +565,11 @@ export async function shareDocumentToChatSession(
 export type ListOwnedChatsResult =
   | {
       ok: true;
-      sessions: Array<{ id: string; title: string; subjectName: string | null }>;
+      sessions: Array<{
+        id: string;
+        title: string;
+        subjectName: string | null;
+      }>;
     }
   | { ok: false; error: string };
 

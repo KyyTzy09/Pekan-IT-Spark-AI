@@ -2,7 +2,8 @@ import "server-only";
 
 const LATEX_INLINE = /\\\((.+?)\\\)|\$([^$\n]+?)\$/g;
 const LATEX_DISPLAY = /\\\[(.+?)\\\]|\$\$([^$]+?)\$\$/g;
-const LATEX_ENV = /\\begin\{(equation|align|gather|multline|cases|matrix|pmatrix|bmatrix|array)\*?\}([\s\S]+?)\\end\{\1\*?\}/g;
+const LATEX_ENV =
+  /\\begin\{(equation|align|gather|multline|cases|matrix|pmatrix|bmatrix|array)\*?\}([\s\S]+?)\\end\{\1\*?\}/g;
 const LATEX_CMDS = /(?:\\[a-zA-Z]+\b)|(?:[_^]\s*[a-zA-Z0-9])/;
 
 const TABLE_ROW_SPLIT = /\r?\n/;
@@ -68,8 +69,8 @@ export function detectMarkdownTables(
         }
         const end =
           cursor +
-          (lines.slice(0, j).join("\n").length) +
-          (j > 0 ? lines[j - 1]?.length ?? 0 : 0);
+          lines.slice(0, j).join("\n").length +
+          (j > 0 ? (lines[j - 1]?.length ?? 0) : 0);
         tables.push({ start, end, rows });
         cursor = end + 1;
         i = j;
@@ -97,9 +98,18 @@ export type ContentWarning = {
 };
 
 const OFF_TOPIC_SIGNALS: Array<{ re: RegExp; label: string }> = [
-  { re: /\b(adult content|nsfw|explicit sexual|porn|18\+|xxx)\b/i, label: "konten dewasa" },
-  { re: /\b(weapon synthesis|synthesize meth|cocaine|heroin|fentanyl|how to make a bomb|build a bomb|terroris)\b/i, label: "konten berbahaya" },
-  { re: /\b(hate speech|genocide|kill all|supremacist)\b/i, label: "ujaran kebencian" },
+  {
+    re: /\b(adult content|nsfw|explicit sexual|porn|18\+|xxx)\b/i,
+    label: "konten dewasa",
+  },
+  {
+    re: /\b(weapon synthesis|synthesize meth|cocaine|heroin|fentanyl|how to make a bomb|build a bomb|terroris)\b/i,
+    label: "konten berbahaya",
+  },
+  {
+    re: /\b(hate speech|genocide|kill all|supremacist)\b/i,
+    label: "ujaran kebencian",
+  },
 ];
 
 const MIN_TEXT_LENGTH = 80;
@@ -111,14 +121,16 @@ export function validateEducationalContent(
   if (text.length < MIN_TEXT_LENGTH) {
     return {
       ok: false,
-      reason: "Teks terlalu sedikit (< 80 karakter). Pastikan file ga kosong atau hasil scan yang belum di-OCR.",
+      reason:
+        "Teks terlalu sedikit (< 80 karakter). Pastikan file ga kosong atau hasil scan yang belum di-OCR.",
     };
   }
   const letters = text.match(/[A-Za-z\u00C0-\u024F]/g)?.length ?? 0;
   if (letters / text.length < MIN_ALPHA_RATIO) {
     return {
       ok: false,
-      reason: "Dokumen ini sepertinya hasil scan/foto tanpa OCR — tolong upload file yg udah searchable, atau pake fitur OCR dulu.",
+      reason:
+        "Dokumen ini sepertinya hasil scan/foto tanpa OCR — tolong upload file yg udah searchable, atau pake fitur OCR dulu.",
     };
   }
   for (const { re, label } of OFF_TOPIC_SIGNALS) {

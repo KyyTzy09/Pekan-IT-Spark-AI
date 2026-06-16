@@ -1,8 +1,10 @@
 import "server-only";
 
-import type { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { DocumentAuditAction } from "../../../generated/prisma/client";
+import type {
+  DocumentAuditAction,
+  Prisma,
+} from "../../../generated/prisma/client";
 
 export async function logDocumentEvent(input: {
   documentId: string;
