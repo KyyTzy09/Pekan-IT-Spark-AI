@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   ArrowUpRight,
+  BarChart3,
   BookOpen,
   Brain,
   Calendar,
@@ -13,13 +14,18 @@ import {
   Plus,
   Star,
   Target,
+  TrendingUp,
   Wand2,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
 import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
+import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 import { SparkCharacter } from "@/components/student/spark-character";
+import { SubjectMasteryChart } from "@/components/student/student-charts";
+import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
+import { WeeklyActivityChart } from "@/components/student/weekly-activity-chart";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -28,21 +34,85 @@ import type {
   DashboardSubjectProgress,
   DashboardSummary,
 } from "@/server/actions/dashboard";
-import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
-import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 
-export function DashboardView({ summary }: { summary: DashboardSummary }) {
+type TimelinePoint = {
+  date: string;
+  overallScore: number;
+  masteryScore: number;
+  challengeScore: number;
+  materialsScore: number;
+  reflectionsScore: number;
+};
+
+export function DashboardView({
+  summary,
+  weeklyTimeline,
+}: {
+  summary: DashboardSummary;
+  weeklyTimeline?: TimelinePoint[];
+}) {
   return (
     <div className="space-y-5 sm:space-y-7">
       <HeroGreeting summary={summary} />
       <StatsRow summary={summary} />
+
+      {/* Weekly Activity Chart */}
+      {weeklyTimeline && weeklyTimeline.length > 0 && (
+        <Reveal delay={60}>
+          <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-xl sm:p-6">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-16 -top-16 size-44 rounded-full opacity-25 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(circle, oklch(0.78 0.18 25 / 0.5), transparent 70%)",
+              }}
+            />
+            <header className="relative mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[var(--coral)]/15 to-[var(--orange)]/15 shadow-[inset_0_0_0_1px_rgba(225,29,72,0.2)]">
+                  <TrendingUp
+                    size={16}
+                    className="text-[var(--coral)]"
+                    strokeWidth={2.5}
+                  />
+                </span>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--coral)]">
+                    Aktivitas 7 hari
+                  </p>
+                  <h2 className="font-heading text-[16px] font-bold leading-tight text-foreground sm:text-[18px]">
+                    Tren belajar kamu
+                  </h2>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-[9.5px] font-bold">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[var(--coral)]" />
+                  <span className="text-muted-foreground">Keseluruhan</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[var(--teal)]" />
+                  <span className="text-muted-foreground">Tantangan</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[var(--purple)]" />
+                  <span className="text-muted-foreground">Penguasaan</span>
+                </span>
+              </div>
+            </header>
+            <WeeklyActivityChart points={weeklyTimeline} />
+          </section>
+        </Reveal>
+      )}
+
       <Reveal>
         <ContinueLearningCard
           recommendation={summary.recommendation}
           recentDocuments={summary.recentDocuments}
         />
       </Reveal>
-      
+
       {/* Gamification widgets: Study Buddy and Mascot Customizer */}
       <Reveal className="grid gap-4 sm:grid-cols-2">
         <StudyBuddyWidget streak={summary.streak.current} />
@@ -669,6 +739,34 @@ function SubjectsProgress({
             </Button>
           </div>
         </header>
+
+        {/* Subject Mastery Bar Chart — only show when 2+ subjects */}
+        {subjects.length >= 2 && (
+          <div className="mb-5 overflow-hidden rounded-2xl border border-border/30 bg-background/30 p-4 backdrop-blur-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--purple)]/15 to-[var(--pink)]/15 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]">
+                <BarChart3
+                  size={13}
+                  className="text-[var(--purple)]"
+                  strokeWidth={2.5}
+                />
+              </span>
+              <p className="text-[11px] font-bold text-muted-foreground">
+                Perbandingan penguasaan per mapel
+              </p>
+            </div>
+            <SubjectMasteryChart
+              subjects={subjects.map((s) => ({
+                id: s.id,
+                name: s.name,
+                masteryPct: s.masteryPct,
+                color: s.color,
+                masteredConcepts: s.masteredConcepts,
+                totalConcepts: s.totalConcepts,
+              }))}
+            />
+          </div>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-2">
           {subjects.map((s) => (

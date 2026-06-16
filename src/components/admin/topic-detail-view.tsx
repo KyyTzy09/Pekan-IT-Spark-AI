@@ -2,8 +2,8 @@
 
 import { ArrowLeft, BookOpen, Loader2, Plus, Save } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowLeft, BookOpen, Loader2, Plus, Save } from "lucide-react";
 import { createConcept, updateConcept } from "@/server/actions/admin-content";
 
 type ConceptLite = {
