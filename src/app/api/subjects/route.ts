@@ -1,19 +1,12 @@
-import { redirect } from "next/navigation";
-import {
-  type SubjectListItem,
-  SubjectsListView,
-} from "@/components/student/subjects-view";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
-
-export default async function SubjectsPage() {
+export async function GET() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
-    redirect("/auth/login");
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
   const userId = session.user.id;
 
   const [profile, subjects, conceptsInSubjects, profiles] = await Promise.all([
@@ -37,7 +30,7 @@ export default async function SubjectsPage() {
   const focusedIds = profile?.focusedSubjects ?? [];
   const profileByConcept = new Map(profiles.map((p) => [p.conceptId, p]));
 
-  const summaries: SubjectListItem[] = subjects.map((s) => {
+  const summaries = subjects.map((s) => {
     const subjectConceptIds = conceptsInSubjects
       .filter((c) => c.topic.subjectId === s.id)
       .map((c) => c.id);
@@ -70,13 +63,5 @@ export default async function SubjectsPage() {
     };
   });
 
-  return (
-    <div className="space-y-5 sm:space-y-7">
-      <SubjectsListView
-        subjects={summaries}
-        focusedIds={focusedIds}
-        addAction={null}
-      />
-    </div>
-  );
+  return NextResponse.json({ subjects: summaries, focusedIds });
 }

@@ -343,7 +343,7 @@ export async function sendMessage(input: {
         ]
       : []),
     ...session.messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
+      role: m.role.toLowerCase() as "user" | "assistant" | "system",
       content: m.content,
     })),
     { role: "user" as const, content: input.content },

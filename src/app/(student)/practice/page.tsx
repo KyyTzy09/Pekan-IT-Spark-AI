@@ -1,108 +1,44 @@
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Sparkles, Target } from "lucide-react";
+import { ArrowLeft, Sparkles, Target } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { PracticePlayer } from "@/components/student/practice-player";
 import { Button } from "@/components/ui/button";
-import type { PracticeSession, PracticeStats } from "@/server/actions/practice";
+import { auth } from "@/lib/auth";
+import {
+  getNextPracticeQuestion,
+  getPracticeStats,
+} from "@/server/actions/practice";
 
 export const dynamic = "force-dynamic";
 
-type PracticeApiResponse = {
-  nextResult:
-    | { ok: true; session: PracticeSession }
-    | { ok: false; error: string };
-  stats: PracticeStats | null;
-};
-
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-5 sm:space-y-7">
-      <Reveal>
-        <header className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl sm:p-6">
-          <div className="animate-pulse space-y-3">
-            <div className="h-4 w-24 rounded-full bg-muted" />
-            <div className="h-6 w-48 rounded bg-muted" />
-            <div className="h-4 w-64 rounded bg-muted" />
-          </div>
-        </header>
-      </Reveal>
-      <Reveal delay={80}>
-        <div className="rounded-3xl border border-border/40 bg-card/80 p-6 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl">
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <Loader2 size={18} className="animate-spin" />
-            <span className="text-[13px]">Memuat soal latihan...</span>
-          </div>
-        </div>
-      </Reveal>
-    </div>
-  );
-}
-
-const FALLBACK_STATS: PracticeStats = {
+const FALLBACK_STATS = {
   accuracyPct: 0,
   recentTotal: 0,
   masteredCount: 0,
   strugglingCount: 0,
-  currentDifficulty: "EASY",
-  recommendedDifficulty: "EASY",
+  currentDifficulty: "EASY" as const,
+  recommendedDifficulty: "EASY" as const,
   longestStreak: 0,
 };
 
-export default function PracticePage() {
-  const searchParams = useSearchParams();
-  const topicId = searchParams.get("topicId") ?? undefined;
-  const { data: session, status: authStatus } = useSession();
-
-  const { data, isLoading } = useQuery<PracticeApiResponse>({
-    queryKey: ["practice", "next", topicId],
-    queryFn: () =>
-      fetch(`/api/practice${topicId ? `?topicId=${topicId}` : ""}`).then((r) =>
-        r.json(),
-      ),
-  });
-
-  if (authStatus === "loading" || isLoading) {
-    return <LoadingSkeleton />;
-  }
-
+export default async function PracticePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topicId?: string }>;
+}) {
+  const session = await auth();
   if (!session?.user?.id || session.user.role !== "STUDENT") {
-    return (
-      <div className="space-y-5 sm:space-y-7">
-        <Reveal>
-          <header className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-6 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl sm:p-8">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl"
-              style={{
-                background:
-                  "radial-gradient(circle, oklch(0.72 0.18 280 / 0.5), transparent 70%)",
-              }}
-            />
-            <span className="relative inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--purple)_22%,transparent)] bg-[color-mix(in_oklch,var(--purple)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
-              <Target size={10} strokeWidth={2.5} />
-              Latihan adaptif
-            </span>
-            <h1 className="relative mt-2 font-heading text-[26px] font-bold leading-tight tracking-tight sm:text-[32px]">
-              Login dulu yuk
-            </h1>
-            <p className="relative mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[14px]">
-              Mode latihan adaptif khusus buat siswa Spark. Masuk dulu biar bisa
-              mulai jawab soal yang naik-turun sesuai level kamu.
-            </p>
-          </header>
-        </Reveal>
-      </div>
-    );
+    redirect("/auth/login");
   }
 
-  if (!data) return null;
+  const sp = await searchParams;
+  const topicId = sp.topicId ?? undefined;
 
-  const { nextResult, stats } = data;
+  const [nextResult, stats] = await Promise.all([
+    getNextPracticeQuestion(topicId ? { topicId } : undefined),
+    getPracticeStats(),
+  ]);
 
   if (!nextResult.ok) {
     return (

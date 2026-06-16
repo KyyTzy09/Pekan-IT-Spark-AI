@@ -15,6 +15,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { generateInvite, revokeInvite } from "@/server/actions/invite";
+import type { LinkStatus } from "../../../generated/prisma/client";
 
 type Invite = {
   inviteCode: string;
@@ -28,7 +29,7 @@ type Invite = {
 type ActiveInvite = {
   inviteCode: string;
   expiresAt: string;
-  status: "PENDING";
+  status: LinkStatus;
   createdAt: string;
 };
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { z } from "zod";
 import { chatModel } from "@/lib/ai";
 
@@ -95,7 +95,55 @@ ATURAN WAJIB:
 - Jangan buat soal yang butuh gambar/diagram.
 - Topik & konsep harus RELEVAN dengan nama mapel.
 
-PENTING: Outline ini akan dipakai untuk generate soal pretest dan materi belajar personal. Kualitas tinggi = pengalaman belajar yang baik.`;
+PENTING: Outline ini akan dipakai untuk generate soal pretest dan materi belajar personal. Kualitas tinggi = pengalaman belajar yang baik.
+
+Format output harus selalu JSON valid sesuai struktur berikut:
+{
+  "description": "Deskripsi singkat mapel",
+  "icon": "🎨",
+  "color": "#HEXWarna",
+  "topics": [
+    {
+      "name": "Nama Topik",
+      "description": "Deskripsi singkat topik",
+      "concepts": [
+        {
+          "name": "Nama Konsep",
+          "description": "Penjelasan singkat konsep"
+        }
+      ]
+    }
+  ],
+  "pretestQuestions": [
+    {
+      "topicIndex": 0,
+      "questionText": "Soal lengkap",
+      "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+      "correctAnswer": "Opsi yang benar",
+      "explanation": "Penjelasan jawaban benar",
+      "difficulty": "EASY" | "MEDIUM" | "HARD"
+    }
+  ]
+}`;
+
+function safeParseJson(text: string): unknown {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+      } catch (_e) {}
+    }
+    throw err;
+  }
+}
 
 export async function generateCurriculumOutline(
   input: CurriculumInput,
@@ -109,16 +157,17 @@ ${input.context ? `Konteks tambahan dari siswa: ${input.context}` : ""}
 
 Generate outline lengkap sesuai instruksi.`;
 
-  const { object } = await generateObject({
+  const { text } = await generateText({
     model: chatModel,
     system: SYSTEM_PROMPT,
     prompt: userPrompt,
-    schema: outlineSchema,
     temperature: 0.4,
   });
 
-  validateOutline(object);
-  return object;
+  const parsedJson = safeParseJson(text);
+  const validated = outlineSchema.parse(parsedJson);
+  validateOutline(validated);
+  return validated;
 }
 
 function validateOutline(outline: CurriculumOutline): void {

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { z } from "zod";
 import { fastModel } from "@/lib/ai";
 import { retrieveDocumentChunks } from "./embeddings";
@@ -54,27 +54,69 @@ const SYSTEM_SUMMARY = `Kamu adalah Spark, asisten belajar untuk siswa SMA/SMK I
 Tugas kamu: baca materi yang diberikan, lalu hasilkan ringkasan padat + poin kunci yang gampang diingat.
 - Pakai bahasa Indonesia kasual tapi rapi (boleh emoji secukupnya).
 - Jangan tambahin info yang ga ada di dokumen.
-- Kalau dokumen terlihat seperti PR/soal/tugas, set hasHomework=true.`;
+- Kalau dokumen terlihat seperti PR/soal/tugas, set hasHomework=true.
+
+Format output harus JSON valid dengan struktur:
+{
+  "title": "Judul singkat materi",
+  "summary": "Ringkasan padat 3-5 paragraf",
+  "keyPoints": ["Poin 1", "Poin 2", "Poin 3"],
+  "hasHomework": true | false,
+  "homeworkTopic": "Topik PR jika hasHomework=true, kosongkan jika false"
+}`;
 
 const SYSTEM_QUIZ = `Kamu adalah Spark, asisten belajar.
 Dari materi yang diberikan, BUAT soal pilihan ganda (3-8 soal) untuk latihan siswa SMA/SMK.
 - Setiap soal harus punya tepat 4 opsi.
 - correctIndex harus 0..3.
 - explanation harus jelas kenapa jawaban itu benar.
-- Jangan keluar dari isi dokumen.`;
+- Jangan keluar dari isi dokumen.
+
+Format output harus JSON valid dengan struktur:
+{
+  "quiz": [
+    {
+      "question": "Soal latihan",
+      "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+      "correctIndex": 0,
+      "difficulty": "EASY" | "MEDIUM" | "HARD",
+      "explanation": "Penjelasan"
+    }
+  ]
+}`;
+
+function safeParseJson(text: string): unknown {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+      } catch (_e) {}
+    }
+    throw err;
+  }
+}
 
 export async function generateDocumentSummary(
   content: string,
   originalName: string,
 ): Promise<DocumentSummary> {
   const truncated = content.slice(0, MAX_SUMMARY_INPUT);
-  const { object } = await generateObject({
+  const { text } = await generateText({
     model: fastModel,
-    schema: summarySchema,
     system: SYSTEM_SUMMARY,
     prompt: `Judul file: "${originalName}"\n\nMateri:\n\n${truncated}\n\nBuat ringkasan padat untuk siswa SMA/SMK. Kalau ga ada poin penting minimal, isi dengan 3 poin terbaik yang bisa kamu ekstrak.`,
   });
-  return object;
+
+  const parsedJson = safeParseJson(text);
+  return summarySchema.parse(parsedJson);
 }
 
 export async function generateQuizFromDocument(
@@ -83,35 +125,33 @@ export async function generateQuizFromDocument(
   count: 3 | 5 | 8 = 5,
 ): Promise<GeneratedQuiz> {
   const truncated = content.slice(0, MAX_QUIZ_INPUT);
-  const { object } = await generateObject({
+  const { text } = await generateText({
     model: fastModel,
-    schema: quizSchema,
     system: SYSTEM_QUIZ,
     prompt: `Judul file: "${originalName}". Buat tepat ${count} soal pilihan ganda berdasarkan materi ini. Pastikan ada variasi difficulty (EASY/MEDIUM/HARD) dan explanation yang jelas.\n\nMateri:\n\n${truncated}`,
   });
-  return object;
+
+  const parsedJson = safeParseJson(text);
+  return quizSchema.parse(parsedJson);
 }
 
 export async function detectHomeworkAndSuggest(
   content: string,
 ): Promise<{ isHomework: boolean; topic: string | null }> {
   const truncated = content.slice(0, 6_000);
-  const { object } = await generateObject({
+  const { text } = await generateText({
     model: fastModel,
-    schema: z.object({
-      isHomework: z
-        .boolean()
-        .describe("True kalau dokumen berisi soal/tugas/PR yang harus dijawab"),
-      topic: z
-        .string()
-        .max(120)
-        .nullable()
-        .describe("Topik utama PR (null kalau bukan PR)"),
-    }),
-    system: "Deteksi apakah dokumen adalah PR/tugas/latihan. Jawab ringkas.",
+    system:
+      'Deteksi apakah dokumen adalah PR/tugas/latihan. Jawab ringkas dalam format JSON:\n{\n  "isHomework": true | false,\n  "topic": "Nama topik atau null"\n}',
     prompt: truncated,
   });
-  return { isHomework: object.isHomework, topic: object.topic };
+
+  const parsedJson = safeParseJson(text) as Record<string, unknown>;
+  const isHomework =
+    typeof parsedJson.isHomework === "boolean" ? parsedJson.isHomework : false;
+  const topic = typeof parsedJson.topic === "string" ? parsedJson.topic : null;
+
+  return { isHomework, topic };
 }
 
 export async function buildDocumentChatContext(

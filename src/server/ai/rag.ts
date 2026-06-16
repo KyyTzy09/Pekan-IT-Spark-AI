@@ -4,6 +4,29 @@ import { embed, embedMany } from "ai";
 import { embeddingModel } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 
+function parseEmbedding(raw: string): number[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as number[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function cosineSimilarityVectors(a: number[], b: number[]): number {
+  if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0;
+  let dot = 0;
+  let magA = 0;
+  let magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
 interface RetrievedDocument {
   id: string;
   content: string;
@@ -32,98 +55,82 @@ export async function retrieveContext(
       value: query,
     });
 
-    const embeddingStr = JSON.stringify(queryEmbedding);
+    // 1) Search concepts (Prisma + JS cosine similarity, since embedding
+    //    column is @db.Text, not pgvector)
+    const concepts = await prisma.concept.findMany({
+      where: subjectId ? { topic: { subjectId } } : undefined,
+      include: {
+        topic: { select: { subjectId: true } },
+        embeddings: { select: { embedding: true } },
+      },
+    });
 
-    if (subjectId) {
-      const conceptResults = await prisma.$queryRawUnsafe<
-        Array<{ id: string; name: string; content: string; distance: number }>
-      >(
-        `SELECT c.id, c.name, COALESCE(c.description, '') || ' ' || COALESCE(c."contentMd", '') AS content, ce.embedding <=> $1::vector AS distance
-         FROM concepts c
-         JOIN concept_embeddings ce ON ce."conceptId" = c.id
-         JOIN topics t ON t.id = c."topicId"
-         WHERE t."subjectId" = $2
-         ORDER BY distance
-         LIMIT $3`,
-        embeddingStr,
-        subjectId,
-        limit,
-      );
+    const conceptScored = concepts
+      .map((c) => {
+        const raw = c.embeddings[0]?.embedding;
+        if (!raw) return null;
+        const docVec = parseEmbedding(raw);
+        const score = cosineSimilarityVectors(queryEmbedding, docVec);
+        if (score <= 0) return null;
+        const content = `${c.description ?? ""} ${c.contentMd ?? ""}`.trim();
+        return {
+          id: c.id,
+          name: c.name,
+          content: content || c.name,
+          score,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
 
-      for (const r of conceptResults) {
-        results.push({
-          id: r.id,
-          content: r.content.substring(0, 2000),
-          title: r.name,
-          type: "concept",
-          score: 1 - r.distance,
-        });
-      }
-    } else {
-      const conceptResults = await prisma.$queryRawUnsafe<
-        Array<{ id: string; name: string; content: string; distance: number }>
-      >(
-        `SELECT c.id, c.name, COALESCE(c.description, '') || ' ' || COALESCE(c."contentMd", '') AS content, ce.embedding <=> $1::vector AS distance
-         FROM concepts c
-         JOIN concept_embeddings ce ON ce."conceptId" = c.id
-         ORDER BY distance
-         LIMIT $2`,
-        embeddingStr,
-        limit,
-      );
-
-      for (const r of conceptResults) {
-        results.push({
-          id: r.id,
-          content: r.content.substring(0, 2000),
-          title: r.name,
-          type: "concept",
-          score: 1 - r.distance,
-        });
-      }
+    for (const r of conceptScored) {
+      results.push({
+        id: r.id,
+        content: r.content.substring(0, 2000),
+        title: r.name,
+        type: "concept",
+        score: r.score,
+      });
     }
 
+    // 2) Search user document chunks
     const userDocuments = await prisma.document.findMany({
       where: { userId },
       select: { id: true, content: true, originalName: true },
     });
 
-    if (userDocuments.length > 0) {
-      const docEmbeddings = userDocuments.filter((d) => d.content.length > 0);
-      if (docEmbeddings.length > 0) {
-        const texts = docEmbeddings.map((d) => d.content.substring(0, 8000));
-        const { embeddings } = await embedMany({
-          model: embeddingModel,
-          values: texts,
-          maxRetries: 0,
+    const docEmbeddings = userDocuments.filter((d) => d.content.length > 0);
+    if (docEmbeddings.length > 0) {
+      const texts = docEmbeddings.map((d) => d.content.substring(0, 8000));
+      const { embeddings: docVecs } = await embedMany({
+        model: embeddingModel,
+        values: texts,
+        maxRetries: 0,
+      });
+
+      for (let i = 0; i < docEmbeddings.length; i++) {
+        const docVec = docVecs[i] ?? [];
+        if (docVec.length === 0) continue;
+        const chunks = await prisma.documentEmbedding.findMany({
+          where: { documentId: docEmbeddings[i].id },
+          select: { chunkContent: true, embedding: true },
         });
-
-        for (let i = 0; i < docEmbeddings.length; i++) {
-          const docEmbedding = JSON.stringify(embeddings[i]);
-          const docResults = await prisma.$queryRawUnsafe<
-            Array<{ id: string; distance: number }>
-          >(
-            `SELECT id, embedding <=> $1::vector AS distance
-             FROM document_embeddings
-             WHERE "documentId" = $2
-             ORDER BY distance
-             LIMIT 1`,
-            docEmbedding,
-            docEmbeddings[i].id,
-          );
-
-          if (docResults.length > 0) {
-            const score = 1 - docResults[0].distance;
-            if (score > 0.3) {
-              results.push({
-                id: docEmbeddings[i].id,
-                content: docEmbeddings[i].content.substring(0, 2000),
-                title: docEmbeddings[i].originalName,
-                type: "document",
-                score,
-              });
-            }
-          }
+        let bestScore = 0;
+        for (const chunk of chunks) {
+          const chunkVec = parseEmbedding(chunk.embedding);
+          if (chunkVec.length === 0) continue;
+          const s = cosineSimilarityVectors(docVec, chunkVec);
+          if (s > bestScore) bestScore = s;
+        }
+        if (bestScore > 0.3) {
+          results.push({
+            id: docEmbeddings[i].id,
+            content: docEmbeddings[i].content.substring(0, 2000),
+            title: docEmbeddings[i].originalName,
+            type: "document",
+            score: bestScore,
+          });
         }
       }
     }
@@ -200,66 +207,39 @@ export async function getRelevantConcepts(query: string, subjectId?: string) {
       value: query,
     });
 
-    const embeddingStr = JSON.stringify(queryEmbedding);
-
-    if (subjectId) {
-      const results = await prisma.$queryRawUnsafe<
-        Array<{
-          id: string;
-          name: string;
-          description: string | null;
-          topicId: string;
-          distance: number;
-        }>
-      >(
-        `SELECT c.id, c.name, c.description, c."topicId", ce.embedding <=> $1::vector AS distance
-         FROM concepts c
-         JOIN concept_embeddings ce ON ce."conceptId" = c.id
-         JOIN topics t ON t.id = c."topicId"
-         WHERE t."subjectId" = $2
-         ORDER BY distance
-         LIMIT 5`,
-        embeddingStr,
-        subjectId,
-      );
-
-      return results.map((r) => ({
-        concept: {
-          id: r.id,
-          name: r.name,
-          description: r.description,
-          topicId: r.topicId,
-        },
-        score: 1 - r.distance,
-      }));
-    }
-
-    const results = await prisma.$queryRawUnsafe<
-      Array<{
-        id: string;
-        name: string;
-        description: string | null;
-        topicId: string;
-        distance: number;
-      }>
-    >(
-      `SELECT c.id, c.name, c.description, c."topicId", ce.embedding <=> $1::vector AS distance
-       FROM concepts c
-       JOIN concept_embeddings ce ON ce."conceptId" = c.id
-       ORDER BY distance
-       LIMIT 5`,
-      embeddingStr,
-    );
-
-    return results.map((r) => ({
-      concept: {
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        topicId: r.topicId,
+    const concepts = await prisma.concept.findMany({
+      where: subjectId ? { topic: { subjectId } } : undefined,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        topicId: true,
+        embeddings: { select: { embedding: true } },
       },
-      score: 1 - r.distance,
-    }));
+    });
+
+    const scored = concepts
+      .map((c) => {
+        const raw = c.embeddings[0]?.embedding;
+        if (!raw) return null;
+        const docVec = parseEmbedding(raw);
+        const score = cosineSimilarityVectors(queryEmbedding, docVec);
+        if (score <= 0) return null;
+        return {
+          concept: {
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            topicId: c.topicId,
+          },
+          score,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    return scored;
   } catch (e: unknown) {
     console.warn(
       "Vector search failed, falling back to keyword search:",

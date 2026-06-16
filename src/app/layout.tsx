@@ -9,6 +9,9 @@ const fredoka = Fredoka({
   variable: "--font-heading",
   display: "swap",
   weight: ["400", "500", "600", "700"],
+  preload: true,
+  adjustFontFallback: true,
+  fallback: ["system-ui", "sans-serif"],
 });
 
 const nunito = Nunito({
@@ -16,16 +19,27 @@ const nunito = Nunito({
   variable: "--font-sans",
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+  preload: true,
+  adjustFontFallback: true,
+  fallback: ["system-ui", "sans-serif"],
 });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  adjustFontFallback: true,
+  fallback: ["system-ui", "sans-serif"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: false, // mono rarely used on first paint
+  adjustFontFallback: true,
+  fallback: ["ui-monospace", "monospace"],
 });
 
 export const metadata: Metadata = {

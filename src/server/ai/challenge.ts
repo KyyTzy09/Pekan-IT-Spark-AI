@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateObject, generateText } from "ai";
+import { generateText } from "ai";
 import { z } from "zod";
 import { chatModel } from "@/lib/ai";
 
@@ -170,7 +170,7 @@ Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaa
 
 ATURAN WAJIB:
 - Output dalam Bahasa Indonesia.
-- Subjek (subjectSlug) HARUS dari focusedSubjects siswa ATAU subject dari weakConcepts.
+- Subjek (subjectSlug) HARUS dari focusedSubjects siswa ATAU subject dari weakConcepts. Gunakan enum subjectSlug uppercase yang tepat: "MATEMATIKA", "BAHASA_INDONESIA", "BAHASA_INGGRIS", "IPA", "SEJARAH", "GEOGRAFI", "EKONOMI", "SOSIOLOGI", "PPKN", "SENI_BUDAYA", "PJOK", "PRAKARYA", "BAHASA_DAERAH", "CODING", "CUSTOM". Jangan disingkat (misal jangan pakai "MAT" atau "BID").
 - Jika availableQuestions ada, PLAN QUESTION items dengan subjectSlug + conceptHint yang ada di sana (sistem akan pilih soalnya).
 - Material markdown WAJIB: ada heading (##), minimal 2 section, 400-800 kata, ada keyPoints, ada penutup. Format: intro → konsep inti → contoh → summary → callout "Coba pikirkan".
 - Reflection prompt HARUS terbuka (tidak yes/no) dan memicu siswa berpikir, bukan menjawab fakta.
@@ -181,7 +181,68 @@ ATURAN WAJIB:
 JANGAN:
 - Generate soal baru (pakai bank soal existing)
 - Pakai subjectSlug yang tidak ada di focusedSubjects ATAU weakConcepts siswa
-- Buat refleksi yang berupa pertanyaan tertutup (ya/tidak)`;
+- Buat refleksi yang berupa pertanyaan tertutup (ya/tidak)
+- Membungkus output JSON dengan key luar seperti "challengePackage". Output harus langsung berupa object JSON sesuai schema.
+
+Format JSON yang wajib diikuti:
+{
+  "title": "Judul paket",
+  "description": "Deskripsi singkat",
+  "items": [
+    {
+      "kind": "QUESTION",
+      "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
+      "conceptHint": "Nama konsep",
+      "difficultyHint": "EASY" | "MEDIUM" | "HARD",
+      "rationale": "Kenapa ini dipilih"
+    },
+    {
+      "kind": "MATERIAL",
+      "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
+      "conceptHint": "Nama konsep",
+      "difficultyHint": "EASY" | "MEDIUM" | "HARD",
+      "rationale": "Kenapa ini dipilih",
+      "material": {
+        "title": "Judul materi",
+        "content": "Isi materi markdown lengkap minimal 400 kata...",
+        "keyPoints": ["poin 1", "poin 2"],
+        "estimatedMinutes": 5,
+        "difficulty": "EASY" | "MEDIUM" | "HARD"
+      }
+    },
+    {
+      "kind": "REFLECTION",
+      "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
+      "conceptHint": "Nama konsep",
+      "difficultyHint": "EASY" | "MEDIUM" | "HARD",
+      "rationale": "Kenapa ini dipilih",
+      "reflection": {
+        "prompt": "Pertanyaan refleksi terbuka",
+        "context": "Konteks refleksi"
+      }
+    }
+  ],
+  "reasoning": "Alasan komposisi"
+}`;
+
+function safeParseJson(text: string): unknown {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+      } catch (_e) {}
+    }
+    throw err;
+  }
+}
 
 export async function generateDailyMix(
   input: DailyMixInput,
@@ -245,16 +306,239 @@ ${questionCatalog || "(tidak ada soal di bank — pakai MATERIAL/REFLECTION saja
 
 Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
 
-  const { object } = await generateObject({
-    model: chatModel,
-    system: SYSTEM_PROMPT,
-    prompt: userPrompt,
-    schema: dailyMixPlanSchema,
-    temperature: 0.7,
-  });
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system: SYSTEM_PROMPT,
+      prompt: userPrompt,
+      temperature: 0.7,
+    });
 
-  validateMixPlan(object, mix);
-  return object;
+    const rawJson = safeParseJson(text);
+    const mapped = await tryMapAndRecoverMixPlan(rawJson, input);
+    if (!mapped) {
+      throw new Error("Failed to parse daily mix plan from AI output");
+    }
+    const parsed = dailyMixPlanSchema.parse(mapped);
+    validateMixPlan(parsed, mix);
+    return parsed;
+  } catch (err: unknown) {
+    console.warn("generateDailyMix failed. Error:", err);
+    throw err;
+  }
+}
+
+function normalizeSubjectSlug(slug: string): string {
+  const s = slug.toUpperCase().trim();
+  if (s === "MAT" || s === "MATEMATIKA") return "MATEMATIKA";
+  if (s === "BID" || s === "BAHASA_INDONESIA" || s === "INDONESIA")
+    return "BAHASA_INDONESIA";
+  if (s === "ING" || s === "BAHASA_INGGRIS" || s === "INGGRIS")
+    return "BAHASA_INGGRIS";
+  if (s === "IPA") return "IPA";
+  if (s === "SEJ" || s === "SEJARAH") return "SEJARAH";
+  if (s === "GEO" || s === "GEOGRAFI") return "GEOGRAFI";
+  if (s === "EKO" || s === "EKONOMI") return "EKONOMI";
+  if (s === "SOS" || s === "SOSIOLOGI") return "SOSIOLOGI";
+  if (s === "PPK" || s === "PPKN") return "PPKN";
+  if (s === "SEN" || s === "SENI" || s === "SENI_BUDAYA") return "SENI_BUDAYA";
+  if (s === "PJO" || s === "PJOK") return "PJOK";
+  if (s === "PRA" || s === "PRAKARYA") return "PRAKARYA";
+  if (s === "DAE" || s === "BAHASA_DAERAH" || s === "DAERAH")
+    return "BAHASA_DAERAH";
+  if (s === "COD" || s === "CODING") return "CODING";
+  if (s === "CUS" || s === "CUSTOM") return "CUSTOM";
+  return s;
+}
+
+function getSubjectNameFromSlug(slug: string): string {
+  const normalized = normalizeSubjectSlug(slug);
+  switch (normalized) {
+    case "MATEMATIKA":
+      return "Matematika";
+    case "BAHASA_INDONESIA":
+      return "Bahasa Indonesia";
+    case "BAHASA_INGGRIS":
+      return "Bahasa Inggris";
+    case "IPA":
+      return "Ilmu Pengetahuan Alam";
+    case "SEJARAH":
+      return "Sejarah";
+    case "GEOGRAFI":
+      return "Geografi";
+    case "EKONOMI":
+      return "Ekonomi";
+    case "SOSIOLOGI":
+      return "Sosiologi";
+    case "PPKN":
+      return "PPKN";
+    case "SENI_BUDAYA":
+      return "Seni Budaya";
+    case "PJOK":
+      return "PJOK";
+    case "PRAKARYA":
+      return "Prakarya";
+    case "BAHASA_DAERAH":
+      return "Bahasa Daerah";
+    case "CODING":
+      return "Coding";
+    default:
+      return normalized;
+  }
+}
+
+async function tryMapAndRecoverMixPlan(
+  rawJson: unknown,
+  input: DailyMixInput,
+): Promise<DailyMixPlan | null> {
+  if (!rawJson || typeof rawJson !== "object") return null;
+
+  const rawObj = rawJson as Record<string, unknown>;
+  let root = rawObj;
+  if (rawObj.challengePackage && typeof rawObj.challengePackage === "object") {
+    root = rawObj.challengePackage as Record<string, unknown>;
+  }
+
+  const title =
+    typeof root.title === "string" ? root.title : "Tantangan Harian";
+  const description =
+    typeof root.description === "string"
+      ? root.description
+      : "Mari selesaikan tantangan hari ini.";
+  const reasoning =
+    typeof root.reasoning === "string"
+      ? root.reasoning
+      : "Disesuaikan dengan profil belajar siswa.";
+
+  if (!Array.isArray(root.items)) {
+    return null;
+  }
+
+  const items: DailyMixPlan["items"] = [];
+
+  for (const rawItem of root.items) {
+    if (!rawItem || typeof rawItem !== "object") continue;
+
+    const item = rawItem as Record<string, unknown>;
+
+    const kindInput = (item.kind || item.type) as string | undefined;
+    let kind: "QUESTION" | "MATERIAL" | "REFLECTION";
+    if (
+      kindInput === "QUESTION" ||
+      kindInput === "MATERIAL" ||
+      kindInput === "REFLECTION"
+    ) {
+      kind = kindInput;
+    } else {
+      kind = "QUESTION"; // fallback
+    }
+
+    let subjectSlug = item.subjectSlug as string | undefined;
+    if (typeof subjectSlug === "string") {
+      subjectSlug = normalizeSubjectSlug(subjectSlug);
+    } else {
+      subjectSlug = "MATEMATIKA";
+    }
+
+    const difficultyHintInput = (item.difficultyHint || item.difficulty) as
+      | string
+      | undefined;
+    let difficultyHint: "EASY" | "MEDIUM" | "HARD" = "EASY";
+    if (
+      difficultyHintInput === "EASY" ||
+      difficultyHintInput === "MEDIUM" ||
+      difficultyHintInput === "HARD"
+    ) {
+      difficultyHint = difficultyHintInput;
+    }
+
+    const rationale =
+      (typeof item.rationale === "string" ? item.rationale : null) ||
+      (typeof item.description === "string" ? item.description : null) ||
+      "Latihan harian untuk topik ini.";
+
+    const mappedItem: DailyMixPlan["items"][number] = {
+      kind,
+      subjectSlug: subjectSlug as DailyMixPlan["items"][number]["subjectSlug"],
+      conceptHint:
+        typeof item.conceptHint === "string" ? item.conceptHint : undefined,
+      topicHint:
+        typeof item.topicHint === "string" ? item.topicHint : undefined,
+      difficultyHint,
+      rationale,
+    };
+
+    if (item.material && typeof item.material === "object") {
+      mappedItem.material =
+        item.material as DailyMixPlan["items"][number]["material"];
+    }
+    if (item.reflection && typeof item.reflection === "object") {
+      mappedItem.reflection =
+        item.reflection as DailyMixPlan["items"][number]["reflection"];
+    }
+
+    // Recover missing nested details
+    if (mappedItem.kind === "MATERIAL" && !mappedItem.material) {
+      const conceptName = mappedItem.conceptHint || "Materi Belajar";
+      const subjectName = getSubjectNameFromSlug(mappedItem.subjectSlug);
+      const matchedWeak = input.weakConcepts.find(
+        (c) =>
+          c.name.toLowerCase() === conceptName.toLowerCase() ||
+          c.subjectName === subjectName,
+      );
+      const masteryScore = matchedWeak ? matchedWeak.masteryScore : 0.5;
+
+      try {
+        const generatedMaterial = await generateMaterialMarkdown({
+          userName: input.userName,
+          subjectName,
+          topicName: mappedItem.topicHint || conceptName,
+          conceptName,
+          masteryScore,
+          learningStyle: input.learningStyle || undefined,
+        });
+        mappedItem.material = generatedMaterial;
+      } catch (genErr) {
+        console.error("Failed to generate fallback material:", genErr);
+        mappedItem.material = {
+          title: `${conceptName} — Panduan Singkat`,
+          content: `## ${conceptName}\n\nMari pelajari konsep ${conceptName} ini. Konsep ini sangat penting untuk memahami dasar subjek ${subjectName}.\n\n### Pengantar\n${rationale}\n\n💭 Coba pikirkan: Bagaimana menerapkan konsep ini dalam kehidupan sehari-hari?`,
+          keyPoints: ["Memahami definisi dasar", "Menerapkan contoh soal"],
+          estimatedMinutes: 5,
+          difficulty: mappedItem.difficultyHint || "EASY",
+        };
+      }
+    }
+
+    if (mappedItem.kind === "REFLECTION" && !mappedItem.reflection) {
+      const conceptName = mappedItem.conceptHint || "Refleksi Harian";
+      const subjectName = getSubjectNameFromSlug(mappedItem.subjectSlug);
+
+      try {
+        const generatedReflection = await generateReflectionPrompt({
+          userName: input.userName,
+          subjectName,
+          topicName: mappedItem.topicHint || conceptName,
+        });
+        mappedItem.reflection = generatedReflection;
+      } catch (genErr) {
+        console.error("Failed to generate fallback reflection:", genErr);
+        mappedItem.reflection = {
+          prompt: `Bagaimana pemahamanmu tentang konsep ${conceptName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
+          context: `Refleksi tentang konsep ${conceptName}`,
+        };
+      }
+    }
+
+    items.push(mappedItem);
+  }
+
+  return {
+    title,
+    description,
+    items,
+    reasoning,
+  };
 }
 
 function validateMixPlan(plan: DailyMixPlan, mix: ChallengeMix): void {
@@ -356,16 +640,41 @@ ${response}
 
 Analisis jawaban siswa di atas. Tentukan sentimen (POSITIVE jika siswa semangat, NEGATIVE jika frustrasi/merasa gagal, NEUTRAL selain itu), kedalaman (SURFACE = jawaban singkat generik, MODERATE = ada insight tapi belum dalam, DEEP = menunjukkan refleksi bermakna), dan 1-3 saran actionable untuk siswa.`;
 
-  const { object } = await generateObject({
-    model: chatModel,
-    system:
-      "Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa.",
-    prompt: userPrompt,
-    schema: REFLECTION_ANALYSIS_SCHEMA,
-    temperature: 0.3,
-  });
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system:
+        'Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa. Kembalikan output JSON dengan format:\n{\n  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",\n  "depth": "SURFACE" | "MODERATE" | "DEEP",\n  "suggestions": ["saran 1", "saran 2"]\n}',
+      prompt: userPrompt,
+      temperature: 0.3,
+    });
 
-  return object;
+    const rawJson = safeParseJson(text) as Record<string, unknown>;
+    const sentiment = (rawJson.sentiment as string) || "NEUTRAL";
+    const depth = (rawJson.depth as string) || "MODERATE";
+    const suggestions = Array.isArray(rawJson.suggestions)
+      ? (rawJson.suggestions as string[])
+      : ["Teruslah belajar dan berefleksi!"];
+    return {
+      sentiment: (["POSITIVE", "NEUTRAL", "NEGATIVE"].includes(sentiment)
+        ? sentiment
+        : "NEUTRAL") as "POSITIVE" | "NEUTRAL" | "NEGATIVE",
+      depth: (["SURFACE", "MODERATE", "DEEP"].includes(depth)
+        ? depth
+        : "MODERATE") as "SURFACE" | "MODERATE" | "DEEP",
+      suggestions: suggestions.slice(0, 3),
+    };
+  } catch (err: unknown) {
+    console.warn("analyzeReflection failed, using recovery. Error:", err);
+    return {
+      sentiment: "NEUTRAL",
+      depth: "MODERATE",
+      suggestions: [
+        "Pertahankan semangat belajarmu!",
+        "Coba diskusikan materi ini dengan Spark.",
+      ],
+    };
+  }
 }
 
 export async function generateReflectionPrompt(args: {
@@ -375,41 +684,47 @@ export async function generateReflectionPrompt(args: {
   materialTitle?: string;
   recentReflections?: string[];
 }): Promise<{ prompt: string; context: string }> {
-  const { object } = await generateObject({
-    model: chatModel,
-    system:
-      "Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup.",
-    prompt: `Buat 1 prompt refleksi untuk siswa ${
-      args.userName ?? "SMA/SMK"
-    } yang baru saja belajar materi:
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system:
+        'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}',
+      prompt: `Buat 1 prompt refleksi untuk siswa ${
+        args.userName ?? "SMA/SMK"
+      } yang baru saja belajar materi:
 - Mapel: ${args.subjectName}
 ${args.topicName ? `- Topik: ${args.topicName}` : ""}
 ${args.materialTitle ? `- Materi: ${args.materialTitle}` : ""}
 
 Refleksi sebelumnya (untukhindari pengulangan): ${
-      args.recentReflections?.join(" | ") ?? "(belum ada)"
-    }
+        args.recentReflections?.join(" | ") ?? "(belum ada)"
+      }
 
 Buat prompt yang:
 - Tidak yes/no
 - Memicu siswa berpikir, bukan menjawab fakta
 - Bisa dijawab 2-4 kalimat`,
-    schema: z.object({
-      prompt: z
-        .string()
-        .min(40)
-        .max(300)
-        .describe("Prompt refleksi yang terbuka"),
-      context: z
-        .string()
-        .min(20)
-        .max(200)
-        .describe("Konteks kenapa refleksi ini relevan"),
-    }),
-    temperature: 0.6,
-  });
+      temperature: 0.6,
+    });
 
-  return object;
+    const rawJson = safeParseJson(text) as Record<string, unknown>;
+    const prompt = (rawJson.prompt ||
+      rawJson.promptRefleksi ||
+      "Bagaimana pemahamanmu tentang materi ini?") as string;
+    const context = (rawJson.context ||
+      rawJson.konteks ||
+      "Refleksi pembelajaran") as string;
+    return { prompt, context };
+  } catch (err: unknown) {
+    console.warn(
+      "generateReflectionPrompt failed, using recovery. Error:",
+      err,
+    );
+    return {
+      prompt: `Bagaimana pemahamanmu tentang konsep ${args.topicName || args.subjectName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
+      context: `Refleksi tentang konsep ${args.topicName || args.subjectName}`,
+    };
+  }
 }
 
 export async function generateMaterialMarkdown(args: {
