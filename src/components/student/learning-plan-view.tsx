@@ -61,16 +61,47 @@ const ACTIVITY_ACCENT: Record<PlanActivity["type"], string> = {
   rest: "from-[var(--muted)] to-[var(--muted-foreground)]/30",
 };
 
-export function LearningPlanView({ initialPlan }: { initialPlan: WeeklyPlan }) {
+export function LearningPlanView({
+  initialPlan,
+}: {
+  initialPlan: WeeklyPlan | null;
+}) {
   const router = useRouter();
-  const [plan, setPlan] = React.useState<WeeklyPlan>(initialPlan);
+  const [plan, setPlan] = React.useState<WeeklyPlan | null>(initialPlan);
+  const [loading, setLoading] = React.useState(!initialPlan);
   const [regenerating, setRegenerating] = React.useState(false);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayIndex = plan.days.findIndex((d) => d.date === today);
-  const safeTodayIndex = todayIndex >= 0 ? todayIndex : 0;
-  const todayDay = plan.days[safeTodayIndex];
+  React.useEffect(() => {
+    if (initialPlan) {
+      setPlan(initialPlan);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+
+    fetch("/api/plan")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch plan");
+        return res.json();
+      })
+      .then((json) => {
+        if (active) {
+          setPlan(json);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load plan client-side:", err);
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialPlan]);
 
   const onToggle = async (activity: PlanActivity) => {
     setPendingId(activity.id);
@@ -105,6 +136,51 @@ export function LearningPlanView({ initialPlan }: { initialPlan: WeeklyPlan }) {
       setRegenerating(false);
     }
   };
+
+  if (loading || !plan) {
+    const weekSkeletons = [
+      "week-0",
+      "week-1",
+      "week-2",
+      "week-3",
+      "week-4",
+      "week-5",
+      "week-6",
+    ];
+    const todaySkeletons = ["today-0", "today-1", "today-2"];
+
+    return (
+      <div className="space-y-5 sm:space-y-7 animate-pulse">
+        {/* Skeleton for PlanHero */}
+        <div className="rounded-3xl border border-border/40 bg-card/40 p-5 sm:p-7 h-[220px]" />
+
+        {/* Skeleton for WeekGrid */}
+        <div className="space-y-3">
+          <div className="h-4 w-32 bg-muted rounded" />
+          <div className="grid grid-cols-7 gap-2">
+            {weekSkeletons.map((key) => (
+              <div key={key} className="h-20 bg-muted rounded-2xl" />
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton for TodaySection */}
+        <div className="space-y-3">
+          <div className="h-4 w-24 bg-muted rounded" />
+          <div className="space-y-2">
+            {todaySkeletons.map((key) => (
+              <div key={key} className="h-24 bg-muted rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todayIndex = plan.days.findIndex((d) => d.date === today);
+  const safeTodayIndex = todayIndex >= 0 ? todayIndex : 0;
+  const todayDay = plan.days[safeTodayIndex];
 
   const { summary } = plan;
   const completionPct =

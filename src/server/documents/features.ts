@@ -1,8 +1,7 @@
 import "server-only";
 
-import { generateText } from "ai";
 import { z } from "zod";
-import { fastModel } from "@/lib/ai";
+import { fastModel, generateText } from "@/lib/ai";
 import { retrieveDocumentChunks } from "./embeddings";
 
 const MAX_SUMMARY_INPUT = 12_000;

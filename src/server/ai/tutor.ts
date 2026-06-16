@@ -1,7 +1,6 @@
 import "server-only";
 
-import { streamText } from "ai";
-import { chatModel } from "@/lib/ai";
+import { chatModel, streamText } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 import type {
   LearningStyle,

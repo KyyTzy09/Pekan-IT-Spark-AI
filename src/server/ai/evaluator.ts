@@ -1,7 +1,6 @@
 import "server-only";
 
-import { generateText } from "ai";
-import { chatModel } from "@/lib/ai";
+import { chatModel, generateText } from "@/lib/ai";
 
 interface EvaluationResult {
   isCorrect: boolean;

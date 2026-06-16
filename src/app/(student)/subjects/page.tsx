@@ -26,6 +26,13 @@ export default async function SubjectsPage() {
       orderBy: [{ isCustom: "asc" }, { order: "asc" }, { name: "asc" }],
     }),
     prisma.concept.findMany({
+      where: {
+        topic: {
+          subject: {
+            OR: [{ createdById: null }, { createdById: userId }],
+          },
+        },
+      },
       select: { id: true, topic: { select: { subjectId: true } } },
     }),
     prisma.studentKnowledgeProfile.findMany({

@@ -18,18 +18,49 @@ export default async function ChallengePage() {
     redirect("/dashboard");
   }
 
+  const userId = session.user.id;
+  const now = new Date();
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  // Check if daily challenges for today already exist in database (fast count query)
+  const existingCount = await prisma.challenge.count({
+    where: {
+      userId,
+      scheduledFor: { gte: dayStart, lt: dayEnd },
+    },
+  });
+
   const [result, progress, focusedSubjectsRaw] = await Promise.all([
-    getTodayChallenges(),
-    getDailyProgress(),
+    existingCount > 0
+      ? getTodayChallenges()
+      : Promise.resolve({
+          challenges: [],
+          progress: { total: 0, completed: 0, points: 0 },
+        }),
+    existingCount > 0
+      ? getDailyProgress()
+      : Promise.resolve({
+          date: dayStart.toISOString(),
+          totalActive: 0,
+          totalCompleted: 0,
+          totalPoints: 0,
+          overallScore: 0,
+          masteryScore: 0,
+          challengeScore: 0,
+          materialsScore: 0,
+          reflectionsScore: 0,
+        }),
     prisma.studentProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
       select: { focusedSubjects: true },
     }),
   ]);
 
   const subjects = await prisma.subject.findMany({
     where: focusedSubjectsRaw?.focusedSubjects.length
-      ? { slug: { in: focusedSubjectsRaw.focusedSubjects as never[] } }
+      ? { id: { in: focusedSubjectsRaw.focusedSubjects } }
       : undefined,
     select: { slug: true, name: true },
     orderBy: { order: "asc" },
@@ -41,6 +72,7 @@ export default async function ChallengePage() {
       progress={result.progress}
       dailyProgress={progress}
       subjectOptions={subjects}
+      initiallyEmpty={existingCount === 0}
     />
   );
 }

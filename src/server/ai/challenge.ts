@@ -1,8 +1,7 @@
 import "server-only";
 
-import { generateText } from "ai";
 import { z } from "zod";
-import { chatModel } from "@/lib/ai";
+import { chatModel, generateText } from "@/lib/ai";
 
 export const CHALLENGE_MIX_DEFAULT = {
   questions: 2,
@@ -24,7 +23,7 @@ const materialSchema = z.object({
   content: z
     .string()
     .min(400)
-    .max(2500)
+    .max(6000)
     .describe(
       "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 2 section, dan penutup ringkas. Panjang 400-800 kata.",
     ),
@@ -48,14 +47,14 @@ const reflectionSchema = z.object({
   prompt: z
     .string()
     .min(40)
-    .max(300)
+    .max(500)
     .describe(
       "Prompt refleksi yang terbuka (bukan yes/no), memicu metacognition",
     ),
   context: z
     .string()
     .min(20)
-    .max(200)
+    .max(300)
     .describe("Konteks singkat kenapa refleksi ini relevan"),
 });
 
@@ -96,7 +95,7 @@ const challengeItemPlanSchema = z.object({
     .describe("Hint kesulitan"),
   rationale: z
     .string()
-    .max(150)
+    .max(300)
     .describe("Alasan kenapa item ini dipilih untuk siswa"),
   material: materialSchema.optional().describe("Wajib ada jika kind=MATERIAL"),
   reflection: reflectionSchema
@@ -120,7 +119,7 @@ export const dailyMixPlanSchema = z.object({
     .describe("Daftar item tantangan (2-8 item)"),
   reasoning: z
     .string()
-    .max(300)
+    .max(600)
     .describe("Alasan komposisi item untuk siswa ini"),
 });
 

@@ -1,8 +1,7 @@
 import "server-only";
 
-import { generateText } from "ai";
 import { z } from "zod";
-import { chatModel } from "@/lib/ai";
+import { chatModel, generateText } from "@/lib/ai";
 
 const outlineSchema = z.object({
   description: z

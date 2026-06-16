@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { SubjectDetailView } from "@/components/student/subjects-view";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { getSubjectDetail } from "@/server/actions/dashboard";
 import type { SubjectSlug } from "../../../../../generated/prisma/client";
 
@@ -37,13 +36,7 @@ export default async function SubjectDetailPage({
   const { slug } = await params;
   const normalized = normalizeSlug(slug);
 
-  const subject = await prisma.subject.findUnique({
-    where: { slug: normalized },
-    select: { slug: true },
-  });
-  if (!subject) notFound();
-
-  const summary = await getSubjectDetail(subject.slug, session.user.id);
+  const summary = await getSubjectDetail(normalized, session.user.id);
   if (!summary) notFound();
 
   return <SubjectDetailView summary={summary} />;
