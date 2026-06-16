@@ -27,8 +27,8 @@ import { cn } from "@/lib/utils";
 import { startNewChat } from "@/server/actions/chat";
 import {
   type DocumentListItem,
-  type GeneratedQuiz,
   deleteDocument,
+  type GeneratedQuiz,
   generateDocumentQuizAction,
   getDocumentSummary,
   listDocuments,
@@ -498,7 +498,9 @@ export function UploadView({
                           className="h-7 rounded-full px-2.5 text-[11px]"
                         >
                           <Sparkles size={11} className="mr-1" />
-                          {doc.hasSummary ? "Lihat ringkasan" : "Buat ringkasan"}
+                          {doc.hasSummary
+                            ? "Lihat ringkasan"
+                            : "Buat ringkasan"}
                         </Button>
                         <Button
                           size="sm"
@@ -555,16 +557,15 @@ export function UploadView({
             latihan) di-log buat audit (UU PDP).
           </p>
           <p className="mt-1.5">
-            <strong>PDF scan/foto:</strong> sementara ini belum support OCR otomatis
-            (akan ditambah di 5.4 advanced). Sementara itu, minta file PDF yg
-            searchable dari guru, atau convert ke DOCX dulu.
+            <strong>PDF scan/foto:</strong> sementara ini belum support OCR
+            otomatis (akan ditambah di 5.4 advanced). Sementara itu, minta file
+            PDF yg searchable dari guru, atau convert ke DOCX dulu.
           </p>
           <p className="mt-1.5">
             <strong>Rumus & tabel:</strong> rumus LaTeX-style ($...$ / $$...$$)
             otomatis ke-render via KaTeX, tabel otomatis ke-detect & format
-            Markdown.{" "}
-            <strong>Wajib edukasi:</strong> dokumen untuk belajar saja — konten
-            di luar kurikulum akan ditolak otomatis.
+            Markdown. <strong>Wajib edukasi:</strong> dokumen untuk belajar saja
+            — konten di luar kurikulum akan ditolak otomatis.
           </p>
         </div>
       </Reveal>
@@ -722,7 +723,10 @@ function SummaryModal({
             <div className="relative max-h-[70vh] overflow-y-auto p-5">
               {loading && (
                 <div className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
-                  <Loader2 size={14} className="animate-spin text-[var(--purple)]" />
+                  <Loader2
+                    size={14}
+                    className="animate-spin text-[var(--purple)]"
+                  />
                   Lagi mikir... Spark baca dokumen kamu terus nge-ekstrak poin
                   pentingnya.
                 </div>
@@ -859,7 +863,10 @@ function QuizModal({
             <div className="relative max-h-[70vh] overflow-y-auto p-5">
               {loading && (
                 <div className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
-                  <Loader2 size={14} className="animate-spin text-[var(--teal)]" />
+                  <Loader2
+                    size={14}
+                    className="animate-spin text-[var(--teal)]"
+                  />
                   Bikinin soal... Spark lagi nyiapin 5 pertanyaan pilihan ganda.
                 </div>
               )}
@@ -989,7 +996,8 @@ function ShareModal({
                   {docName ?? "Pilih chat"}
                 </h2>
                 <p className="mt-1 text-[12px] text-muted-foreground">
-                  Spark bakal jawab berdasarkan dokumen ini di chat yang kamu pilih.
+                  Spark bakal jawab berdasarkan dokumen ini di chat yang kamu
+                  pilih.
                 </p>
               </div>
               <button

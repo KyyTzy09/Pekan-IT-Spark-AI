@@ -405,17 +405,17 @@
 ## Phase 6 — Adaptive Practice & Evaluation (Minggu 5–6)
 
 ### 6.1 Practice Mode
-- [ ] 🔴 Halaman latihan per topik/konsep
-- [ ] 🔴 Generate soal berdasarkan knowledge profile
-- [ ] 🔴 Adaptive difficulty: naik jika benar berturut-turut, turun jika salah
-- [ ] 🔴 Tampilkan hint jika siswa meminta
-- [ ] 🔴 Socratic step-by-step untuk problem solving
+- [x] 🔴 Halaman latihan per topik/konsep — `src/app/(student)/practice/page.tsx` nerima `?topicId=` query param, scope konsep ke topik; `getNextPracticeQuestion({ topicId })` filter by topic
+- [x] 🔴 Generate soal berdasarkan knowledge profile — `src/server/actions/practice.ts` `getNextPracticeQuestion()` udah pakai `pickConceptWeighted()` (mastery < 40% weight 0.5, < 70% weight 0.3, mastered weight 0.15); ditambah filter prereq satisfied (4.6.9 anti-pattern 4)
+- [x] 🔴 Adaptive difficulty: naik jika benar berturut-turut, turun jika salah — `src/server/learning/adaptive.ts` `selectNextDifficulty()` rolling accuracy (window 5) + wrong-streak (3) + promote/demote thresholds; deterministic, bukan ML/RL (4.6.9 anti-pattern 3)
+- [x] 🔴 Tampilkan hint jika siswa meminta — `PracticePlayer` tombol "Minta hint" → panggil `getQuestionHint()` server action → reveal `Question.hint` field (ada di schema). Plus: Socratic nudge per-difficulty (`socraticHintFor()`) selalu tampil sebagai fallback kalo hint DB kosong
+- [x] 🔴 Socratic step-by-step untuk problem solving — `PracticePlayer` tombol "Diskusiin sama Spark (Socratic)" setelah jawaban salah → panggil `startNewChat({ firstMessage: soal + konsep })` → redirect ke `/chat/[sessionId]`. Plus: RAG context di-chat system message udah enforce Socratic method (lihat 5.3)
 
 ### 6.2 Quiz & Mini Exam
-- [ ] 🔴 Quiz mode dengan timer (opsional)
-- [ ] 🔴 Randomized question selection
-- [ ] 🔴 Auto-submit saat waktu habis
-- [ ] 🔴 Hasil quiz dengan breakdown per konsep
+- [x] 🔴 Quiz mode dengan timer (opsional) — `src/app/(student)/practice/quiz/[topicId]/page.tsx` + `src/components/student/quiz-player.tsx`; default 5 soal / 5 menit, configurable via `?n=8&time=600` query params
+- [x] 🔴 Randomized question selection — `startQuizSession()` shuffle soal topic pake `Math.random()`, pick first N
+- [x] 🔴 Auto-submit saat waktu habis — `QuizPlayer` `useEffect([timeLeft])` → `finishQuiz(true)` kalo timeLeft=0; client-side timer, server validate `elapsedSec > timeLimitSec + 30` di `submitQuizAnswer`
+- [x] 🔴 Hasil quiz dengan breakdown per konsep — `src/app/(student)/practice/quiz/result/page.tsx` + `src/components/student/quiz-result-view.tsx`; score ring, time, breakdown per konsep dengan status (Mastered/Learning/Struggling), per-concept "Diskusiin [konsep] sama Spark" CTA, "Quiz ulang" + "Latihan topik" CTAs
 
 ### 6.3 Answer Evaluation & Feedback
 - [ ] 🔴 Evaluasi jawaban multiple choice instan

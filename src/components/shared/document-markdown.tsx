@@ -3,7 +3,10 @@
 import katex from "katex";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { detectMathRegions, isLikelyTableLine } from "@/server/documents/content-check";
+import {
+  detectMathRegions,
+  isLikelyTableLine,
+} from "@/server/documents/content-check";
 
 type Segment =
   | { kind: "text"; value: string }
@@ -58,9 +61,7 @@ function parseBlocks(text: string): Block[] {
     const line = lines[i] ?? "";
     if (isTableLine(line)) {
       const next = lines[i + 1] ?? "";
-      const sep = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(
-        next.trim(),
-      );
+      const sep = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(next.trim());
       if (sep) {
         const rows: string[][] = [];
         rows.push(parseTableRow(line));

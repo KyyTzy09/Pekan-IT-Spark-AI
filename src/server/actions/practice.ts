@@ -38,12 +38,27 @@ export type PracticeSession = {
   accuracyPct: number;
   recentTotal: number;
   weakPrereqs: Array<{ conceptId: string; name: string; score: number }>;
+  topicContext: { topicId: string; topicName: string } | null;
+  socraticHint: string | null;
 };
+
+const SOCRATIC_HINTS: Record<string, string> = {
+  EASY: "Coba inget lagi konsep utamanya. Apa yang pertama kali kamu pikirkan?",
+  MEDIUM:
+    "Coba pecah jadi langkah kecil. Kira-kira langkah pertama apa yang harus kamu lakukan?",
+  HARD: "Ga apa-apa kalo belum ketemu. Yuk coba pake pertanyaan pemandu: apa yang kamu udah pastiin? apa yang masih bikin bingung?",
+  ADVANCED:
+    "Ini soal kompleks. Yuk kita pecah bareng — coba identifikasi dulu bagian mana yang kamu paling yakin.",
+};
+
+function socraticHintFor(difficulty: Difficulty): string {
+  return SOCRATIC_HINTS[difficulty] ?? SOCRATIC_HINTS.MEDIUM!;
+}
 
 const RECENT_WINDOW = 20;
 
 export async function getNextPracticeQuestion(
-  subjectSlug?: string,
+  options: { subjectSlug?: string; topicId?: string } = {},
 ): Promise<
   { ok: true; session: PracticeSession } | { ok: false; error: string }
 > {
@@ -52,6 +67,24 @@ export async function getNextPracticeQuestion(
     userId = await requireStudent();
   } catch (e) {
     return { ok: false, error: "Login dulu ya" };
+  }
+
+  const subjectSlug = options.subjectSlug;
+  const topicId = options.topicId;
+
+  let topicContext: { topicId: string; topicName: string } | null = null;
+  if (topicId) {
+    const topic = await prisma.topic.findFirst({
+      where: {
+        id: topicId,
+        subject: subjectSlug ? { slug: subjectSlug as never } : {},
+      },
+      select: { id: true, name: true, subjectId: true },
+    });
+    if (!topic) {
+      return { ok: false, error: "Topik tidak ditemukan" };
+    }
+    topicContext = { topicId: topic.id, topicName: topic.name };
   }
 
   const subjects = await prisma.subject.findMany({
@@ -69,7 +102,11 @@ export async function getNextPracticeQuestion(
   const subjectIds = subjects.map((s) => s.id);
 
   const concepts = await prisma.concept.findMany({
-    where: { topic: { subjectId: { in: subjectIds } } },
+    where: {
+      topic: topicId
+        ? { id: topicId, subjectId: { in: subjectIds } }
+        : { subjectId: { in: subjectIds } },
+    },
     select: {
       id: true,
       name: true,
@@ -267,7 +304,7 @@ export async function getNextPracticeQuestion(
     return { ok: false, error: "Belum ada soal untuk konsep ini" };
   }
 
-  const options = Array.isArray(selected.options)
+  const questionOptions = Array.isArray(selected.options)
     ? (selected.options as unknown as string[])
     : typeof selected.options === "string"
       ? (JSON.parse(selected.options) as string[])
@@ -284,13 +321,15 @@ export async function getNextPracticeQuestion(
         subjectName: candidateConcept.topic.subject.name,
         subjectSlug: candidateConcept.topic.subject.slug,
         questionText: selected.questionText,
-        options,
+        options: questionOptions,
         difficulty: selected.difficulty,
       },
       currentDifficulty: chosenDifficulty,
       accuracyPct,
       recentTotal: total,
       weakPrereqs: weakPrereqs.slice(0, 3),
+      topicContext,
+      socraticHint: socraticHintFor(chosenDifficulty),
     },
   };
 }
@@ -327,6 +366,371 @@ export type SubmitPracticeResult =
       unlockedConcepts: Array<{ id: string; name: string }>;
     }
   | { ok: false; error: string };
+
+export async function getQuestionHint(input: {
+  questionId: string;
+}): Promise<
+  | { ok: true; hint: string | null; explanation: string | null }
+  | { ok: false; error: string }
+> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const question = await prisma.question.findFirst({
+    where: {
+      id: input.questionId,
+      concept: { topic: { subject: {} } },
+    },
+    select: { id: true, hint: true, explanation: true },
+  });
+  if (!question) return { ok: false, error: "Soal tidak ditemukan" };
+  return { ok: true, hint: question.hint, explanation: question.explanation };
+}
+
+export type QuizQuestion = {
+  id: string;
+  conceptId: string;
+  conceptName: string;
+  topicName: string;
+  questionText: string;
+  options: string[];
+  difficulty: Difficulty;
+  hint: string | null;
+};
+
+export type QuizSession = {
+  sessionId: string;
+  topicId: string;
+  topicName: string;
+  subjectName: string;
+  totalQuestions: number;
+  timeLimitSec: number;
+  questions: QuizQuestion[];
+  startedAt: string;
+};
+
+export type QuizAnswerResult =
+  | {
+      ok: true;
+      isCorrect: boolean;
+      correctAnswer: string;
+      explanation: string | null;
+      questionIndex: number;
+    }
+  | { ok: false; error: string };
+
+export type QuizResult =
+  | {
+      ok: true;
+      sessionId: string;
+      totalQuestions: number;
+      correctCount: number;
+      scorePct: number;
+      timeUsedSec: number;
+      topicName: string;
+      subjectName: string;
+      breakdown: Array<{
+        conceptId: string;
+        conceptName: string;
+        correct: number;
+        wrong: number;
+        total: number;
+        status: "MASTERED" | "LEARNING" | "STRUGGLING" | "NOT_STARTED";
+      }>;
+    }
+  | { ok: false; error: string };
+
+const QUIZ_BATCH_STORE = new Map<
+  string,
+  {
+    userId: string;
+    topicId: string;
+    questionIds: string[];
+    answers: Map<
+      number,
+      {
+        questionId: string;
+        answer: string;
+        isCorrect: boolean;
+        timeSpent: number;
+      }
+    >;
+    startedAt: number;
+    timeLimitSec: number;
+  }
+>();
+
+function newQuizId(): string {
+  return `qz_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export async function startQuizSession(input: {
+  topicId: string;
+  numQuestions?: 5 | 8 | 10;
+  timeLimitSec?: number;
+}): Promise<{ ok: true; session: QuizSession } | { ok: false; error: string }> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const topic = await prisma.topic.findFirst({
+    where: { id: input.topicId },
+    select: {
+      id: true,
+      name: true,
+      subject: { select: { name: true } },
+    },
+  });
+  if (!topic) return { ok: false, error: "Topik tidak ditemukan" };
+
+  const numQ = input.numQuestions ?? 5;
+  const timeLimitSec = input.timeLimitSec ?? Math.max(120, numQ * 60);
+
+  const allQuestions = await prisma.question.findMany({
+    where: {
+      isActive: true,
+      concept: { topicId: input.topicId },
+    },
+    select: {
+      id: true,
+      difficulty: true,
+      questionText: true,
+      options: true,
+      concept: {
+        select: { id: true, name: true, topic: { select: { name: true } } },
+      },
+    },
+  });
+  if (allQuestions.length === 0) {
+    return { ok: false, error: "Topik ini belum ada soal" };
+  }
+  // randomize order
+  const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+  const picked = shuffled.slice(0, Math.min(numQ, shuffled.length));
+
+  const quizSessionId = newQuizId();
+  QUIZ_BATCH_STORE.set(quizSessionId, {
+    userId,
+    topicId: input.topicId,
+    questionIds: picked.map((q) => q.id),
+    answers: new Map(),
+    startedAt: Date.now(),
+    timeLimitSec,
+  });
+
+  const questions: QuizQuestion[] = picked.map((q) => ({
+    id: q.id,
+    conceptId: q.concept.id,
+    conceptName: q.concept.name,
+    topicName: q.concept.topic.name,
+    questionText: q.questionText,
+    options: Array.isArray(q.options)
+      ? (q.options as unknown as string[])
+      : typeof q.options === "string"
+        ? (JSON.parse(q.options) as string[])
+        : [],
+    difficulty: q.difficulty,
+    hint: null,
+  }));
+
+  return {
+    ok: true,
+    session: {
+      sessionId: quizSessionId,
+      topicId: topic.id,
+      topicName: topic.name,
+      subjectName: topic.subject.name,
+      totalQuestions: questions.length,
+      timeLimitSec,
+      questions,
+      startedAt: new Date().toISOString(),
+    },
+  };
+}
+
+export async function submitQuizAnswer(input: {
+  sessionId: string;
+  questionId: string;
+  answer: string;
+  timeSpentSec: number;
+}): Promise<QuizAnswerResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const store = QUIZ_BATCH_STORE.get(input.sessionId);
+  if (!store || store.userId !== userId) {
+    return { ok: false, error: "Sesi quiz udah expired. Mulai ulang ya." };
+  }
+  if (!store.questionIds.includes(input.questionId)) {
+    return { ok: false, error: "Soal ini ga ada di sesi quiz kamu." };
+  }
+  const elapsedSec = (Date.now() - store.startedAt) / 1000;
+  if (elapsedSec > store.timeLimitSec + 30) {
+    return { ok: false, error: "Waktu udah lewat. Sesi di-close." };
+  }
+  const question = await prisma.question.findUnique({
+    where: { id: input.questionId },
+    select: { id: true, correctAnswer: true, explanation: true },
+  });
+  if (!question) return { ok: false, error: "Soal tidak ditemukan" };
+
+  const isCorrect =
+    question.correctAnswer.trim().toUpperCase() ===
+    input.answer.trim().toUpperCase();
+
+  await recordQuestionAttempt({
+    questionId: input.questionId,
+    answer: input.answer,
+    isCorrect,
+    timeSpent: Math.round(input.timeSpentSec),
+  });
+
+  const questionIndex = store.questionIds.indexOf(input.questionId);
+  store.answers.set(questionIndex, {
+    questionId: input.questionId,
+    answer: input.answer,
+    isCorrect,
+    timeSpent: input.timeSpentSec,
+  });
+
+  return {
+    ok: true,
+    isCorrect,
+    correctAnswer: question.correctAnswer,
+    explanation: question.explanation,
+    questionIndex,
+  };
+}
+
+export async function getQuizResult(input: {
+  sessionId: string;
+}): Promise<QuizResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return {
+      ok: false,
+      error: "Login dulu ya",
+    } as unknown as QuizResult;
+  }
+  const store = QUIZ_BATCH_STORE.get(input.sessionId);
+  if (!store || store.userId !== userId) {
+    return {
+      ok: false,
+      error: "Sesi quiz udah expired.",
+    } as unknown as QuizResult;
+  }
+
+  const timeUsedSec = (Date.now() - store.startedAt) / 1000;
+
+  // Read the just-recorded attempts to get correct counts per concept
+  const allAttempts = await prisma.questionAttempt.findMany({
+    where: {
+      userId,
+      questionId: { in: store.questionIds },
+      createdAt: { gte: new Date(store.startedAt - 5_000) },
+    },
+    select: {
+      questionId: true,
+      isCorrect: true,
+      question: { select: { conceptId: true } },
+    },
+  });
+
+  const topic = await prisma.topic.findUnique({
+    where: { id: store.topicId },
+    select: {
+      name: true,
+      subject: { select: { name: true } },
+    },
+  });
+
+  const conceptMap = new Map<
+    string,
+    { id: string; name: string; correct: number; wrong: number; total: number }
+  >();
+  for (const a of allAttempts) {
+    const conceptId = a.question.conceptId;
+    const concept = await prisma.concept.findUnique({
+      where: { id: conceptId },
+      select: { name: true },
+    });
+    const entry = conceptMap.get(conceptId) ?? {
+      id: conceptId,
+      name: concept?.name ?? "?",
+      correct: 0,
+      wrong: 0,
+      total: 0,
+    };
+    entry.total += 1;
+    if (a.isCorrect) entry.correct += 1;
+    else entry.wrong += 1;
+    conceptMap.set(conceptId, entry);
+  }
+
+  // attach mastery status
+  const profiles = await prisma.studentKnowledgeProfile.findMany({
+    where: {
+      userId,
+      conceptId: { in: Array.from(conceptMap.keys()) },
+    },
+    select: { conceptId: true, status: true },
+  });
+  const statusMap = new Map(profiles.map((p) => [p.conceptId, p.status]));
+
+  const breakdown = Array.from(conceptMap.values()).map((c) => ({
+    conceptId: c.id,
+    conceptName: c.name,
+    correct: c.correct,
+    wrong: c.wrong,
+    total: c.total,
+    status: statusMap.get(c.id) ?? ("NOT_STARTED" as const),
+  }));
+
+  const correctCount = breakdown.reduce((acc, c) => acc + c.correct, 0);
+  const totalQ = breakdown.reduce((acc, c) => acc + c.total, 0);
+  const scorePct = totalQ === 0 ? 0 : Math.round((correctCount / totalQ) * 100);
+
+  // cleanup
+  QUIZ_BATCH_STORE.delete(input.sessionId);
+
+  return {
+    ok: true,
+    sessionId: input.sessionId,
+    totalQuestions: store.questionIds.length,
+    correctCount,
+    scorePct,
+    timeUsedSec: Math.round(timeUsedSec),
+    topicName: topic?.name ?? "?",
+    subjectName: topic?.subject.name ?? "?",
+    breakdown,
+  };
+}
+
+export async function abortQuizSession(input: {
+  sessionId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const store = QUIZ_BATCH_STORE.get(input.sessionId);
+  if (!store || store.userId !== userId)
+    return { ok: false, error: "Ga ada sesi" };
+  QUIZ_BATCH_STORE.delete(input.sessionId);
+  return { ok: true };
+}
 
 export async function submitPracticeAnswer(input: {
   questionId: string;

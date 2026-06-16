@@ -2,13 +2,18 @@ import "server-only";
 
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
-import { detectMathRegions, detectMarkdownTables } from "./content-check";
+import { detectMarkdownTables, detectMathRegions } from "./content-check";
 
 export type ExtractedDocument = {
   text: string;
   pageCount?: number;
   warnings: string[];
-  mathRegions: Array<{ start: number; end: number; latex: string; display: boolean }>;
+  mathRegions: Array<{
+    start: number;
+    end: number;
+    latex: string;
+    display: boolean;
+  }>;
   tables: Array<{ start: number; end: number; rows: string[][] }>;
 };
 
@@ -164,4 +169,3 @@ function finalize(
     tables: detectMarkdownTables(markdown),
   };
 }
-

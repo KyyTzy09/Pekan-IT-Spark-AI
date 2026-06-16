@@ -6,9 +6,9 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { generateChatTitle, generateTutorStream } from "@/server/ai/tutor";
 import { logDocumentEvent } from "@/server/documents/audit";
 import { buildDocumentChatContext } from "@/server/documents/features";
-import { generateChatTitle, generateTutorStream } from "@/server/ai/tutor";
 
 const createSchema = z.object({
   subjectSlug: z.string().optional(),

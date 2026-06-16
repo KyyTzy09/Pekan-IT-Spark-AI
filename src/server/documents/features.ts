@@ -108,8 +108,7 @@ export async function detectHomeworkAndSuggest(
         .nullable()
         .describe("Topik utama PR (null kalau bukan PR)"),
     }),
-    system:
-      "Deteksi apakah dokumen adalah PR/tugas/latihan. Jawab ringkas.",
+    system: "Deteksi apakah dokumen adalah PR/tugas/latihan. Jawab ringkas.",
     prompt: truncated,
   });
   return { isHomework: object.isHomework, topic: object.topic };
