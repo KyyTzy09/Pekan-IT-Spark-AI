@@ -30,6 +30,7 @@ type PretestData = {
 };
 
 export default async function OnboardingPage() {
+  console.log("[ONBOARDING_SERVICE] OnboardingPage render start");
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/login");
   if (session.user.role !== "STUDENT") redirect("/");

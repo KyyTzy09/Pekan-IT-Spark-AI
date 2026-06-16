@@ -45,6 +45,9 @@ interface SearchOptions {
 export async function retrieveContext(
   options: SearchOptions,
 ): Promise<RetrievedDocument[]> {
+  console.log("[AI_SERVICE] retrieveContext start", {
+    query: options.query,
+  });
   const { query, userId, subjectId, limit = 3 } = options;
   const results: RetrievedDocument[] = [];
 
@@ -147,7 +150,7 @@ export async function retrieveContext(
 async function keywordSearch(
   options: SearchOptions,
 ): Promise<RetrievedDocument[]> {
-  const { query, userId, subjectId, limit = 3 } = options;
+  const { query, userId, limit = 3 } = options;
   const queryTokens = simpleTokenize(query);
   const results: RetrievedDocument[] = [];
 
@@ -200,6 +203,7 @@ async function keywordSearch(
 }
 
 export async function getRelevantConcepts(query: string, subjectId?: string) {
+  console.log("[AI_SERVICE] getRelevantConcepts start", { query });
   try {
     const { embedding: queryEmbedding } = await embed({
       model: embeddingModel,

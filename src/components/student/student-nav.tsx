@@ -8,6 +8,7 @@ import {
   Flame,
   Heart,
   Home,
+  LogOut,
   type LucideIcon,
   Menu,
   MessageCircle,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { cn } from "@/lib/utils";
@@ -497,6 +499,16 @@ export function StudentNav({
                       </Link>
                     );
                   })}
+
+                  {/* Logout Button */}
+                  <button
+                    type="button"
+                    onClick={() => signOut({ callbackUrl: "/auth/login" })}
+                    className="col-span-2 relative flex items-center justify-center gap-2.5 rounded-2xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 active:scale-[0.98] transition-all p-4 text-center text-red-500 font-bold cursor-pointer"
+                  >
+                    <LogOut size={16} />
+                    <span className="text-[11.5px]">Keluar Akun</span>
+                  </button>
                 </div>
               </motion.div>
             </>
@@ -627,6 +639,18 @@ export function StudentNav({
           </p>
         </div>
       </div>
+
+      {/* Logout Button */}
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/auth/login" })}
+        className="group relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-bold transition-all border border-transparent text-red-500 hover:bg-red-500/10 hover:border-red-500/20 active:scale-[0.98] cursor-pointer mt-1"
+      >
+        <span className="grid size-8 place-items-center rounded-lg bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all duration-300">
+          <LogOut size={15} />
+        </span>
+        <span className="flex-1 text-left tracking-wide">Keluar Akun</span>
+      </button>
     </nav>
   );
 }

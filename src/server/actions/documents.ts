@@ -17,6 +17,7 @@ import {
   type DocumentSummary as GeneratedDocSummary,
   type GeneratedQuiz,
   generateDocumentSummary,
+  generateMaterialFromDocument,
   generateQuizFromDocument,
 } from "@/server/documents/features";
 
@@ -50,6 +51,7 @@ export type DocumentListItem = {
   createdAt: string;
   contentPreview: string;
   hasSummary: boolean;
+  hasHomework: boolean | null;
   chunkCount: number;
 };
 
@@ -240,6 +242,18 @@ export async function uploadDocument(
   });
 
   console.log("[uploadDocument] creating document record...");
+  let summaryJson: string | null = null;
+  try {
+    const summaryData = await generateDocumentSummary(
+      extracted.text,
+      file.name,
+    );
+    summaryJson = JSON.stringify(summaryData);
+    console.log("[uploadDocument] summary auto-generated successfully");
+  } catch (e) {
+    console.error("[uploadDocument] summary auto-generation failed:", e);
+  }
+
   const document = await prisma.document.create({
     data: {
       userId,
@@ -248,6 +262,7 @@ export async function uploadDocument(
       size: file.size,
       pageCount: extracted.pageCount ?? null,
       content: extracted.text,
+      summary: summaryJson,
       chatSessionId: parsed.data.chatSessionId ?? null,
     },
     select: {
@@ -342,17 +357,32 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
   });
   return {
     ok: true,
-    documents: docs.map((d) => ({
-      id: d.id,
-      originalName: d.originalName,
-      mimeType: d.mimeType,
-      size: d.size,
-      pageCount: d.pageCount,
-      createdAt: d.createdAt.toISOString(),
-      contentPreview: d.content.slice(0, 220),
-      hasSummary: Boolean(d.summary && d.summary.length > 0),
-      chunkCount: d._count.embeddings,
-    })),
+    documents: docs.map((d) => {
+      let hasHomework: boolean | null = null;
+      if (d.summary) {
+        try {
+          const parsed = JSON.parse(d.summary);
+          hasHomework =
+            typeof parsed.hasHomework === "boolean"
+              ? parsed.hasHomework
+              : false;
+        } catch {
+          // ignore
+        }
+      }
+      return {
+        id: d.id,
+        originalName: d.originalName,
+        mimeType: d.mimeType,
+        size: d.size,
+        pageCount: d.pageCount,
+        createdAt: d.createdAt.toISOString(),
+        contentPreview: d.content.slice(0, 220),
+        hasSummary: Boolean(d.summary && d.summary.length > 0),
+        hasHomework,
+        chunkCount: d._count.embeddings,
+      };
+    }),
   };
 }
 
@@ -511,6 +541,82 @@ export async function generateDocumentQuizAction(
   } catch (e) {
     console.error("generateDocumentQuiz failed:", e);
     return { ok: false, error: "Gagal bikin latihan. Coba lagi nanti ya." };
+  }
+}
+
+export type GenerateDocumentMaterialResult =
+  | {
+      ok: true;
+      documentId: string;
+      originalName: string;
+      material: {
+        id: string;
+        title: string;
+        content: string;
+        keyPoints: string[];
+        difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+        estimatedMinutes: number;
+      };
+    }
+  | { ok: false; error: string };
+
+export async function generateDocumentMaterialAction(
+  documentId: string,
+): Promise<GenerateDocumentMaterialResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const doc = await loadOwnedDocument(userId, documentId);
+  if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
+  try {
+    const materialData = await generateMaterialFromDocument(
+      doc.content,
+      doc.originalName,
+    );
+
+    // Save material to DB
+    const m = await prisma.material.create({
+      data: {
+        userId,
+        title: materialData.title,
+        content: materialData.content,
+        keyPoints: materialData.keyPoints,
+        difficulty: materialData.difficulty,
+        estimatedMinutes: materialData.estimatedMinutes,
+        source: "ON_DEMAND",
+      },
+    });
+
+    await logDocumentEvent({
+      documentId: doc.id,
+      userId,
+      action: "PROCESS",
+      metadata: {
+        stage: "material_generated",
+        materialId: m.id,
+        title: m.title,
+      },
+    });
+
+    return {
+      ok: true,
+      documentId: doc.id,
+      originalName: doc.originalName,
+      material: {
+        id: m.id,
+        title: m.title,
+        content: m.content,
+        keyPoints: m.keyPoints as string[],
+        difficulty: m.difficulty as "EASY" | "MEDIUM" | "HARD" | "ADVANCED",
+        estimatedMinutes: m.estimatedMinutes,
+      },
+    };
+  } catch (e) {
+    console.error("generateDocumentMaterial failed:", e);
+    return { ok: false, error: "Gagal bikin materi. Coba lagi nanti ya." };
   }
 }
 

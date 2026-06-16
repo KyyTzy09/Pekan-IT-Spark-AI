@@ -33,6 +33,7 @@ const completeSchema = z.object({
 export type CompleteOnboardingInput = z.infer<typeof completeSchema>;
 
 async function requireStudent() {
+  console.log("[ONBOARDING_SERVICE] requireStudent verification start");
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/auth/login");
@@ -52,6 +53,9 @@ export type CompleteOnboardingResult = {
 export async function completeOnboarding(
   input: unknown,
 ): Promise<CompleteOnboardingResult> {
+  console.log("[ONBOARDING_SERVICE] completeOnboarding action start", {
+    input,
+  });
   const { userId } = await requireStudent();
   const parsed = completeSchema.safeParse(input);
   if (!parsed.success) {

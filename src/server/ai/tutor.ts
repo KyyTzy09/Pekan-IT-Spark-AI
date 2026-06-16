@@ -226,6 +226,9 @@ export async function generateTutorStream(input: {
   topicId?: string;
   lastUserMessage?: string;
 }) {
+  console.log("[AI_SERVICE] generateTutorStream start", {
+    userId: input.userId,
+  });
   const ctx = await loadUserContext(
     input.userId,
     input.subjectSlug,

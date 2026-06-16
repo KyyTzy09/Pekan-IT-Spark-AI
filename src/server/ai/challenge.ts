@@ -161,7 +161,7 @@ export interface DailyMixInput {
 
 const SYSTEM_PROMPT = `Kamu adalah perancang tantangan harian untuk Spark Ai — platform tutor AI untuk siswa SMA/SMK Indonesia.
 
-Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaat. Setiap paket berisi 2-4 item dari 3 jenis:
+Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaat. Setiap paket berisi item tantangan dengan jumlah yang disesuaikan dengan profil adaptif siswa (antara 4 sampai 8 item) dari 3 jenis:
 
 1. **QUESTION** (soal latihan) — pilih dari bank soal existing yang tersedia (lihat data). Jangan generate soal baru.
 2. **MATERIAL** (materi bacaan markdown) — generate materi pembelajaran yang kontekstual. Markdown dengan heading, section, dan penutup.
@@ -174,6 +174,12 @@ ATURAN WAJIB:
 - Material markdown WAJIB: ada heading (##), minimal 2 section, 400-800 kata, ada keyPoints, ada penutup. Format: intro → konsep inti → contoh → summary → callout "Coba pikirkan".
 - Reflection prompt HARUS terbuka (tidak yes/no) dan memicu siswa berpikir, bukan menjawab fakta.
 - Difficulty MATERIAL/REFLECTION: jika siswa lemah di konsep (mastery < 0.4) → EASY/explainer; jika sedang → MEDIUM; jika kuat (mastery > 0.7) → HARD/push further.
+- Sesuaikan gaya penulisan MATERIAL dengan gaya belajar siswa (learningStyle):
+  * VISUAL: gunakan analogi visual, deskripsi imajinatif visual, dan format yang mudah dicerna secara spasial.
+  * EXAMPLE_HEAVY: sertakan banyak contoh konkret, studi kasus nyata, dan soal-soal aplikatif yang relevan untuk usia SMA/SMK.
+  * SOCRATIC: gunakan pertanyaan-pertanyaan pemandu kritis di awal dan akhir sub-bab untuk memicu rasa ingin tahu.
+  * TEXTUAL: berikan penjelasan teoretis yang runtut, terstruktur, mendalam, dan kaya referensi.
+- Sesuaikan kedalaman dan kompleksitas materi dengan jenjang kelas (grade) siswa agar menantang namun dapat dipahami.
 - Variasi: kalau kemarin ada MATERIAL tentang Trigonometri, hari ini ganti ke materi berbeda.
 - Reasoning: jelaskan kenapa komposisi ini cocok untuk siswa.
 
@@ -182,6 +188,8 @@ JANGAN:
 - Pakai subjectSlug yang tidak ada di focusedSubjects ATAU weakConcepts siswa
 - Buat refleksi yang berupa pertanyaan tertutup (ya/tidak)
 - Membungkus output JSON dengan key luar seperti "challengePackage". Output harus langsung berupa object JSON sesuai schema.
+- Menuliskan teks obrolan, penjelasan, basa-basi, atau kalimat pengantar di luar JSON. Output Anda HARUS berupa string JSON valid saja.
+- Menggunakan karakter baris baru asli di dalam nilai string JSON. Semua baris baru dalam teks markdown materi ("content") harus di-escape menjadi '\\n' literal.
 
 Format JSON yang wajib diikuti:
 {
@@ -224,28 +232,61 @@ Format JSON yang wajib diikuti:
   "reasoning": "Alasan komposisi"
 }`;
 
-function safeParseJson(text: string): unknown {
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/```\s*$/, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch (err) {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
-      } catch (_e) {}
+function sanitizeJsonString(raw: string): string {
+  let inString = false;
+  let escaped = false;
+  let result = "";
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+    if (char === '"' && !escaped) {
+      inString = !inString;
     }
-    throw err;
+    if (inString && (char === "\n" || char === "\r")) {
+      result += "\\n";
+    } else {
+      result += char;
+    }
+    if (char === "\\" && !escaped) {
+      escaped = true;
+    } else {
+      escaped = false;
+    }
   }
+  return result;
+}
+
+function safeParseJson(text: string): unknown {
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const jsonCandidate = text.slice(firstBrace, lastBrace + 1).trim();
+    const sanitized = sanitizeJsonString(jsonCandidate);
+    try {
+      return JSON.parse(sanitized);
+    } catch (err) {
+      console.warn(
+        "safeParseJson failed to parse candidate:",
+        err,
+        "Sanitized candidate was:",
+        sanitized.slice(0, 300),
+      );
+      throw new Error(
+        `JSON parsing failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  const sanitizedClean = sanitizeJsonString(text.trim());
+  return JSON.parse(sanitizedClean);
 }
 
 export async function generateDailyMix(
   input: DailyMixInput,
 ): Promise<DailyMixPlan> {
+  console.log("[AI_SERVICE] generateDailyMix start", {
+    userId: input.userId,
+  });
   const mix = input.mix ?? CHALLENGE_MIX_DEFAULT;
   const totalItems = mix.questions + mix.materials + mix.reflections;
 
@@ -306,12 +347,18 @@ ${questionCatalog || "(tidak ada soal di bank — pakai MATERIAL/REFLECTION saja
 Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
 
   try {
+    console.log("[AI_SERVICE] generateDailyMix request", {
+      model: chatModel,
+      system: SYSTEM_PROMPT,
+      prompt: userPrompt,
+    });
     const { text } = await generateText({
       model: chatModel,
       system: SYSTEM_PROMPT,
       prompt: userPrompt,
       temperature: 0.7,
     });
+    console.log("[AI_SERVICE] generateDailyMix response", { text });
 
     const rawJson = safeParseJson(text);
     const mapped = await tryMapAndRecoverMixPlan(rawJson, input);
@@ -627,6 +674,7 @@ export async function analyzeReflection(
   response: string,
   context?: string,
 ): Promise<ReflectionAnalysis> {
+  console.log("[AI_SERVICE] analyzeReflection start");
   const userPrompt = `Prompt refleksi yang diberikan:
 """
 ${prompt}
@@ -640,13 +688,19 @@ ${response}
 Analisis jawaban siswa di atas. Tentukan sentimen (POSITIVE jika siswa semangat, NEGATIVE jika frustrasi/merasa gagal, NEUTRAL selain itu), kedalaman (SURFACE = jawaban singkat generik, MODERATE = ada insight tapi belum dalam, DEEP = menunjukkan refleksi bermakna), dan 1-3 saran actionable untuk siswa.`;
 
   try {
+    const systemPrompt = 'Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa. Kembalikan output JSON dengan format:\n{\n  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",\n  "depth": "SURFACE" | "MODERATE" | "DEEP",\n  "suggestions": ["saran 1", "saran 2"]\n}';
+    console.log("[AI_SERVICE] analyzeReflection request", {
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+    });
     const { text } = await generateText({
       model: chatModel,
-      system:
-        'Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa. Kembalikan output JSON dengan format:\n{\n  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",\n  "depth": "SURFACE" | "MODERATE" | "DEEP",\n  "suggestions": ["saran 1", "saran 2"]\n}',
+      system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.3,
     });
+    console.log("[AI_SERVICE] analyzeReflection response", { text });
 
     const rawJson = safeParseJson(text) as Record<string, unknown>;
     const sentiment = (rawJson.sentiment as string) || "NEUTRAL";
@@ -683,28 +737,39 @@ export async function generateReflectionPrompt(args: {
   materialTitle?: string;
   recentReflections?: string[];
 }): Promise<{ prompt: string; context: string }> {
+  console.log("[AI_SERVICE] generateReflectionPrompt start", {
+    subjectName: args.subjectName,
+  });
   try {
-    const { text } = await generateText({
-      model: chatModel,
-      system:
-        'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}',
-      prompt: `Buat 1 prompt refleksi untuk siswa ${
-        args.userName ?? "SMA/SMK"
-      } yang baru saja belajar materi:
+    const systemPrompt = 'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}';
+    const userPrompt = `Buat 1 prompt refleksi untuk siswa ${
+      args.userName ?? "SMA/SMK"
+    } yang baru saja belajar materi:
 - Mapel: ${args.subjectName}
 ${args.topicName ? `- Topik: ${args.topicName}` : ""}
 ${args.materialTitle ? `- Materi: ${args.materialTitle}` : ""}
 
 Refleksi sebelumnya (untukhindari pengulangan): ${
-        args.recentReflections?.join(" | ") ?? "(belum ada)"
-      }
+      args.recentReflections?.join(" | ") ?? "(belum ada)"
+    }
 
 Buat prompt yang:
 - Tidak yes/no
 - Memicu siswa berpikir, bukan menjawab fakta
-- Bisa dijawab 2-4 kalimat`,
+- Bisa dijawab 2-4 kalimat`;
+
+    console.log("[AI_SERVICE] generateReflectionPrompt request", {
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+    });
+    const { text } = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
       temperature: 0.6,
     });
+    console.log("[AI_SERVICE] generateReflectionPrompt response", { text });
 
     const rawJson = safeParseJson(text) as Record<string, unknown>;
     const prompt = (rawJson.prompt ||
@@ -740,6 +805,9 @@ export async function generateMaterialMarkdown(args: {
   estimatedMinutes: number;
   difficulty: "EASY" | "MEDIUM" | "HARD";
 }> {
+  console.log("[AI_SERVICE] generateMaterialMarkdown start", {
+    conceptName: args.conceptName,
+  });
   const difficulty =
     args.masteryScore < 0.4
       ? "EASY"
@@ -756,9 +824,7 @@ export async function generateMaterialMarkdown(args: {
           ? "Masukkan 1-2 pertanyaan pemandu yang memancing思考."
           : "Gaya bahasa kasual dan suportif, sesuai persona Spark.";
 
-  const result = await generateText({
-    model: chatModel,
-    system: `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
+  const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
 
 Buat materi bacaan dalam format Markdown. Struktur WAJIB:
 - Heading ## untuk judul
@@ -771,22 +837,34 @@ Buat materi bacaan dalam format Markdown. Struktur WAJIB:
 ${styleNote}
 
 Difficulty: ${difficulty}. ${
-      difficulty === "EASY"
-        ? "Bahasa sederhana, analogi kehidupan sehari-hari, definisi dulu baru contoh."
-        : difficulty === "HARD"
-          ? "Lebih dalam, bisa pakai terminologi advanced, dorong berpikir analitis."
-          : "Seimbang, definisi + contoh + sedikit insight."
-    }
+    difficulty === "EASY"
+      ? "Bahasa sederhana, analogi kehidupan sehari-hari, definisi dulu baru contoh."
+      : difficulty === "HARD"
+        ? "Lebih dalam, bisa pakai terminologi advanced, dorong berpikir analitis."
+        : "Seimbang, definisi + contoh + sedikit insight."
+  }
 
-Panjang: 400-800 kata. Output HANYA markdown, jangan ada penjelasan meta.`,
-    prompt: `Mapel: ${args.subjectName}
+Panjang: 400-800 kata. Output HANYA markdown, jangan ada penjelasan meta.`;
+
+  const userPrompt = `Mapel: ${args.subjectName}
 Topik: ${args.topicName}
 Konsep: ${args.conceptName}
 Tingkat pemahaman siswa saat ini: ${(args.masteryScore * 100).toFixed(0)}%
 
-Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" lebih dalam. Materi akan disimpan permanen untuk diulang baca, jadi pastikan self-contained.`,
+Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" lebih dalam. Materi akan disimpan permanen untuk diulang baca, jadi pastikan self-contained.`;
+
+  console.log("[AI_SERVICE] generateMaterialMarkdown request", {
+    model: chatModel,
+    system: systemPrompt,
+    prompt: userPrompt,
+  });
+  const result = await generateText({
+    model: chatModel,
+    system: systemPrompt,
+    prompt: userPrompt,
     temperature: 0.6,
   });
+  console.log("[AI_SERVICE] generateMaterialMarkdown response", { text: result.text });
 
   const keyPoints = await extractKeyPoints(result.text);
 

@@ -147,6 +147,9 @@ function safeParseJson(text: string): unknown {
 export async function generateCurriculumOutline(
   input: CurriculumInput,
 ): Promise<CurriculumOutline> {
+  console.log("[AI_SERVICE] generateCurriculumOutline start", {
+    subjectName: input.subjectName,
+  });
   const userPrompt = `Buat outline mata pelajaran custom untuk siswa ${
     input.educationLevel ?? "SMA/SMK"
   }${input.gradeLevel ? ` kelas ${input.gradeLevel}` : ""}.

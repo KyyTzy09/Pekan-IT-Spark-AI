@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { DocumentMarkdownText } from "@/components/shared/document-markdown";
 import { Reveal } from "@/components/shared/reveal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ import { startNewChat } from "@/server/actions/chat";
 import {
   type DocumentListItem,
   deleteDocument,
+  generateDocumentMaterialAction,
   generateDocumentQuizAction,
   getDocumentSummary,
   listDocuments,
@@ -96,6 +98,17 @@ export function UploadView({
   const [chatsLoading, setChatsLoading] = React.useState(false);
   const [shareError, setShareError] = React.useState<string | null>(null);
   const [shareDone, setShareDone] = React.useState<string | null>(null);
+  const [materialFor, setMaterialFor] = React.useState<string | null>(null);
+  const [materialData, setMaterialData] = React.useState<{
+    id: string;
+    title: string;
+    content: string;
+    keyPoints: string[];
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+    estimatedMinutes: number;
+  } | null>(null);
+  const [materialLoading, setMaterialLoading] = React.useState(false);
+  const [materialError, setMaterialError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const refresh = React.useCallback(async () => {
@@ -264,6 +277,32 @@ export function UploadView({
     setQuizFor(null);
     setQuizData(null);
     setQuizError(null);
+  };
+
+  const onShowMaterial = async (doc: DocumentListItem) => {
+    setMaterialFor(doc.id);
+    setMaterialLoading(true);
+    setMaterialError(null);
+    setMaterialData(null);
+    try {
+      const result = await generateDocumentMaterialAction(doc.id);
+      if (!result.ok) {
+        setMaterialError(result.error);
+        setMaterialLoading(false);
+        return;
+      }
+      setMaterialData(result.material);
+      setMaterialLoading(false);
+    } catch (err) {
+      setMaterialError(err instanceof Error ? err.message : "Gagal.");
+      setMaterialLoading(false);
+    }
+  };
+
+  const closeMaterial = () => {
+    setMaterialFor(null);
+    setMaterialData(null);
+    setMaterialError(null);
   };
 
   const onOpenShare = async (doc: DocumentListItem) => {
@@ -502,15 +541,27 @@ export function UploadView({
                             ? "Lihat ringkasan"
                             : "Buat ringkasan"}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onShowQuiz(doc)}
-                          className="h-7 rounded-full px-2.5 text-[11px]"
-                        >
-                          <GraduationCap size={11} className="mr-1" />
-                          Buat latihan
-                        </Button>
+                        {doc.hasHomework ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onShowMaterial(doc)}
+                            className="h-7 rounded-full px-2.5 text-[11px] text-[var(--teal)] font-semibold"
+                          >
+                            <BookOpen size={11} className="mr-1" />
+                            Buat materi belajar
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onShowQuiz(doc)}
+                            className="h-7 rounded-full px-2.5 text-[11px]"
+                          >
+                            <GraduationCap size={11} className="mr-1" />
+                            Buat latihan
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -590,6 +641,15 @@ export function UploadView({
         error={quizError}
         docName={documents.find((d) => d.id === quizFor)?.originalName}
         onClose={closeQuiz}
+      />
+
+      <MaterialModal
+        open={materialFor !== null}
+        loading={materialLoading}
+        data={materialData}
+        error={materialError}
+        docName={documents.find((d) => d.id === materialFor)?.originalName}
+        onClose={closeMaterial}
       />
 
       <ShareModal
@@ -795,6 +855,143 @@ function SummaryModal({
                 className="rounded-full bg-[var(--purple)] text-white"
               >
                 Tutup
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function MaterialModal({
+  open,
+  loading,
+  data,
+  error,
+  docName,
+  onClose,
+}: {
+  open: boolean;
+  loading: boolean;
+  data: {
+    id: string;
+    title: string;
+    content: string;
+    keyPoints: string[];
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+    estimatedMinutes: number;
+  } | null;
+  error: string | null;
+  docName: string | undefined;
+  onClose: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 30, scale: 0.97, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-3xl overflow-hidden rounded-t-3xl border border-border/40 bg-card/95 shadow-2xl backdrop-blur-xl sm:rounded-3xl"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-[var(--teal)]/15 blur-3xl"
+            />
+            <div className="relative flex items-start justify-between gap-3 border-b border-border/40 p-5">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--teal)_22%,transparent)] bg-[color-mix(in_oklch,var(--teal)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--teal)]">
+                  <BookOpen size={10} strokeWidth={2.5} />
+                  Materi Belajar AI
+                </span>
+                <h2 className="mt-2 font-heading text-[18px] font-bold leading-tight">
+                  {data?.title ?? docName ?? "Materi Belajar"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-background/60 text-muted-foreground hover:bg-background"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="relative max-h-[70vh] overflow-y-auto p-5">
+              {loading && (
+                <div className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
+                  <Loader2
+                    size={14}
+                    className="animate-spin text-[var(--teal)]"
+                  />
+                  Lagi merangkai materi... Spark lagi baca soal-soal dan bikin
+                  materi belajar teori yang lengkap buat kamu.
+                </div>
+              )}
+              {error && (
+                <p className="rounded-2xl border border-rose-300/50 bg-rose-50/80 p-3 text-[12.5px] text-rose-900 dark:bg-rose-500/10 dark:text-rose-200">
+                  {error}
+                </p>
+              )}
+              {data && !loading && (
+                <div className="space-y-5">
+                  <div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-wider">
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground">
+                      Level: {data.difficulty}
+                    </span>
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground">
+                      Waktu Baca: ~{data.estimatedMinutes} menit
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Poin Kunci
+                    </h3>
+                    <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                      {data.keyPoints.map((kp) => (
+                        <li
+                          key={kp}
+                          className="flex items-start gap-2 rounded-xl border border-border/40 bg-background/60 px-3 py-2 text-[12px]"
+                        >
+                          <CheckCircle2
+                            size={12}
+                            className="mt-0.5 shrink-0 text-[var(--teal)]"
+                          />
+                          <span>{kp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="border-t border-border/40 pt-4">
+                    <h3 className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                      Isi Materi
+                    </h3>
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed">
+                      <DocumentMarkdownText text={data.content} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="relative flex flex-wrap items-center justify-end gap-2 border-t border-border/40 p-4">
+              <Button
+                onClick={onClose}
+                size="sm"
+                className="rounded-full bg-[var(--teal)] text-white"
+              >
+                Selesai Membaca
               </Button>
             </div>
           </motion.div>

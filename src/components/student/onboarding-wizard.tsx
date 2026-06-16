@@ -200,7 +200,7 @@ export function OnboardingWizard({
       setSubmitting(false);
       return;
     }
-    void update().catch(() => null);
+    await update();
     router.replace("/dashboard");
   };
 

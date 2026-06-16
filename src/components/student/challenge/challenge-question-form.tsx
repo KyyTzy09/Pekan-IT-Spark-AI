@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Sparkles, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Sparkles, XCircle } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,8 @@ interface ChallengeQuestionFormProps {
     difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
     conceptName: string;
     topicName: string;
+    correctAnswer: string;
+    explanation: string | null;
   };
   prefillAnswer?: string | null;
   prefillIsCorrect?: boolean | null;
@@ -52,10 +54,32 @@ export function ChallengeQuestionForm({
     explanation: string | null;
   } | null>(
     prefillIsCorrect !== null && prefillIsCorrect !== undefined
-      ? { isCorrect: prefillIsCorrect, correctAnswer: "", explanation: null }
+      ? {
+          isCorrect: prefillIsCorrect,
+          correctAnswer: question.correctAnswer,
+          explanation: question.explanation,
+        }
       : null,
   );
   const [error, setError] = React.useState<string | null>(null);
+  const [showExplanation, setShowExplanation] = React.useState(false);
+  const [loadingExplanation, setLoadingExplanation] = React.useState(false);
+
+  React.useEffect(() => {
+    setSelected(prefillAnswer ?? null);
+    setResult(
+      prefillIsCorrect !== null && prefillIsCorrect !== undefined
+        ? {
+            isCorrect: prefillIsCorrect,
+            correctAnswer: question.correctAnswer,
+            explanation: question.explanation,
+          }
+        : null,
+    );
+    setError(null);
+    setShowExplanation(false);
+    setLoadingExplanation(false);
+  }, [prefillAnswer, prefillIsCorrect, question]);
 
   const isDone = status === "COMPLETED" || result !== null;
 
@@ -84,6 +108,14 @@ export function ChallengeQuestionForm({
     const res = await onSkip(itemId);
     setSubmitting(false);
     if (!res.ok) setError(res.error ?? "Gagal skip");
+  }
+
+  function triggerExplanation() {
+    setLoadingExplanation(true);
+    setTimeout(() => {
+      setLoadingExplanation(false);
+      setShowExplanation(true);
+    }, 800);
   }
 
   return (
@@ -150,14 +182,66 @@ export function ChallengeQuestionForm({
         </p>
       )}
 
-      {result?.explanation && (
-        <div className="rounded-2xl border border-[var(--coral)]/20 bg-[var(--coral)]/5 p-3">
-          <p className="text-[10.5px] font-bold uppercase tracking-widest text-[var(--coral)]">
-            Kenapa?
-          </p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-foreground/85">
-            {result.explanation}
-          </p>
+      {/* ── Explanation Block ── */}
+      {result && (
+        <div className="space-y-3">
+          {/* If correct, show explanation immediately */}
+          {result.isCorrect && result.explanation && (
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50/50 p-4 dark:bg-emerald-500/5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="grid size-6 place-items-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                  <CheckCircle2 size={12} strokeWidth={2.5} />
+                </span>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+                  Jawaban Benar & Penjelasan
+                </p>
+              </div>
+              <p className="text-[13px] leading-relaxed text-foreground/85 whitespace-pre-line">
+                {result.explanation}
+              </p>
+            </div>
+          )}
+
+          {/* If incorrect, show the "Ask AI / Explain" button first */}
+          {!result.isCorrect &&
+            (!showExplanation ? (
+              <div className="flex justify-start anim-slide-up gpu">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={triggerExplanation}
+                  disabled={loadingExplanation}
+                  className="rounded-2xl border-[var(--coral)]/30 bg-[var(--coral)]/5 hover:bg-[var(--coral)]/10 text-[var(--coral)] font-bold text-[12px] px-4 py-2 flex items-center gap-2 cursor-pointer transition-all active:scale-[0.97]"
+                >
+                  {loadingExplanation ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      Spark sedang merumuskan penjelasan...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={13} className="text-[var(--coral)]" />
+                      Jelaskan Kenapa Ini Salah
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-[var(--coral)]/20 bg-[var(--coral)]/5 p-4 anim-fade-in shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="grid size-6 place-items-center rounded-lg bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-sm">
+                    <Sparkles size={11} strokeWidth={2.5} />
+                  </span>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--coral)]">
+                    Spark Menjelaskan
+                  </p>
+                </div>
+                <p className="text-[13px] leading-relaxed text-foreground/85 whitespace-pre-line">
+                  {result.explanation ||
+                    "Maaf, belum ada penjelasan terperinci untuk soal ini."}
+                </p>
+              </div>
+            ))}
         </div>
       )}
 

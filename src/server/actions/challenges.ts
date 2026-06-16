@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { recordQuestionAttempt } from "@/server/actions/subjects";
 import {
   analyzeReflection,
-  CHALLENGE_MIX_DEFAULT,
   type ChallengeMix,
   generateDailyMix,
   generateOnDemandChallenge,
@@ -17,6 +16,7 @@ import type {
   ChallengeItemStatus,
   ChallengeSource,
   ChallengeStatus,
+  Prisma,
   SubjectSlug,
 } from "../../../generated/prisma/client";
 
@@ -194,86 +194,149 @@ async function generateAndStoreDailyChallenges(
   userId: string,
   date: Date,
 ): Promise<void> {
-  const [
-    profile,
-    weakConcepts,
-    strongConcepts,
-    recentChallenges,
-    availableQuestions,
-  ] = await Promise.all([
-    prisma.studentProfile.findUnique({
-      where: { userId },
-      select: {
-        grade: true,
-        school: true,
-        learningStyle: true,
-        focusedSubjects: true,
-        user: { select: { name: true } },
-      },
-    }),
-    prisma.studentKnowledgeProfile.findMany({
-      where: { userId, masteryScore: { lt: 0.7 } },
-      orderBy: { masteryScore: "asc" },
-      take: 8,
-      include: {
-        concept: {
-          select: {
-            id: true,
-            name: true,
-            topic: { select: { subject: { select: { name: true } } } },
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: {
+      grade: true,
+      school: true,
+      learningStyle: true,
+      focusedSubjects: true,
+      user: { select: { name: true } },
+    },
+  });
+
+  const focusedSubjectIds = profile?.focusedSubjects ?? [];
+
+  // Fetch focused subject details (names)
+  const focusedSubjectModels =
+    focusedSubjectIds.length > 0
+      ? await prisma.subject.findMany({
+          where: { id: { in: focusedSubjectIds } },
+          select: { name: true },
+        })
+      : [];
+  const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+
+  const [weakConcepts, strongConcepts, recentChallenges, availableQuestions] =
+    await Promise.all([
+      prisma.studentKnowledgeProfile.findMany({
+        where: {
+          userId,
+          masteryScore: { lt: 0.7 },
+          ...(focusedSubjectIds.length > 0 && {
+            concept: {
+              topic: {
+                subjectId: { in: focusedSubjectIds },
+              },
+            },
+          }),
+        },
+        orderBy: { masteryScore: "asc" },
+        take: 8,
+        include: {
+          concept: {
+            select: {
+              id: true,
+              name: true,
+              topic: { select: { subject: { select: { name: true } } } },
+            },
           },
         },
-      },
-    }),
-    prisma.studentKnowledgeProfile.findMany({
-      where: { userId, masteryScore: { gte: 0.8 } },
-      orderBy: { masteryScore: "desc" },
-      take: 5,
-      include: {
-        concept: {
-          select: {
-            id: true,
-            name: true,
-            topic: { select: { subject: { select: { name: true } } } },
+      }),
+      prisma.studentKnowledgeProfile.findMany({
+        where: {
+          userId,
+          masteryScore: { gte: 0.8 },
+          ...(focusedSubjectIds.length > 0 && {
+            concept: {
+              topic: {
+                subjectId: { in: focusedSubjectIds },
+              },
+            },
+          }),
+        },
+        orderBy: { masteryScore: "desc" },
+        take: 5,
+        include: {
+          concept: {
+            select: {
+              id: true,
+              name: true,
+              topic: { select: { subject: { select: { name: true } } } },
+            },
           },
         },
-      },
-    }),
-    prisma.challenge.findMany({
-      where: {
-        userId,
-        scheduledFor: {
-          gte: new Date(date.getTime() - 5 * 24 * 60 * 60 * 1000),
-          lt: date,
+      }),
+      prisma.challenge.findMany({
+        where: {
+          userId,
+          scheduledFor: {
+            gte: new Date(date.getTime() - 5 * 24 * 60 * 60 * 1000),
+            lt: date,
+          },
         },
-      },
-      orderBy: { scheduledFor: "desc" },
-      take: 5,
-      include: { items: { select: { kind: true } } },
-    }),
-    prisma.question.findMany({
-      where: { isActive: true },
-      take: 60,
-      select: {
-        id: true,
-        conceptId: true,
-        difficulty: true,
-        concept: {
-          select: {
-            name: true,
-            topic: {
-              select: {
-                name: true,
-                subject: { select: { slug: true } },
+        orderBy: { scheduledFor: "desc" },
+        take: 5,
+        include: { items: { select: { kind: true } } },
+      }),
+      prisma.question.findMany({
+        where: {
+          isActive: true,
+          ...(focusedSubjectIds.length > 0 && {
+            concept: {
+              topic: {
+                subjectId: { in: focusedSubjectIds },
+              },
+            },
+          }),
+        },
+        take: 60,
+        select: {
+          id: true,
+          conceptId: true,
+          difficulty: true,
+          concept: {
+            select: {
+              name: true,
+              topic: {
+                select: {
+                  name: true,
+                  subject: { select: { slug: true } },
+                },
               },
             },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  const focusedSubjects = profile?.focusedSubjects ?? [];
+  const focusedSubjects = focusedSubjectNames;
+
+  // Adaptive learning: dynamically compute challenge composition based on student's ability/performance
+  let mixConfig = { questions: 3, materials: 2, reflections: 2 }; // Default: 7 items
+
+  if (weakConcepts.length > 3) {
+    // User has multiple weaknesses: focus on explanation/review (more materials)
+    mixConfig = {
+      questions: 3,
+      materials: 3,
+      reflections: 2, // Total: 8 items
+    };
+  } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
+    // Advanced user: focus heavily on application and critical thinking (more questions/reflections)
+    mixConfig = {
+      questions: 4,
+      materials: 1,
+      reflections: 3, // Total: 8 items
+    };
+  } else {
+    // Balanced profile
+    mixConfig = {
+      questions: 4,
+      materials: 2,
+      reflections: 2, // Total: 8 items
+    };
+  }
 
   try {
     const plan = await generateDailyMix({
@@ -307,7 +370,7 @@ async function generateAndStoreDailyChallenges(
         subjectSlug: q.concept.topic.subject.slug,
         difficulty: q.difficulty,
       })),
-      mix: CHALLENGE_MIX_DEFAULT,
+      mix: mixConfig,
     });
 
     await prisma.$transaction(async (tx) => {
@@ -337,7 +400,7 @@ async function generateAndStoreDailyChallenges(
           status: "ACTIVE" as const,
           source: "AUTO_DAILY" as const,
           scheduledFor: toDateOnly(date),
-          mixConfig: CHALLENGE_MIX_DEFAULT,
+          mixConfig: mixConfig,
         };
 
         if (item.kind === "QUESTION") {
@@ -901,29 +964,66 @@ export async function generateOnDemand(input: {
     };
   }
 
-  const [profile, availableQuestions] = await Promise.all([
-    prisma.studentProfile.findUnique({
-      where: { userId },
-      select: { focusedSubjects: true },
-    }),
-    prisma.question.findMany({
-      where: { isActive: true },
-      take: 30,
-      select: {
-        id: true,
-        conceptId: true,
-        difficulty: true,
-        concept: {
-          select: {
-            name: true,
-            topic: {
-              select: { name: true, subject: { select: { slug: true } } },
-            },
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { focusedSubjects: true },
+  });
+
+  const focusedSubjectIds = profile?.focusedSubjects ?? [];
+
+  // Fetch focused subject details (names)
+  const focusedSubjectModels =
+    focusedSubjectIds.length > 0
+      ? await prisma.subject.findMany({
+          where: { id: { in: focusedSubjectIds } },
+          select: { name: true },
+        })
+      : [];
+  const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+
+  // If specific subject is requested
+  const subjectSlug = parsed.data.subjectSlug;
+  const subject = subjectSlug
+    ? await prisma.subject.findUnique({
+        where: { slug: subjectSlug as SubjectSlug },
+      })
+    : null;
+
+  // Build filter for availableQuestions
+  const availableQuestionsFilter: Prisma.QuestionWhereInput = {
+    isActive: true,
+  };
+  if (subject) {
+    availableQuestionsFilter.concept = {
+      topic: {
+        subjectId: subject.id,
+      },
+    };
+  } else if (focusedSubjectIds.length > 0) {
+    availableQuestionsFilter.concept = {
+      topic: {
+        subjectId: { in: focusedSubjectIds },
+      },
+    };
+  }
+
+  const availableQuestions = await prisma.question.findMany({
+    where: availableQuestionsFilter,
+    take: 30,
+    select: {
+      id: true,
+      conceptId: true,
+      difficulty: true,
+      concept: {
+        select: {
+          name: true,
+          topic: {
+            select: { name: true, subject: { select: { slug: true } } },
           },
         },
       },
-    }),
-  ]);
+    },
+  });
 
   try {
     const plan = await generateOnDemandChallenge({
@@ -931,7 +1031,7 @@ export async function generateOnDemand(input: {
       kind: parsed.data.kind,
       subjectSlug: parsed.data.subjectSlug,
       difficulty: parsed.data.difficulty,
-      focusedSubjects: profile?.focusedSubjects ?? [],
+      focusedSubjects: focusedSubjectNames,
       availableQuestions: availableQuestions.map((q) => ({
         id: q.id,
         conceptId: q.conceptId,
