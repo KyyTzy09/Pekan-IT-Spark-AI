@@ -120,6 +120,7 @@ model User {
   passwordHash  String?
   role          Role      @default(STUDENT)
   isOnboarded   Boolean   @default(false)
+  isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -151,6 +152,7 @@ model User {
   materialReads       MaterialRead[]
   reflections         Reflection[]
   challengeProgress   UserChallengeProgress[]
+  adminActions        AdminAuditLog[]           @relation("AdminActor")
 
   @@map("users")
 }
@@ -242,6 +244,7 @@ model Subject {
   color       String?
   order       Int           @default(0)
   isCustom    Boolean       @default(false)
+  isActive    Boolean       @default(true)
   source      SubjectSource @default(OFFICIAL)
   createdById String?
   createdBy   User?         @relation("CustomSubjects", fields: [createdById], references: [id], onDelete: SetNull)
@@ -257,6 +260,7 @@ model Subject {
   @@index([isCustom])
   @@index([source])
   @@index([createdById])
+  @@index([isVerified])
   @@map("subjects")
 }
 
@@ -866,4 +870,31 @@ model DocumentQuiz {
 
   @@index([documentId])
   @@map("document_quizzes")
+}
+
+enum AdminAction {
+  CUSTOM_SUBJECT_APPROVE
+  CUSTOM_SUBJECT_REJECT
+  USER_BAN
+  USER_UNBAN
+  USER_SUSPEND
+  USER_UNSUSPEND
+  CONTENT_DELETE
+}
+
+model AdminAuditLog {
+  id          String      @id @default(cuid())
+  adminId     String
+  admin       User        @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
+  action      AdminAction
+  targetType  String
+  targetId    String
+  metadata    Json?       @db.JsonB
+  note        String?     @db.Text
+  createdAt   DateTime    @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@map("admin_audit_log")
 }
