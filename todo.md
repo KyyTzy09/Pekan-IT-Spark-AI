@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-16 (v0.95 — Phase 4 done, **NEW**: AI Daily Challenge System — 4 mixed challenges/hari (soal + materi markdown + refleksi), hybrid daily+on-demand, full progress tracking)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; ready for Phase 5 (Document Upload)
+> **Last updated:** 2026-06-17 (v0.96 — Phase 7 partial: XP/Level unbounded + Streak + Badge check + 50 badges seeded. UI mini-celebration belum di-wire)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; Phase 6 ✅; Phase 7 (7.1 ✅ 7.2 ✅ 7.3 partial)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 > **⚠️ WAJIB pakai `rtk` prefix:** Setiap command `bun` / `bunx` WAJIB ditulis `rtk bun` / `rtk bunx` (cth: `rtk bunx prisma migrate dev`, bukan `bunx prisma migrate dev`). Ini untuk konsistensi tooling environment.
@@ -537,28 +537,24 @@
 ## Phase 7 — Gamification System (Minggu 5–6)
 
 ### 7.1 XP & Level System
-- [ ] 🔴 Model `XpTransaction` dan `Level`
-- [ ] 🔴 XP sources: jawab benar, selesai sesi chat, streak, kuasai konsep, daily quest
-- [ ] 🔴 Level 1–50 dengan nama lokal: Pemula → Penjelajah → Pejuang → Ahli → Maestro → Legenda
-- [ ] 🔴 Progress bar level di beranda
-- [ ] 🔴 Fungsi `addXp(userId, amount, source, metadata)`
+- [x] 🔴 Model `XpTransaction` dan `Level`
+- [x] 🔴 XP sources: jawab benar, selesai sesi chat, streak, kuasai konsep, daily quest (constant `XP_REWARDS` di `src/lib/gamification.ts`)
+- [x] 🔴 **Level unbounded** — formula `xpForFormulaLevel(n) = 500*n*(n-1)`. L1–50 pakai tabel (nama: Pemula → Legenda). L51+ tier "Legenda" tanpa cap. L100=4.95M XP, L1000=499.5M XP
+- [x] 🔴 Progress bar level di beranda (ProfileWidget di `student-nav.tsx`, panggil `getDashboardSummary` → `levelFromXp`)
+- [x] 🔴 Fungsi `addXp(userId, amount, source, metadata)` di `src/server/actions/gamification.ts` — atomic XP transaction + level update dalam 1 tx
 
 ### 7.2 Streak Belajar
-- [ ] 🔴 Model `Streak`
-- [ ] 🔴 Hitung hari berturut-turut belajar
-- [ ] 🔴 Visual api 🔥 dan angka streak
-- [ ] 🔴 Streak freeze 1x per minggu
-- [ ] 🔴 Pesan positif saat streak putus: "Gapapa, yuk mulai lembaran baru!"
+- [x] 🔴 Model `Streak` (+ field `lastFreezeResetAt` via migration `20260617000000_add_streak_freeze_reset`)
+- [x] 🔴 Hitung hari berturut-turut belajar — `recordActivity(userId)` di `src/server/actions/gamification.ts`
+- [x] 🔴 Visual api 🔥 dan angka streak (ProfileWidget sudah render)
+- [x] 🔴 Streak freeze 1x per minggu — auto-refill jika `lastFreezeResetAt` >= 7 hari
+- [x] 🔴 Pesan positif saat streak putus: `getStreakBrokenMessage(prevStreak)` — tone-adjusted by streak length, no shame
 
 ### 7.3 Badges & Achievements
-- [ ] 🔴 Model `Badge`, `Achievement`, `UserBadge`, `UserAchievement`
-- [ ] 🔴 Seed 50+ badge across categories:
-  - Akademik (Penakluk Trigonometri, Teman Aljabar, dll)
-  - Kebiasaan (Streak Master 7 Hari, Konsisten 30 Hari)
-  - Keberanian (Penanya Ulung, Pemikir Kritis)
-  - Spesial (Penolong Teman — v2)
-- [ ] 🔴 Badge check trigger setelah aktivitas
-- [ ] 🔴 Notifikasi unlock badge dengan mini celebration
+- [x] 🔴 Model `Badge`, `Achievement`, `UserBadge`, `UserAchievement`
+- [x] 🔴 Seed 50+ badge (50 total: 18 existing + 32 baru di seed). Categories: Akademik, Kebiasaan, Keberanian, Spesial
+- [~] 🔴 Badge check trigger — function `checkAndUnlockBadges(userId)` ada di `src/server/actions/gamification.ts`, returns `BadgeUnlock[]`. **Belum auto-call dari activity sites** (perlu wiring di practice/challenge/chat completion)
+- [ ] 🟠 Notifikasi unlock badge dengan mini celebration — server return ready, UI belum (perlu BadgeUnlockToast component)
 
 ### 7.4 Daily Quest
 - [ ] 🔴 Model `DailyQuest`

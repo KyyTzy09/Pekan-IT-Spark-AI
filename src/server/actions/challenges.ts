@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
+import { addXp, recordActivity } from "@/server/actions/gamification";
 import { recordQuestionAttempt } from "@/server/actions/subjects";
 import {
   analyzeReflection,
@@ -734,10 +736,20 @@ export async function completeChallengeItem(input: {
       });
     }
 
+    if (isCorrect) {
+      await addXp(
+        userId,
+        XP_REWARDS.ANSWER_CORRECT,
+        "ANSWER_CORRECT",
+        { questionId: item.questionId, challengeItemId: item.id },
+      );
+    }
+
     const challengeCompleted = await checkAndCompleteChallenge(
       item.challengeId,
     );
     await aggregateDailyProgress(userId, item.challenge.scheduledFor);
+    await recordActivity(userId);
     revalidatePath("/challenge", "layout");
     revalidatePath("/dashboard", "layout");
 
@@ -758,10 +770,17 @@ export async function completeChallengeItem(input: {
       where: { id: item.id },
       data: { status: "COMPLETED", completedAt: new Date() },
     });
+    await addXp(
+      userId,
+      XP_REWARDS.CHAT_SESSION,
+      "CHAT_SESSION",
+      { challengeItemId: item.id, kind: "MATERIAL" },
+    );
     const challengeCompleted = await checkAndCompleteChallenge(
       item.challengeId,
     );
     await aggregateDailyProgress(userId, item.challenge.scheduledFor);
+    await recordActivity(userId);
     revalidatePath("/challenge", "layout");
     return { ok: true, challengeCompleted };
   }
@@ -849,10 +868,19 @@ export async function submitReflection(input: {
     },
   });
 
-  await checkAndCompleteChallenge(challenge.id);
+  await addXp(
+    userId,
+    15,
+    "DAILY_QUEST",
+    { challengeId: challenge.id, kind: "REFLECTION" },
+  );
+
+  const completedAfter = await checkAndCompleteChallenge(challenge.id);
   await aggregateDailyProgress(userId, challenge.scheduledFor);
+  await recordActivity(userId);
   revalidatePath("/challenge", "layout");
   revalidatePath(`/challenge/${challenge.id}`, "layout");
+  revalidatePath("/dashboard", "layout");
 
   return {
     ok: true,

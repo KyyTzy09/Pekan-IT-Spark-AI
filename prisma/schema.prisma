@@ -502,14 +502,15 @@ model Level {
 }
 
 model Streak {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  currentStreak   Int       @default(0)
-  longestStreak   Int       @default(0)
-  lastActivityAt  DateTime?
-  freezeAvailable Int       @default(1)
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak     Int       @default(0)
+  longestStreak     Int       @default(0)
+  lastActivityAt    DateTime?
+  freezeAvailable   Int       @default(1)
+  lastFreezeResetAt DateTime?
+  updatedAt         DateTime  @updatedAt
 
   @@map("streaks")
 }

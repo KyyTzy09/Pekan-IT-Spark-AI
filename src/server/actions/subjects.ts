@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
+import { addXp } from "@/server/actions/gamification";
 import {
   type CurriculumOutline,
   generateCurriculumOutline,
@@ -267,6 +269,23 @@ export async function recordQuestionAttempt(
       lastAttemptAt: new Date(),
     },
   });
+
+  if (isCorrect) {
+    await addXp(userId, XP_REWARDS.ANSWER_CORRECT, "ANSWER_CORRECT", {
+      questionId,
+      conceptId: question.conceptId,
+      difficulty: question.difficulty,
+    });
+  }
+
+  if (newStatus === "MASTERED" && prevScore < 0.8) {
+    await addXp(
+      userId,
+      XP_REWARDS.CONCEPT_MASTERED,
+      "CONCEPT_MASTERED",
+      { conceptId: question.conceptId },
+    );
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/subjects");

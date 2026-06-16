@@ -1,5 +1,6 @@
 import "server-only";
 
+import { levelFromXp } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 import type { SubjectSlug } from "../../../generated/prisma/client";
 
@@ -215,26 +216,10 @@ export async function getDashboardSummary(
     ]);
 
   const totalXp = profile?.totalXp ?? 0;
-  const currentLevel = levels.find((l) => l.level === (profile?.level ?? 1));
-  const nextLevel = levels.find((l) => l.level === (profile?.level ?? 1) + 1);
+  const computed = levelFromXp(totalXp, levels);
   const levelInfo: DashboardLevelInfo = {
-    level: profile?.level ?? 1,
-    name: currentLevel?.name ?? "Pemula",
+    ...computed,
     totalXp,
-    currentMinXp: currentLevel?.minXp ?? 0,
-    nextMinXp: nextLevel?.minXp ?? null,
-    progress: nextLevel
-      ? Math.min(
-          100,
-          Math.max(
-            0,
-            ((totalXp - (currentLevel?.minXp ?? 0)) /
-              Math.max(1, nextLevel.minXp - (currentLevel?.minXp ?? 0))) *
-              100,
-          ),
-        )
-      : 100,
-    xpToNext: nextLevel ? Math.max(0, nextLevel.minXp - totalXp) : null,
   };
 
   const allConcepts = await prisma.concept.findMany({
