@@ -171,7 +171,9 @@ export async function getNextPracticeQuestion(
   }
 
   const eligibleConcepts: typeof concepts = [];
+  const blockedConcepts: typeof concepts = [];
   const weakPrereqs: PracticeSession["weakPrereqs"] = [];
+  const prereqRefCount = new Map<string, number>();
   for (const c of concepts) {
     const weakHere: PracticeSession["weakPrereqs"] = [];
     let prereqSatisfied = true;
@@ -186,21 +188,45 @@ export async function getNextPracticeQuestion(
           name: edge.prerequisite.name,
           score,
         });
+        prereqRefCount.set(
+          edge.prerequisiteId,
+          (prereqRefCount.get(edge.prerequisiteId) ?? 0) + 1,
+        );
       }
     }
     if (prereqSatisfied) {
       eligibleConcepts.push(c);
-    } else if (weakPrereqs.length < 3) {
-      weakPrereqs.push(...weakHere);
+    } else {
+      blockedConcepts.push(c);
+      for (const w of weakHere) {
+        if (
+          weakPrereqs.length < 5 &&
+          !weakPrereqs.some((existing) => existing.conceptId === w.conceptId)
+        ) {
+          weakPrereqs.push(w);
+        }
+      }
     }
   }
-  const candidateConcepts =
-    eligibleConcepts.length > 0 ? eligibleConcepts : concepts;
 
-  const candidateConcept = pickConceptWeighted(
-    candidateConcepts,
-    masteryByConcept,
-  );
+  if (eligibleConcepts.length === 0) {
+    const nextPrereqConcepts = [...prereqRefCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => concepts.find((c) => c.id === id))
+      .filter((c): c is (typeof concepts)[number] => Boolean(c))
+      .filter((c) => c.prerequisites.length === 0);
+    const fallbackConcept = nextPrereqConcepts[0] ?? null;
+    if (!fallbackConcept) {
+      return {
+        ok: false,
+        error:
+          "Semua konsep masih terblokir prasyarat. Selesaikan prasyarat dulu ya.",
+      };
+    }
+    eligibleConcepts.push(fallbackConcept);
+  }
+
+  const candidateConcept = pickConceptWeighted(eligibleConcepts, masteryByConcept);
   if (!candidateConcept) {
     return { ok: false, error: "Tidak ada konsep yang bisa dilatih saat ini" };
   }

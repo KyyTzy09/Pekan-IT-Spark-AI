@@ -99,6 +99,11 @@ export function SubjectsListView({
                 <h2 className="mt-0.5 font-heading text-[16px] font-bold leading-tight">
                   Custom + AI
                 </h2>
+                <p className="mt-1 flex items-center gap-1 text-[10.5px] leading-relaxed text-muted-foreground">
+                  <Sparkles size={10} className="text-[var(--purple)]" />
+                  Mapel di bawah ini AI-generated — bukan kurikulum nasional. Tetap
+                  konfirmasi ke guru untuk hal penting.
+                </p>
               </div>
               <span className="rounded-full bg-[var(--purple)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]">
                 {custom.length} mapel
@@ -165,10 +170,10 @@ function SubjectCard({
             {subject.isCustom && (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-[var(--purple)]/8 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
-                title="Mapel ini dibuat pakai Spark AI"
+                title="Mapel ini AI-generated oleh Spark, bukan kurikulum nasional"
               >
                 <Wand2 size={8} strokeWidth={2.5} />
-                AI
+                AI-generated
               </span>
             )}
           </div>
@@ -255,15 +260,35 @@ export function SubjectDetailView({
               <span className="text-[24px]">{subject.icon ?? "📚"}</span>
             </span>
             <div className="flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Mata pelajaran
-              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Mata pelajaran
+                </p>
+                {subject.isCustom && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--purple)]/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.22)]"
+                    title="Mapel ini AI-generated oleh Spark, bukan kurikulum nasional"
+                  >
+                    <Wand2 size={9} strokeWidth={2.5} />
+                    AI-generated
+                  </span>
+                )}
+              </div>
               <h1 className="mt-1 font-heading text-[28px] font-bold leading-tight tracking-tight sm:text-[34px]">
                 {subject.name}
               </h1>
               {subject.description && (
                 <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13.5px]">
                   {subject.description}
+                </p>
+              )}
+              {subject.isCustom && (
+                <p className="mt-2 flex items-start gap-1.5 rounded-xl border border-[var(--purple)]/20 bg-[var(--purple)]/5 px-3 py-2 text-[11.5px] leading-relaxed text-[var(--purple)] dark:text-[var(--purple)]">
+                  <Sparkles size={12} className="mt-0.5 shrink-0" />
+                  <span>
+                    Mapel ini AI-generated oleh Spark — bukan kurikulum nasional.
+                    Selalu konfirmasi materi ke guru untuk hal-hal penting.
+                  </span>
                 </p>
               )}
             </div>

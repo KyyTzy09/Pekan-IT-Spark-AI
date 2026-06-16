@@ -402,6 +402,8 @@ export type SubjectExplorerSummary = {
     icon: string | null;
     color: string | null;
     description: string | null;
+    isCustom: boolean;
+    source: "OFFICIAL" | "AI_GENERATED" | "USER_CREATED";
   };
   topics: Array<{
     id: string;
@@ -478,6 +480,8 @@ export async function getSubjectDetail(
       icon: subject.icon,
       color: subject.color,
       description: subject.description,
+      isCustom: subject.isCustom,
+      source: subject.source,
     },
     topics,
     totalConcepts: subject.topics.reduce(

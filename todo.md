@@ -345,17 +345,21 @@
 - [x] 🟠 Update `src/app/(student)/practice/page.tsx`: dari stub "segera hadir" jadi fully wired ke pipeline
 
 #### 4.6.8 Admin Review untuk Custom Subjects (Phase 10)
+> Catatan: sesuai 4.6.9.2 (anti-pattern), mapel custom **TIDAK** dipromosikan ke kurikulum global. Admin cuma verify — `isCustom: true` tetap.
 - [ ] 🟢 Admin page: list custom subjects dengan `isVerified: false`
-- [ ] 🟢 Approve → set `isVerified: true` + `isCustom: false` (promote ke kurikulum global)
+- [ ] 🟢 Approve → set `isVerified: true` saja (TETAP `isCustom: true`, JANGAN promote ke global) — mapel jadi bisa dishare ke siswa lain, badge jadi "Verified", tapi tetap di section "Custom + AI"
 - [ ] 🟢 Reject → soft delete (atau set `isActive: false`) + kasih feedback ke siswa
 - [ ] 🟢 Audit log: siapa yang approve/reject kapan
 
 #### 4.6.9 Anti-Pattern (Sama seperti 7.10)
-- [ ] 🔴 Tidak boleh auto-generate soal pretest untuk mapel nasional (kualitas terlalu kritis)
-- [ ] 🔴 Tidak boleh biarkan mapel custom masuk kurikulum global
-- [ ] 🔴 Tidak boleh pakai ML/RL untuk difficulty selection (aturan deterministik lebih transparan)
-- [ ] 🔴 Tidak boleh skip prerequisite check
-- [ ] 🔴 Mapel custom harus tetap ditampilkan dengan disclaimer "AI-generated"
+- [x] 🔴 Tidak boleh auto-generate soal pretest untuk mapel nasional (kualitas terlalu kritis) — **PASS**: onboarding pretest (`src/app/onboarding/page.tsx`) pakai `prisma.question.findMany` dari seed; AI generate cuma di `addCustomSubject` (`isCustom: true`)
+- [x] 🔴 Tidak boleh biarkan mapel custom masuk kurikulum global — **PASS + spec sync**: 4.6.8 diupdate (admin approve cuma verify, TETAP `isCustom: true`, JANGAN promote)
+- [x] 🔴 Tidak boleh pakai ML/RL untuk difficulty selection (aturan deterministik lebih transparan) — **PASS**: `src/server/learning/adaptive.ts` `selectNextDifficulty` pakai rolling accuracy + wrong-streak + promote/demote thresholds, fully deterministic
+- [x] 🔴 Tidak boleh skip prerequisite check — **FIXED**: `src/server/actions/practice.ts` `getNextPracticeQuestion()` line ~196 fallback ke root prereq concept (yg punya dependents) instead of all concepts; root concepts by definition always eligible (no prereqs), blocked concepts never picked
+- [x] 🔴 Mapel custom harus tetap ditampilkan dengan disclaimer "AI-generated" — **FIXED**: 
+  - `src/components/student/subjects-view.tsx` Section header "Custom + AI" dapat inline disclaimer
+  - SubjectCard badge berubah dari "AI" → "AI-generated" (visible, bukan cuma tooltip)
+  - `SubjectDetailView` header dapat prominent purple box disclaimer "Mapel ini AI-generated oleh Spark — bukan kurikulum nasional. Selalu konfirmasi materi ke guru untuk hal-hal penting."
 
 ---
 
