@@ -42,7 +42,9 @@ function buildSystemPrompt(
   const subjectLine = options.subject
     ? `Mata pelajaran: ${options.subject.name}.`
     : "Topik umum: mata pelajaran SMA/SMK Indonesia.";
-  const topicLine = options.topic ? `Topik saat ini: ${options.topic.name}.` : "";
+  const topicLine = options.topic
+    ? `Topik saat ini: ${options.topic.name}.`
+    : "";
   const gradeLine = options.grade ? `Kelas siswa: ${options.grade}.` : "";
   const schoolLine = options.school ? `Asal sekolah: ${options.school}.` : "";
   const styleLine = options.learningStyle
@@ -83,27 +85,33 @@ ${responseDepthLine}
 6. SELALU akhiri dengan pertanyaan terbuka untuk lanjutin dialog.
 
 ## KONTEKS KURIKULUM
-${contextSnippets.length > 0
-  ? `Berikut materi kurikulum yang relevan:\n${contextSnippets
-      .slice(0, 3)
-      .map((s, i) => `[${i + 1}] ${s}`)
-      .join("\n\n")}`
-  : "(Belum ada materi kurikulum yang match — jawab dari pengetahuan umum yang sesuai)."}
+${
+  contextSnippets.length > 0
+    ? `Berikut materi kurikulum yang relevan:\n${contextSnippets
+        .slice(0, 3)
+        .map((s, i) => `[${i + 1}] ${s}`)
+        .join("\n\n")}`
+    : "(Belum ada materi kurikulum yang match — jawab dari pengetahuan umum yang sesuai)."
+}
 
 ## KONSEP YANG SUDAH DIKUASAI SISWA
-${mastered.length > 0
-  ? mastered.map((c) => `- ${c.name} (${c.subjectName})`).join("\n")
-  : "(Belum ada)"}
+${
+  mastered.length > 0
+    ? mastered.map((c) => `- ${c.name} (${c.subjectName})`).join("\n")
+    : "(Belum ada)"
+}
 
 ## KONSEP YANG LAGI DIPELAJARI / STRUGGLE
-${learning.length > 0
-  ? learning
-      .map(
-        (c) =>
-          `- ${c.name} (${c.subjectName}) — ${c.status} ${Math.round(c.masteryScore * 100)}%`,
-      )
-      .join("\n")
-  : "(Belum ada)"}
+${
+  learning.length > 0
+    ? learning
+        .map(
+          (c) =>
+            `- ${c.name} (${c.subjectName}) — ${c.status} ${Math.round(c.masteryScore * 100)}%`,
+        )
+        .join("\n")
+    : "(Belum ada)"
+}
 
 ${
   newOnes.length > 0
@@ -269,9 +277,7 @@ export async function generateTutorStream(input: {
   });
 }
 
-export async function generateChatTitle(
-  firstMessage: string,
-): Promise<string> {
+export async function generateChatTitle(firstMessage: string): Promise<string> {
   const trimmed = firstMessage.trim();
   if (trimmed.length <= 48) return trimmed;
   return `${trimmed.slice(0, 45).trimEnd()}…`;

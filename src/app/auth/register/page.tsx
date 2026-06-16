@@ -158,8 +158,7 @@ export default function RegisterPage() {
       {/* ── Header ── */}
       <header className="space-y-2">
         <h1 className="font-heading text-[28px] font-extrabold leading-[1.1] tracking-tight text-foreground anim-slide-up gpu">
-          Buat akun{" "}
-          <span className="text-gradient">Spark</span>
+          Buat akun <span className="text-gradient">Spark</span>
         </h1>
         <p
           className="text-[13.5px] leading-relaxed text-muted-foreground anim-slide-up gpu"
@@ -170,10 +169,7 @@ export default function RegisterPage() {
       </header>
 
       {/* ── Role Selector — Card style ── */}
-      <div
-        className="anim-slide-up gpu"
-        style={{ animationDelay: "120ms" }}
-      >
+      <div className="anim-slide-up gpu" style={{ animationDelay: "120ms" }}>
         <div className="grid grid-cols-2 gap-2.5">
           {ROLES.map((r) => {
             const active = role === r.id;
@@ -258,10 +254,7 @@ export default function RegisterPage() {
       </div>
 
       {/* ── Google ── */}
-      <div
-        className="anim-slide-up gpu"
-        style={{ animationDelay: "180ms" }}
-      >
+      <div className="anim-slide-up gpu" style={{ animationDelay: "180ms" }}>
         <Button
           type="button"
           variant="outline"

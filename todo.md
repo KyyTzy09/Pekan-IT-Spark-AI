@@ -329,18 +329,20 @@
 - [x] 🔴 Subject card: badge "AI" (Wand2 icon) untuk custom subjects, badge "Fokus" untuk mapel di `focusedSubjects`
 - [x] 🔴 Dashboard "Progress per mapel" section: tombol "Tambah mapel" (Wand2) di header + tile "Mau belajar mapel lain?" dengan blob gradient coral/purple di grid
 
-#### 4.6.6 Seed Tambahan (PENDING — effort curation bukan AI)
-- [ ] 🟠 Seed 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi): masing-masing ~30 konsep, ~40 soal, prerequisite chains — butuh effort kurasi manual, ~2-3 hari kerja
-- [ ] 🟠 Seed PPKN: ~25 konsep, ~35 soal
-- [ ] 🟠 Update `prisma/seed.ts` untuk include mapel-mapel baru
-- [ ] 🟠 Generate embeddings (pgvector) untuk concept baru (incremental)
+#### 4.6.6 Seed Tambahan (PARTIAL DONE — concept/soal ~75% target, prereq chains seeded)
+- [x] 🟠 Seed 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi): 21/22/22/20 konsep & 33/30/37/27 soal (target ~30/~40) — cukup untuk launching, tambah nanti incremental
+- [x] 🟠 Seed PPKN: 20 konsep & 30 soal (target ~25/~35) — cukup, tambah nanti incremental
+- [x] 🟠 Update `prisma/seed.ts` untuk include mapel-mapel baru — semua subject/topic/concept/question ada
+- [x] 🟠 Prerequisite chains: 73 edges seeded via `PREREQUISITES_BY_SUBJECT` + `seedPrerequisites()` (topik → topik, min mastery 0.6–0.7)
+- [x] 🟢 Generate embeddings (pgvector) untuk concept baru — `generateAndSeedEmbeddings()` sudah panggil `embedMany`; skip gracefully kalau provider ga support
 
-#### 4.6.7 Integrasi Adaptive Engine ke Practice (Phase 6)
-- [ ] 🟠 Practice page: query `selectNextQuestionDifficulty()` saat load
-- [ ] 🟠 Practice page: select question by concept mastery + prereq satisfied
-- [ ] 🟠 Submit answer → panggil `recordQuestionAttempt()` → display new mastery + status
-- [ ] 🟠 UI: tampilkan "Difficulty: MEDIUM (akurasimu 75%)" feedback ke siswa (transparansi)
-- [ ] 🟠 Trigger: kalau status berubah ke MASTERED → unlock concept dependent + celebrate
+#### 4.6.7 Integrasi Adaptive Engine ke Practice (DONE)
+- [x] 🟠 Server action `getNextPracticeQuestion()`: filter konsep by prereq satisfied → call `selectNextQuestionDifficulty()` → pick un-attempted question by difficulty
+- [x] 🟠 Server action `submitPracticeAnswer()`: validate answer server-side → panggil `recordQuestionAttempt()` → return newMastery + newStatus + unlocked concepts
+- [x] 🟠 `<PracticePlayer />` client component: pilih opsi → submit → tampilkan feedback (benar/salah, correct answer, mastery %, status badge)
+- [x] 🟠 UI: header cards "Difficulty: MEDIUM (akurasi X%)" + "Akurasi kamu X%" + "Streak & konsep" — transparansi penuh
+- [x] 🟠 Trigger MASTERED: `<MasteredCelebration />` modal (party popper, spring animation) + list "Konsep dependen baru terbuka"
+- [x] 🟠 Update `src/app/(student)/practice/page.tsx`: dari stub "segera hadir" jadi fully wired ke pipeline
 
 #### 4.6.8 Admin Review untuk Custom Subjects (Phase 10)
 - [ ] 🟢 Admin page: list custom subjects dengan `isVerified: false`

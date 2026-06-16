@@ -1,8 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { ArrowRight, Check, Heart, Rocket, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "../../shared/reveal";
 
@@ -18,11 +18,7 @@ export function CTASection() {
   const isLoggedIn = status === "authenticated" && session?.user;
   const role = session?.user?.role as string | undefined;
   const home =
-    role === "PARENT"
-      ? "/parent"
-      : role === "ADMIN"
-        ? "/admin"
-        : "/dashboard";
+    role === "PARENT" ? "/parent" : role === "ADMIN" ? "/admin" : "/dashboard";
 
   return (
     <section className="container-px py-16 md:py-24">

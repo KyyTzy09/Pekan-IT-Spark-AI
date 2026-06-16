@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,6 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,7 @@ export function Hero() {
   const isLoggedIn = status === "authenticated" && session?.user;
   const role = session?.user?.role as string | undefined;
   const home =
-    role === "PARENT"
-      ? "/parent"
-      : role === "ADMIN"
-        ? "/admin"
-        : "/dashboard";
+    role === "PARENT" ? "/parent" : role === "ADMIN" ? "/admin" : "/dashboard";
   const ctaHref = isLoggedIn ? home : "/auth/register";
   const ctaLabel = isLoggedIn ? "Lanjut Belajar" : "Mulai Belajar Gratis";
   const CtaIcon = isLoggedIn ? ArrowRight : Rocket;
