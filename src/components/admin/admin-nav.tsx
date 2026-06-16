@@ -42,6 +42,13 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
         icon: BookOpen,
         match: (p) => p.startsWith("/admin/custom-subjects"),
       },
+      {
+        href: "/admin/subjects",
+        label: "Kelola Mapel",
+        shortLabel: "Kelola",
+        icon: BookOpen,
+        match: (p) => p.startsWith("/admin/subjects"),
+      },
     ],
   },
   {

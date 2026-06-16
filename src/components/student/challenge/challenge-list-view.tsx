@@ -9,6 +9,7 @@ import {
   ChallengeCard,
   OnDemandGenerator,
 } from "@/components/student/challenge";
+import { DailyScoreGauge } from "@/components/student/student-charts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -226,6 +227,41 @@ export function ChallengeListView({
           </div>
         </header>
       </Reveal>
+
+      {/* Daily Score Gauge */}
+      {!loading && dailyProgress.overallScore > 0 && (
+        <Reveal delay={60}>
+          <section className="relative overflow-hidden rounded-2xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full opacity-20 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(circle, oklch(0.7 0.15 220 / 0.5), transparent 70%)",
+              }}
+            />
+            <div className="relative mb-3 flex items-center gap-2">
+              <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--blue)]/15 to-[var(--teal)]/15 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.2)]">
+                <Sparkles
+                  size={13}
+                  className="text-[var(--blue)]"
+                  strokeWidth={2.5}
+                />
+              </span>
+              <p className="text-[11px] font-bold text-muted-foreground">
+                Skor performa hari ini
+              </p>
+            </div>
+            <DailyScoreGauge
+              overallScore={dailyProgress.overallScore}
+              challengeScore={dailyProgress.challengeScore}
+              materialsScore={dailyProgress.materialsScore}
+              reflectionsScore={dailyProgress.reflectionsScore}
+              masteryScore={dailyProgress.masteryScore}
+            />
+          </section>
+        </Reveal>
+      )}
 
       <Reveal delay={80}>
         <div className="flex flex-wrap items-center justify-between gap-3">

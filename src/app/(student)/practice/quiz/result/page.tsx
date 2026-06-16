@@ -5,6 +5,8 @@ import { Reveal } from "@/components/shared/reveal";
 import { QuizResultView } from "@/components/student/quiz-result-view";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Hasil quiz — Spark Ai",
   description: "Breakdown nilai per konsep.",

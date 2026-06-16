@@ -27,12 +27,23 @@ type ChallengeListItem = {
   mixConfig: { questions: number; materials: number; reflections: number };
 };
 
+type TimelinePoint = {
+  date: string;
+  overallScore: number;
+  masteryScore: number;
+  challengeScore: number;
+  materialsScore: number;
+  reflectionsScore: number;
+};
+
 export function DashboardWithChallengesView({
   summary,
   todayChallenges: initialChallenges,
+  weeklyTimeline,
 }: {
   summary: DashboardSummary;
   todayChallenges: ChallengeListItem[];
+  weeklyTimeline?: TimelinePoint[];
 }) {
   const [challenges, setChallenges] =
     useState<ChallengeListItem[]>(initialChallenges);
@@ -75,7 +86,7 @@ export function DashboardWithChallengesView({
 
   return (
     <div className="space-y-5 sm:space-y-7">
-      <DashboardView summary={summary} />
+      <DashboardView summary={summary} weeklyTimeline={weeklyTimeline} />
       {showChallenges && (
         <Reveal>
           <div className="relative overflow-hidden rounded-3xl border border-border/45 bg-card/60 p-5 shadow-[0_8px_30px_rgba(80,20,50,0.04)] backdrop-blur-xl sm:p-6">
