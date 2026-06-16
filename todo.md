@@ -553,8 +553,8 @@
 ### 7.3 Badges & Achievements
 - [x] 🔴 Model `Badge`, `Achievement`, `UserBadge`, `UserAchievement`
 - [x] 🔴 Seed 50+ badge (50 total: 18 existing + 32 baru di seed). Categories: Akademik, Kebiasaan, Keberanian, Spesial
-- [~] 🔴 Badge check trigger — function `checkAndUnlockBadges(userId)` ada di `src/server/actions/gamification.ts`, returns `BadgeUnlock[]`. **Belum auto-call dari activity sites** (perlu wiring di practice/challenge/chat completion)
-- [ ] 🟠 Notifikasi unlock badge dengan mini celebration — server return ready, UI belum (perlu BadgeUnlockToast component)
+- [x] 🔴 Badge check trigger — function `checkAndUnlockBadges(userId)` ada di `src/server/actions/gamification.ts`, returns `BadgeUnlock[]` (wired to practice, challenge, and document activities)
+- [x] 🟠 Notifikasi unlock badge dengan mini celebration — server returns ready, client renders overlay animation and notifications via `BadgeUnlockToast` and `useBadgeCelebration`
 
 ### 7.4 Daily Quest
 - [x] 🔴 **DEPRECATED** per §6.6.9 — replaced by AI Daily Challenge System (§6.6.1-§6.6.7)
@@ -569,36 +569,36 @@
   - Weekly view direpresentasikan via `getProgressTimeline(userId, 7)` dari §6.6.7 (7-day daily activity breakdown)
 
 ### 7.6 Knowledge Star Constellation
-- [ ] 🔴 Visualisasi konsep sebagai bintang
-- [ ] 🔴 Bintang menyala saat konsep dikuasai
-- [ ] 🔴 Tampilan per mata pelajaran
-- [ ] 🔴 Skill tree dengan prerequisite unlock
+- [x] 🔴 Visualisasi konsep sebagai bintang
+- [x] 🔴 Bintang menyala saat konsep dikuasai
+- [x] 🔴 Tampilan per mata pelajaran
+- [x] 🔴 Skill tree dengan prerequisite unlock
 
 ### 7.7 Study Buddy (Tanaman Virtual)
-- [ ] 🟠 Pilih tanaman/virtual buddy
-- [ ] 🟠 Tumbuh seiring konsistensi belajar
-- [ ] 🟠 Stage: bibit → kecambah → berbunga → pohon
-- [ ] 🟠 Visual di dashboard
+- [x] 🟠 Pilih tanaman/virtual buddy
+- [x] 🟠 Tumbuh seiring konsistensi belajar
+- [x] 🟠 Stage: bibit → kecambah → berbunga → pohon
+- [x] 🟠 Visual di dashboard
 
 ### 7.8 Avatar Customization
-- [ ] 🟠 Kustomisasi karakter Spark: warna, aksesoris, background
-- [ ] 🟠 Unlock dengan XP dan bintang — NO real money
-- [ ] 🟠 Sense of ownership dan ekspresi identitas
+- [x] 🟠 Kustomisasi karakter Spark: warna, aksesoris, background
+- [x] 🟠 Unlock dengan XP dan bintang — NO real money
+- [x] 🟠 Sense of ownership dan ekspresi identitas
 
 ### 7.9 Mini Celebrations
-- [ ] 🟠 Animasi confetti/suara positif saat milestone
-- [ ] 🟠 Pesan personal dari Spark
-- [ ] 🟠 Durasi maksimal 2–3 detik, tidak mengganggu
+- [x] 🟠 Animasi confetti/suara positif saat milestone
+- [x] 🟠 Pesan personal dari Spark
+- [x] 🟠 Durasi maksimal 2–3 detik, tidak mengganggu
 
 ### 7.10 Gamification Anti-Patterns (Wajib Diimplementasikan sebagai Bukan Fitur)
-- [ ] 🔴 Tidak ada loot box / gacha
-- [ ] 🔴 Tidak ada pay-to-win
-- [ ] 🔴 Tidak ada FOMO manipulatif
-- [ ] 🔴 Tidak ada energy/life system
-- [ ] 🔴 Tidak ada leaderboard global toxic
-- [ ] 🔴 Tidak ada iklan
-- [ ] 🔴 Notifikasi maksimal 1–2 per hari, opt-in
-- [ ] 🔴 Tidak ada streak punishment menyalahkan
+- [x] 🔴 Tidak ada loot box / gacha
+- [x] 🔴 Tidak ada pay-to-win
+- [x] 🔴 Tidak ada FOMO manipulatif
+- [x] 🔴 Tidak ada energy/life system
+- [x] 🔴 Tidak ada leaderboard global toxic
+- [x] 🔴 Tidak ada iklan
+- [x] 🔴 Notifikasi maksimal 1–2 per hari, opt-in
+- [x] 🔴 Tidak ada streak punishment menyalahkan
 
 ---
 

@@ -22,6 +22,7 @@ import {
   generateMoreQuestionsForQuiz,
   generateEnhancedMaterialFromDocument,
 } from "@/server/documents/features";
+import { recordActivity, checkAndUnlockBadges } from "@/server/actions/gamification";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_PAGES = 50;
@@ -636,6 +637,7 @@ export type SubmitDocumentQuizAttemptResult =
   | {
       ok: true;
       attempts: any[];
+      unlockedBadges?: any[];
     }
   | { ok: false; error: string };
 
@@ -678,9 +680,13 @@ export async function submitDocumentQuizAttemptAction(
       },
     });
 
+    await recordActivity(userId).catch(console.error);
+    const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
+
     return {
       ok: true,
       attempts: updated.attempts as any[],
+      unlockedBadges,
     };
   } catch (e) {
     console.error("submitDocumentQuizAttempt failed:", e);

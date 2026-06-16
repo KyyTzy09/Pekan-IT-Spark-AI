@@ -486,3 +486,128 @@ export async function checkAndUnlockBadges(
   revalidatePath("/dashboard");
   return newlyUnlocked;
 }
+
+// ============================================================================
+// Study Buddy
+// ============================================================================
+
+export async function getStudyBuddyAction() {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.user.id;
+
+  let buddy = await prisma.studyBuddy.findUnique({
+    where: { userId },
+  });
+
+  if (!buddy) {
+    buddy = await prisma.studyBuddy.create({
+      data: {
+        userId,
+        type: "bunga",
+        stage: 1,
+      },
+    });
+  }
+
+  return { ok: true, buddy };
+}
+
+export async function updateStudyBuddyAction(type: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.user.id;
+
+  await prisma.studyBuddy.upsert({
+    where: { userId },
+    create: {
+      userId,
+      type,
+      stage: 1,
+    },
+    update: {
+      type,
+    },
+  });
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// ============================================================================
+// Avatar Customization
+// ============================================================================
+
+export async function getAvatarCustomizationAction() {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.user.id;
+
+  let avatar = await prisma.avatarCustomization.findUnique({
+    where: { userId },
+  });
+
+  if (!avatar) {
+    avatar = await prisma.avatarCustomization.create({
+      data: {
+        userId,
+        color: "default",
+        accessory: "none",
+        background: "default",
+      },
+    });
+  }
+
+  return { ok: true, avatar };
+}
+
+export async function updateAvatarCustomizationAction(
+  color: string,
+  accessory: string | null,
+  background: string | null,
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.user.id;
+
+  // Fetch student profile to validate XP unlock requirement
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { totalXp: true },
+  });
+  const xp = profile?.totalXp ?? 0;
+
+  // Color limits
+  if (color === "green" && xp < 200) return { ok: false, error: "Butuh 200 XP untuk warna Hijau" };
+  if (color === "purple" && xp < 400) return { ok: false, error: "Butuh 400 XP untuk warna Ungu" };
+  if (color === "gold" && xp < 800) return { ok: false, error: "Butuh 800 XP untuk warna Emas" };
+
+  // Accessory limits
+  if (accessory === "glasses" && xp < 300) return { ok: false, error: "Butuh 300 XP untuk Kacamata" };
+  if (accessory === "hat" && xp < 500) return { ok: false, error: "Butuh 500 XP untuk Topi Wisuda" };
+  if (accessory === "crown" && xp < 1000) return { ok: false, error: "Butuh 1000 XP untuk Mahkota Emas" };
+  if (accessory === "ribbon" && xp < 400) return { ok: false, error: "Butuh 400 XP untuk Pita Lucu" };
+
+  // Background limits
+  if (background === "aurora" && xp < 250) return { ok: false, error: "Butuh 250 XP untuk background Aurora" };
+  if (background === "space" && xp < 500) return { ok: false, error: "Butuh 500 XP untuk background Space" };
+  if (background === "neon" && xp < 750) return { ok: false, error: "Butuh 750 XP untuk background Neon" };
+
+  await prisma.avatarCustomization.upsert({
+    where: { userId },
+    create: {
+      userId,
+      color,
+      accessory: accessory || "none",
+      background: background || "default",
+    },
+    update: {
+      color,
+      accessory: accessory || "none",
+      background: background || "default",
+    },
+  });
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}

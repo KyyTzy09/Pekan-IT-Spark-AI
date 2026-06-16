@@ -5,7 +5,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
-import { addXp, recordActivity } from "@/server/actions/gamification";
+import { addXp, recordActivity, checkAndUnlockBadges } from "@/server/actions/gamification";
 import { recordQuestionAttempt } from "@/server/actions/subjects";
 import {
   analyzeReflection,
@@ -688,6 +688,7 @@ export async function completeChallengeItem(input: {
   newStatus?: string;
   challengeCompleted?: boolean;
   error?: string;
+  unlockedBadges?: any[];
 }> {
   const userId = await requireStudent();
   const parsed = completeSchema.safeParse(input);
@@ -750,6 +751,7 @@ export async function completeChallengeItem(input: {
     );
     await aggregateDailyProgress(userId, item.challenge.scheduledFor);
     await recordActivity(userId);
+    const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
     revalidatePath("/challenge", "layout");
     revalidatePath("/dashboard", "layout");
 
@@ -759,6 +761,7 @@ export async function completeChallengeItem(input: {
       correctAnswer: item.question.correctAnswer,
       explanation: item.question.explanation,
       challengeCompleted,
+      unlockedBadges,
     };
   }
 
@@ -781,8 +784,9 @@ export async function completeChallengeItem(input: {
     );
     await aggregateDailyProgress(userId, item.challenge.scheduledFor);
     await recordActivity(userId);
+    const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
     revalidatePath("/challenge", "layout");
-    return { ok: true, challengeCompleted };
+    return { ok: true, challengeCompleted, unlockedBadges };
   }
 
   if (item.kind === "REFLECTION") {
@@ -821,6 +825,7 @@ export async function submitReflection(input: {
   ok: boolean;
   analysis?: { sentiment: string; depth: string; suggestions: string[] };
   error?: string;
+  unlockedBadges?: any[];
 }> {
   const userId = await requireStudent();
   const parsed = reflectionSchema.safeParse(input);
@@ -878,6 +883,7 @@ export async function submitReflection(input: {
   const completedAfter = await checkAndCompleteChallenge(challenge.id);
   await aggregateDailyProgress(userId, challenge.scheduledFor);
   await recordActivity(userId);
+  const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
   revalidatePath("/challenge", "layout");
   revalidatePath(`/challenge/${challenge.id}`, "layout");
   revalidatePath("/dashboard", "layout");
@@ -889,6 +895,7 @@ export async function submitReflection(input: {
       depth: analysis.depth,
       suggestions: analysis.suggestions,
     },
+    unlockedBadges,
   };
 }
 
@@ -921,7 +928,7 @@ export async function markMaterialRead(input: {
   materialId: string;
   readSeconds?: number;
   completed?: boolean;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; unlockedBadges?: any[] }> {
   const userId = await requireStudent();
   const parsed = markReadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Input tidak valid" };
@@ -937,8 +944,15 @@ export async function markMaterialRead(input: {
     parsed.data.completed,
     parsed.data.readSeconds,
   );
+
+  let unlockedBadges: any[] = [];
+  if (parsed.data.completed) {
+    await recordActivity(userId).catch(console.error);
+    unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
+  }
+
   revalidatePath("/materials", "layout");
-  return { ok: true };
+  return { ok: true, unlockedBadges };
 }
 
 async function markMaterialReadInternal(

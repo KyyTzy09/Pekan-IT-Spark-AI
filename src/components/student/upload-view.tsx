@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getMaterialDetail } from "@/server/actions/challenges";
 import { startNewChat } from "@/server/actions/chat";
+import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 import {
   appendQuestionsToDocumentQuizAction,
   type DocumentListItem,
@@ -76,6 +77,7 @@ export function UploadView({
   initialDocuments: DocumentListItem[];
 }) {
   const router = useRouter();
+  const { showBadges } = useBadgeCelebration();
   const [documents, setDocuments] =
     React.useState<DocumentListItem[]>(initialDocuments);
   const [status, setStatus] = React.useState<UploadStatus>({ kind: "idle" });
@@ -315,6 +317,9 @@ export function UploadView({
         prev ? { ...prev, attempts: res.attempts } : null,
       );
       setHistoryVersion((v) => v + 1);
+      if (res.unlockedBadges?.length) {
+        showBadges(res.unlockedBadges);
+      }
     }
   };
 

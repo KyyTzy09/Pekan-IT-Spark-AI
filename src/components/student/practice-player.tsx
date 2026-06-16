@@ -34,6 +34,7 @@ import {
   type SubmitPracticeResult,
   submitPracticeAnswer,
 } from "@/server/actions/practice";
+import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 
 const DIFFICULTY_META: Record<
   string,
@@ -113,6 +114,7 @@ export function PracticePlayer({
   topicId?: string;
 }) {
   const router = useRouter();
+  const { showBadges } = useBadgeCelebration();
   const [session, setSession] = React.useState<PracticeSession>(initialSession);
   const [stats, setStats] = React.useState<PracticeStats>(initialStats);
   const [selected, setSelected] = React.useState<string | null>(null);
@@ -165,6 +167,9 @@ export function PracticePlayer({
       setResult(r);
       if (r.masteredNow) {
         setShowCelebration(true);
+      }
+      if (r.unlockedBadges?.length) {
+        showBadges(r.unlockedBadges);
       }
       const newStats = await getPracticeStats();
       if (newStats) setStats(newStats);

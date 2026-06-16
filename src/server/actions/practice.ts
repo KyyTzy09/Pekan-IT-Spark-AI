@@ -374,6 +374,7 @@ export type SubmitPracticeResult =
         wrongStreak: number;
         recommendedPrereq: { id: string; name: string; score: number } | null;
       };
+      unlockedBadges?: any[];
     }
   | { ok: false; error: string };
 
@@ -883,6 +884,7 @@ export async function submitPracticeAnswer(input: {
     masteredNow,
     unlockedConcepts,
     stuck: { wrongStreak, recommendedPrereq },
+    unlockedBadges: result.unlockedBadges,
   };
 }
 

@@ -28,6 +28,8 @@ import type {
   DashboardSubjectProgress,
   DashboardSummary,
 } from "@/server/actions/dashboard";
+import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
+import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 
 export function DashboardView({ summary }: { summary: DashboardSummary }) {
   return (
@@ -40,6 +42,13 @@ export function DashboardView({ summary }: { summary: DashboardSummary }) {
           recentDocuments={summary.recentDocuments}
         />
       </Reveal>
+      
+      {/* Gamification widgets: Study Buddy and Mascot Customizer */}
+      <Reveal className="grid gap-4 sm:grid-cols-2">
+        <StudyBuddyWidget streak={summary.streak.current} />
+        <AvatarCustomizerWidget totalXp={summary.level.totalXp} />
+      </Reveal>
+
       <QuickActions />
       <SubjectsProgress subjects={summary.subjects} />
     </div>

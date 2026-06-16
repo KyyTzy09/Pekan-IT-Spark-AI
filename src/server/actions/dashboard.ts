@@ -466,6 +466,8 @@ export type TopicDetailSummary = {
     description: string | null;
     status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
     masteryScore: number;
+    isLocked: boolean;
+    unmetPrerequisites: Array<{ id: string; name: string }>;
   }>;
   totalConcepts: number;
   masteredConcepts: number;
@@ -482,7 +484,22 @@ export async function getTopicDetail(
       subject: true,
       concepts: {
         orderBy: { order: "asc" },
-        select: { id: true, name: true, slug: true, description: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          prerequisites: {
+            select: {
+              prerequisiteId: true,
+              prerequisite: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       },
     },
   });
@@ -494,8 +511,36 @@ export async function getTopicDetail(
   });
   const profileMap = new Map(profiles.map((p) => [p.conceptId, p]));
 
+  // Fetch all prerequisite profiles in one query to handle cross-topic dependencies
+  const allPrereqIds = topic.concepts.flatMap((c) =>
+    c.prerequisites.map((p) => p.prerequisiteId)
+  );
+  const prereqProfiles = allPrereqIds.length > 0
+    ? await prisma.studentKnowledgeProfile.findMany({
+        where: { userId, conceptId: { in: allPrereqIds } },
+        select: { conceptId: true, masteryScore: true },
+      })
+    : [];
+  const prereqMasteryMap = new Map(
+    prereqProfiles.map((p) => [p.conceptId, p.masteryScore])
+  );
+
   const concepts = topic.concepts.map((c) => {
     const p = profileMap.get(c.id);
+
+    const unmetPrerequisites = c.prerequisites
+      .filter((prereq) => {
+        const sameTopicProfile = profileMap.get(prereq.prerequisiteId);
+        const score = sameTopicProfile
+          ? sameTopicProfile.masteryScore
+          : (prereqMasteryMap.get(prereq.prerequisiteId) ?? 0);
+        return score < 0.7;
+      })
+      .map((prereq) => ({
+        id: prereq.prerequisiteId,
+        name: prereq.prerequisite.name,
+      }));
+
     return {
       id: c.id,
       name: c.name,
@@ -507,6 +552,8 @@ export async function getTopicDetail(
         | "MASTERED"
         | "STRUGGLING",
       masteryScore: p?.masteryScore ?? 0,
+      isLocked: unmetPrerequisites.length > 0,
+      unmetPrerequisites,
     };
   });
 
