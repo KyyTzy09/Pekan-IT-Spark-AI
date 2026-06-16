@@ -17,7 +17,7 @@ const PUBLIC_ROUTES = ["/", "/about", "/help", "/courses"];
 
 const AUTH_ROUTES = ["/auth/login", "/auth/register"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = await getToken({
     req: request,
@@ -33,11 +33,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Auth routes (login/register) — redirect to dashboard if already logged in
+  // Auth routes (login/register) — tetap bisa diakses walau udah login,
+  // supaya developer bisa re-test alur registrasi / sign-in (mis. QA session
+  // lama, uji role-switch, dll).
   if (AUTH_ROUTES.some((r) => pathname.startsWith(r))) {
-    if (isLoggedIn) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
     return NextResponse.next();
   }
 

@@ -3751,8 +3751,10 @@ async function seedQuestions(
 
   const concepts = await prisma.concept.findMany();
   const conceptByName: Record<string, string> = {};
+  const conceptContent: Record<string, string> = {};
   for (const c of concepts) {
     conceptByName[c.name] = c.id;
+    conceptContent[c.name] = c.contentMd ?? c.description ?? c.name;
   }
 
   for (const [subjectSlug, questions] of Object.entries(QUESTIONS_BY_SUBJECT)) {
@@ -3764,22 +3766,74 @@ async function seedQuestions(
         console.warn(`Concept "${q.conceptName}" not found, skipping question`);
         continue;
       }
+      const conceptName = q.conceptName;
+      const conceptBody = conceptContent[conceptName] ?? "";
 
-      await prisma.question.create({
-        data: {
-          conceptId,
-          questionText: q.question,
-          type: "MULTIPLE_CHOICE",
-          options: q.options,
-          correctAnswer: String.fromCharCode(65 + q.correctIndex),
-          difficulty: q.difficulty,
-        },
+      const existing = await prisma.question.findFirst({
+        where: { conceptId, questionText: q.question },
+        select: { id: true },
       });
+      const data = {
+        conceptId,
+        questionText: q.question,
+        type: "MULTIPLE_CHOICE" as const,
+        options: q.options,
+        correctAnswer: String.fromCharCode(65 + q.correctIndex),
+        difficulty: q.difficulty,
+        explanation: buildExplanation(q, conceptName, conceptBody),
+        hint: buildHint(conceptName, q.difficulty),
+        commonMisconceptions: buildMisconceptions(q, conceptName, conceptBody),
+      };
+      if (existing) {
+        await prisma.question.update({ where: { id: existing.id }, data });
+      } else {
+        await prisma.question.create({ data });
+      }
       total++;
     }
     console.log(`Questions created for ${subjectSlug}: ${questions.length}`);
   }
   console.log(`Total questions: ${total}`);
+
+  // Backfill: isi explanation/hint/commonMisconceptions untuk question
+  // yang udah ada tapi belum punya (mis. dari seed lama sebelum fase 6.3).
+  const allQuestions = await prisma.question.findMany({
+    where: { OR: [{ explanation: null }, { hint: null }, { commonMisconceptions: null }] },
+    select: {
+      id: true,
+      questionText: true,
+      options: true,
+      correctAnswer: true,
+      difficulty: true,
+      concept: { select: { name: true, contentMd: true, description: true } },
+    },
+  });
+  let backfilled = 0;
+  for (const q of allQuestions) {
+    const options = Array.isArray(q.options) ? (q.options as string[]) : [];
+    const correctIndex = options.findIndex(
+      (opt) => typeof opt === "string" && opt.trim() === q.correctAnswer.trim(),
+    );
+    if (correctIndex < 0) continue;
+    const synthetic: QSeed = {
+      question: q.questionText,
+      options,
+      correctIndex,
+      difficulty: (q.difficulty as "EASY" | "MEDIUM" | "HARD") ?? "MEDIUM",
+    };
+    const conceptName = q.concept.name;
+    const conceptBody = q.concept.contentMd ?? q.concept.description ?? "";
+    await prisma.question.update({
+      where: { id: q.id },
+      data: {
+        explanation: buildExplanation(synthetic, conceptName, conceptBody),
+        hint: buildHint(conceptName, synthetic.difficulty),
+        commonMisconceptions: buildMisconceptions(synthetic, conceptName, conceptBody),
+      },
+    });
+    backfilled++;
+  }
+  console.log(`Questions backfilled with explanation/hint/misconceptions: ${backfilled}`);
 }
 
 async function main() {
@@ -4070,6 +4124,98 @@ async function main() {
 
   console.log("Seed completed!");
 }
+
+// ---------------------------------------------------------------------------
+// Question enrichment helpers (explanation / hint / commonMisconceptions)
+// ---------------------------------------------------------------------------
+
+type QSeed = {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+};
+
+function truncate(text: string, max: number): string {
+  if (!text) return "";
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1).trimEnd() + "…";
+}
+
+function pickConceptSnippet(content: string, sentence: number): string {
+  if (!content) return "";
+  const sentences = content
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length === 0) return truncate(content, 200);
+  const idx = Math.min(sentence, sentences.length - 1);
+  return truncate(sentences[idx] ?? sentences[0] ?? "", 220);
+}
+
+function buildExplanation(
+  q: QSeed,
+  conceptName: string,
+  conceptContent: string,
+): string {
+  const correctOpt = q.options[q.correctIndex] ?? "jawaban benar";
+  const base = `Jawaban yang benar adalah **${correctOpt}**.`;
+  const snippet = pickConceptSnippet(conceptContent, 0);
+  if (snippet) {
+    return `${base} ${snippet} Ingat konsep kunci: ${conceptName}.`;
+  }
+  return base;
+}
+
+function buildHint(
+  conceptName: string,
+  difficulty: "EASY" | "MEDIUM" | "HARD",
+): string {
+  const prompts: Record<string, string> = {
+    EASY: `Coba inget lagi definisi "${conceptName}". Kalo lupa, buka dulu halaman konsep sebelum jawab.`,
+    MEDIUM: `Pecah jadi langkah kecil: (1) apa yang diketahui dari soal? (2) konsep "${conceptName}" mana yang relevan? (3) eliminasi opsi yang ga masuk akal.`,
+    HARD: `Ga apa-apa kalo belum ketemu. Tarik napas, baca ulang pelan-pelan, identifikasi kata kunci soal, lalu cocokin sama konsep "${conceptName}". Coba pake eliminasi dulu.`,
+  };
+  return prompts[difficulty] ?? prompts.MEDIUM!;
+}
+
+function buildMisconceptions(
+  q: QSeed,
+  conceptName: string,
+  conceptContent: string,
+): string {
+  const wrongIndices = q.options
+    .map((_, i) => i)
+    .filter((i) => i !== q.correctIndex)
+    .slice(0, 3);
+  const lines: string[] = [];
+  for (const idx of wrongIndices) {
+    const wrongOpt = q.options[idx];
+    if (!wrongOpt) continue;
+    const reason = pickDistractorReason(idx, q.correctIndex, conceptName);
+    lines.push(`"${wrongOpt}" → ${reason}`);
+  }
+  if (lines.length === 0) {
+    return `Kadang siswa salah karena buru-buru baca soal. Pelan-pelan ya, konsep "${conceptName}" butuh waktu.`;
+  }
+  return `Beberapa miskonsepsi umum:\n${lines.join("\n")}\n\nKalau kamu pilih salah satu di atas, coba cek lagi: apa yang bikin opsi itu menarik? Apakah ada asumsi yang keliru?`;
+}
+
+function pickDistractorReason(
+  wrongIdx: number,
+  correctIdx: number,
+  conceptName: string,
+): string {
+  if (wrongIdx < correctIdx) {
+    return `sering dipilih karena terlalu cepat pilih opsi pertama yang "kedengeran" bener, padahal belum dicek ulang ke konsep ${conceptName}.`;
+  }
+  if (wrongIdx === correctIdx + 1) {
+    return `mengecoh — mirip sama jawaban benar tapi ada satu kata/detail yang beda. Baca opsi pelan-pelan.`;
+  }
+  return `kadang dipilih karena salah ingat konsep ${conceptName} (mis. kebalik definisi). Yuk review materi sekali lagi.`;
+}
+
+void pickConceptSnippet;
 
 main()
   .catch((e) => {

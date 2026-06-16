@@ -418,22 +418,28 @@
 - [x] 🔴 Hasil quiz dengan breakdown per konsep — `src/app/(student)/practice/quiz/result/page.tsx` + `src/components/student/quiz-result-view.tsx`; score ring, time, breakdown per konsep dengan status (Mastered/Learning/Struggling), per-concept "Diskusiin [konsep] sama Spark" CTA, "Quiz ulang" + "Latihan topik" CTAs
 
 ### 6.3 Answer Evaluation & Feedback
-- [ ] 🔴 Evaluasi jawaban multiple choice instan
-- [ ] 🔴 Evaluasi jawaban esai/kalkulasi dengan AI
-- [ ] 🔴 Feedback personal: jelaskan mengapa benar/salah
-- [ ] 🔴 Deteksi miskonsepsi umum
-- [ ] 🔴 Rekomendasi konsep prasyarat jika belum kuat
-
-### 6.4 Spaced Repetition (P1)
-- [ ] 🟠 Sistem review soal yang pernah salah
-- [ ] 🟠 Reminder konsep yang hampir lupa
-- [ ] 🟠 Integrasi dengan daily quest
+- [x] 🔴 Evaluasi jawaban multiple choice instan — `src/server/actions/practice.ts` `submitPracticeAnswer()` validate `answer === correctAnswer` server-side, return `isCorrect` + `correctAnswer`. UI render color-coded (hijau/merah) instan di PracticePlayer + QuizPlayer
+- [~] 🔴 Evaluasi jawaban esai/kalkulasi dengan AI — `src/server/ai/evaluator.ts` `evaluateAnswer()` udah ada (call LLM, parse JSON), tapi belum di-wire ke UI. Pending: tambah QuestionType.SHORT_ANSWER/ESSAY di seed + UI input form
+- [x] 🔴 Feedback personal: jelaskan mengapa benar/salah — 
+  - Schema: `Question.explanation` field udah ada
+  - Seed: `prisma/seed.ts` `buildExplanation()` + `buildHint()` + `buildMisconceptions()` auto-generate per question (derived dari concept content + difficulty)
+  - Backfill: kalau question udah ada tapi explanation null, seed update di tempat
+  - UI: `PracticePlayer` "Kenapa?" button (setelah benar/salah) → `<WhyModal>` modal: tampilkan explanation + commonMisconceptions + hint. `submitPracticeAnswer` return all 3 fields
+- [x] 🔴 Deteksi miskonsepsi umum — 
+  - Schema: `Question.commonMisconceptions` field udah ada
+  - Seed: `buildMisconceptions()` generate per-question "kenapa distractor itu sering dipilih" explanation (generic: similar-to-correct, wrong-recall, first-impulse)
+  - UI: WhyModal section "Miskonsepsi umum" tampilkan pattern ini
+- [x] 🔴 Rekomendasi konsep prasyarat jika belum kuat — `submitPracticeAnswer` return `stuck: { wrongStreak, recommendedPrereq }`:
+  - Track wrong-streak dari 5 attempt terakhir per konsep
+  - Kalau ≥ 2 salah berturut-turut, cari prereq dengan mastery terendah
+  - UI: amber banner "Streak salah 2x di [konsep], prereq [X] masih lemah (40%) — yuk remedial"
+  - Link ke `/practice` (filter by topic) untuk remedial
 
 ### 6.5 Knowledge Profile Update
-- [ ] 🔴 Update mastery score setelah setiap attempt
-- [ ] 🔴 Update adaptive difficulty level
-- [ ] 🔴 Update concept status ( mastered / struggling / learning )
-- [ ] 🔴 Trigger badge/achievement check
+- [x] 🔴 Update mastery score setelah setiap attempt — `submitPracticeAnswer` panggil `recordQuestionAttempt` dari `src/server/actions/subjects.ts` line ~225 yang update `StudentKnowledgeProfile` via EMA (`computeMasteryUpdate()` learning rate 0.2)
+- [x] 🔴 Update adaptive difficulty level — `selectNextQuestionDifficulty()` rolling accuracy (window 5) + wrong-streak (3) + promote/demote thresholds (deterministic, no ML/RL). Dipakai di `getNextPracticeQuestion` line ~175
+- [x] 🔴 Update concept status (mastered / struggling / learning) — `deriveConceptStatus()` di `src/server/learning/adaptive.ts` line ~77: ≥0.8 MASTERED, 0.4-0.8 LEARNING, <0.4 tapi >0 STRUGGLING, 0 NOT_STARTED
+- [~] 🔴 Trigger badge/achievement check — Phase 7 (Gamification), not yet implemented
 
 ---
 
