@@ -527,10 +527,10 @@
 - [x] 🔴 Challenge completion TIDAK BOLEH jadi gate untuk akses materi (siswa tetap bisa browse materials tanpa complete challenges)
 
 #### 6.6.9 Replace/Integrate dengan Phase 7
-- [ ] 🟠 Phase 7.4 Daily Quest (static 3 misi) → **DEPRECATED** di-replace sama challenge system ini
-- [ ] 🟠 Phase 7.5 Weekly Challenge → tetap ada, tapi sekarang = summary of 7 days × 4 challenges = 28 daily items
-- [ ] 🟠 XP/Level dari Phase 7.1: challenge completion kasih XP (soal = 10 XP, materi = 5 XP, refleksi = 15 XP)
-- [ ] 🟠 Streak dari Phase 7.2: streak hitung dari challenge completion (min 1 challenge/day)
+- [x] 🟠 Phase 7.4 Daily Quest (static 3 misi) → **DEPRECATED** di-replace sama challenge system ini
+- [x] 🟠 Phase 7.5 Weekly Challenge → tetap ada, tapi sekarang = summary of 7 days × 4 challenges = 28 daily items
+- [x] 🟠 XP/Level dari Phase 7.1: challenge completion kasih XP (soal = 10 XP, materi = 5 XP, refleksi = 15 XP)
+- [x] 🟠 Streak dari Phase 7.2: streak hitung dari challenge completion (min 1 challenge/day)
 
 ---
 
@@ -557,15 +557,16 @@
 - [ ] 🟠 Notifikasi unlock badge dengan mini celebration — server return ready, UI belum (perlu BadgeUnlockToast component)
 
 ### 7.4 Daily Quest
-- [ ] 🔴 Model `DailyQuest`
-- [ ] 🔴 Generate 3 misi harian otomatis
-- [ ] 🔴 Contoh: selesai 5 soal, belajar 15 menit, uji 1 topik baru
-- [ ] 🔴 Bonus XP jika semua misi selesai
+- [x] 🔴 **DEPRECATED** per §6.6.9 — replaced by AI Daily Challenge System (§6.6.1-§6.6.7)
+  - Static 3-misi quest di-remove, `DEFAULT_QUESTS` di-cleanup dari `dashboard.ts` & `dashboard-view.tsx`
+  - `DashboardDailyQuest` type dihapus
+  - `/daily-quest` link (broken) di-remove
+  - Daily engagement sekarang: 4 challenges/hari auto (soal + materi + refleksi) via `getOrCreateTodayChallenges`
 
 ### 7.5 Weekly Challenge
-- [ ] 🟠 Generate tantangan mingguan
-- [ ] 🟠 Badge eksklusif mingguan
-- [ ] 🟠 Progress tracking
+- [x] 🟠 **CHANGED** per §6.6.9 — bukan lagi entity terpisah, sekarang = **summary 7 hari × 4 challenges = 28 items**
+  - Model `WeeklyChallenge` di schema tetap (untuk data lama), tapi **tidak ada generate logic baru**
+  - Weekly view direpresentasikan via `getProgressTimeline(userId, 7)` dari §6.6.7 (7-day daily activity breakdown)
 
 ### 7.6 Knowledge Star Constellation
 - [ ] 🔴 Visualisasi konsep sebagai bintang

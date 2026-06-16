@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type {
-  DashboardDailyQuest,
   DashboardRecommendation,
   DashboardSubjectProgress,
   DashboardSummary,
@@ -35,12 +34,11 @@ export function DashboardView({ summary }: { summary: DashboardSummary }) {
     <div className="space-y-5 sm:space-y-7">
       <HeroGreeting summary={summary} />
       <StatsRow summary={summary} />
-      <Reveal className="grid gap-5 lg:grid-cols-3">
+      <Reveal>
         <ContinueLearningCard
           recommendation={summary.recommendation}
           recentDocuments={summary.recentDocuments}
         />
-        <DailyQuestCard quests={summary.todayQuests} />
       </Reveal>
       <QuickActions />
       <SubjectsProgress subjects={summary.subjects} />
@@ -514,63 +512,6 @@ function ContinueLearningCard({
           </Button>
         )}
       </div>
-    </article>
-  );
-}
-
-function DailyQuestCard({ quests }: { quests: DashboardDailyQuest[] }) {
-  return (
-    <article className="relative overflow-hidden rounded-2xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-12 -bottom-12 size-32 rounded-full bg-[var(--teal)]/15 opacity-50 blur-3xl"
-      />
-      <div className="relative flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--teal)]">
-          Misi hari ini
-        </p>
-        <span className="rounded-full bg-[color-mix(in_oklch,var(--teal)_12%,transparent)] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--teal)]">
-          <span className="inline-block size-1.5 animate-pulse-soft rounded-full bg-[var(--teal)]" />{" "}
-          Live
-        </span>
-      </div>
-      <h2 className="relative mt-1.5 font-heading text-[16px] font-bold leading-tight text-foreground">
-        3 misi, selesai dalam 15 menit
-      </h2>
-      <ul className="relative mt-3.5 space-y-2.5">
-        {quests.map((q) => (
-          <li
-            key={q.id}
-            className="flex items-center gap-3 rounded-2xl border border-border/40 bg-background/40 p-3"
-          >
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--coral)]/12 to-[var(--orange)]/12 text-base shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
-              {q.emoji}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-bold text-foreground">
-                {q.title}
-              </p>
-              <p className="truncate text-[11px] text-muted-foreground">
-                {q.description}
-              </p>
-            </div>
-            <span className="rounded-full bg-[var(--yellow)]/12 px-2 py-0.5 text-[10px] font-bold text-[var(--yellow)] shadow-[inset_0_0_0_1px_rgba(245,158,11,0.25)]">
-              +{q.xp} XP
-            </span>
-          </li>
-        ))}
-      </ul>
-      <Button
-        asChild
-        variant="outline"
-        size="sm"
-        className="relative mt-4 w-full rounded-full border-border/50"
-      >
-        <Link href="/daily-quest">
-          Lihat semua misi
-          <ArrowRight size={13} />
-        </Link>
-      </Button>
     </article>
   );
 }

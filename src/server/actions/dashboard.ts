@@ -30,14 +30,6 @@ export type DashboardSubjectProgress = {
   attemptCount: number;
 };
 
-export type DashboardDailyQuest = {
-  id: string;
-  title: string;
-  description: string;
-  xp: number;
-  emoji: string;
-};
-
 export type DashboardRecommendation = {
   type: "continue" | "new";
   conceptId: string;
@@ -74,7 +66,6 @@ export type DashboardSummary = {
   totalMastered: number;
   totalConcepts: number;
   totalAttempts: number;
-  todayQuests: DashboardDailyQuest[];
   recommendation: DashboardRecommendation | null;
   recentDocuments: number;
 };
@@ -129,30 +120,6 @@ function pickSparkTip(): string {
   const idx = new Date().getDate() % SPARK_TIPS.length;
   return SPARK_TIPS[idx] ?? SPARK_TIPS[0] ?? "";
 }
-
-const DEFAULT_QUESTS: DashboardDailyQuest[] = [
-  {
-    id: "default-1",
-    title: "Selesaikan 5 soal",
-    description: "Pilih topik apa aja — yang penting konsisten.",
-    xp: 30,
-    emoji: "🎯",
-  },
-  {
-    id: "default-2",
-    title: "Belajar 15 menit",
-    description: "Chat bareng Spark atau baca materi. Tanpa jeda.",
-    xp: 20,
-    emoji: "⏱️",
-  },
-  {
-    id: "default-3",
-    title: "Uji 1 konsep baru",
-    description: "Coba konsep yang belum pernah kamu sentuh.",
-    xp: 25,
-    emoji: "✨",
-  },
-];
 
 export async function getDashboardSummary(
   userId: string,
@@ -378,7 +345,6 @@ export async function getDashboardSummary(
     totalMastered,
     totalConcepts: totalConceptsAll,
     totalAttempts: attempts,
-    todayQuests: DEFAULT_QUESTS,
     recommendation,
     recentDocuments: docs,
   };
