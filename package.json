@@ -11,6 +11,7 @@
     "db:studio": "bunx prisma studio",
     "db:migrate": "bunx prisma migrate dev",
     "db:seed": "bunx prisma db seed",
+    "db:seed:student": "bun ./prisma/seed-student.ts",
     "db:generate": "bunx prisma generate",
     "db:push": "bunx prisma db push",
     "typecheck": "bunx tsc --noEmit"

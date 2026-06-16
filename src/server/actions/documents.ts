@@ -410,9 +410,6 @@ export async function getDocumentSummary(
     };
   }
 }
-// GeneratedQuiz is imported above; UI can import it from either path.
-export type { GeneratedQuiz };
-
 export type GenerateDocumentQuizResult =
   | {
       ok: true;

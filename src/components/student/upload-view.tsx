@@ -28,7 +28,6 @@ import { startNewChat } from "@/server/actions/chat";
 import {
   type DocumentListItem,
   deleteDocument,
-  type GeneratedQuiz,
   generateDocumentQuizAction,
   getDocumentSummary,
   listDocuments,
@@ -36,6 +35,7 @@ import {
   shareDocumentToChatSession,
   uploadDocument,
 } from "@/server/actions/documents";
+import type { GeneratedQuiz } from "@/server/documents/features";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
