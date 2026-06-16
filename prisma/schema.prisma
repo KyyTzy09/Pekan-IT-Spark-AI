@@ -610,6 +610,8 @@ model Document {
   createdAt     DateTime            @default(now())
   embeddings    DocumentEmbedding[]
   auditLogs     DocumentAuditLog[]
+  quizzes       DocumentQuiz[]
+  materials     Material[]
 
   @@index([userId])
   @@index([chatSessionId])
@@ -780,6 +782,8 @@ model Material {
   topic            Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
   conceptId        String?
   concept          Concept?        @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  documentId       String?
+  document         Document?       @relation(fields: [documentId], references: [id], onDelete: SetNull)
   title            String
   content          String          @db.Text
   keyPoints        Json?           @db.JsonB
@@ -793,6 +797,7 @@ model Material {
   @@index([userId, subjectId])
   @@index([userId, createdAt])
   @@index([userId, source])
+  @@index([documentId])
   @@map("materials")
 }
 
@@ -846,4 +851,18 @@ model UserChallengeProgress {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("user_challenge_progress")
+}
+
+model DocumentQuiz {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  title       String
+  questions   Json     @db.JsonB // Array of quiz questions
+  attempts    Json     @db.JsonB @default("[]") // Array of attempts
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([documentId])
+  @@map("document_quizzes")
 }

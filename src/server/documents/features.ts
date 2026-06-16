@@ -231,4 +231,59 @@ export async function generateMaterialFromDocument(
   return materialSchema.parse(parsedJson);
 }
 
+export async function generateMoreQuestionsForQuiz(
+  content: string,
+  originalName: string,
+  existingQuestions: Array<{ question: string }>,
+  count: number,
+): Promise<GeneratedQuiz> {
+  const truncated = content.slice(0, MAX_QUIZ_INPUT);
+  const formattedExisting = existingQuestions
+    .map((q, idx) => `[Soal ${idx + 1}]: ${q.question}`)
+    .join("\n");
+
+  const { text } = await generateText({
+    model: fastModel,
+    system: SYSTEM_QUIZ,
+    prompt: `Judul file: "${originalName}". Buat TEPAT ${count} soal baru pilihan ganda berdasarkan materi ini.
+PENTING: Jangan buat soal yang sama atau mirip dengan soal-soal yang sudah ada di bawah ini. Soal-soal baru harus menguji topik yang berbeda atau tingkat pemahaman yang berbeda dari dokumen.
+
+Soal-soal yang sudah ada:
+${formattedExisting}
+
+Materi dokumen:
+${truncated}`,
+  });
+
+  const parsedJson = safeParseJson(text);
+  return quizSchema.parse(parsedJson);
+}
+
+export async function generateEnhancedMaterialFromDocument(
+  content: string,
+  originalName: string,
+  existingContent: string,
+): Promise<GeneratedMaterial> {
+  const truncated = content.slice(0, MAX_QUIZ_INPUT);
+  const { text } = await generateText({
+    model: fastModel,
+    system: SYSTEM_MATERIAL,
+    prompt: `Judul file: "${originalName}".
+Tugas kamu adalah menulis ulang dan meningkatkan materi belajar teori yang sudah ada di bawah ini agar menjadi JAUH LEBIH BERBOBOT, LEBIH MENDALAM, DAN KOMPREHENSIF.
+- Tambahkan penjelasan konsep-konsep teoritis yang lebih detail dan terperinci.
+- Tambahkan lebih banyak contoh soal beserta pembahasan langkah demi langkah (step-by-step).
+- Perbaiki struktur penjelasan menggunakan heading, tabel, list, dan visualisasi teks agar lebih menarik dan mudah diingat.
+- Gunakan KaTeX untuk semua notasi rumus.
+
+Materi belajar saat ini:
+${existingContent}
+
+Dokumen asli/soal:
+${truncated}`,
+  });
+
+  const parsedJson = safeParseJson(text);
+  return materialSchema.parse(parsedJson);
+}
+
 export const _internal = { SYSTEM_SUMMARY, SYSTEM_QUIZ, SYSTEM_MATERIAL };

@@ -19,6 +19,8 @@ import {
   generateDocumentSummary,
   generateMaterialFromDocument,
   generateQuizFromDocument,
+  generateMoreQuestionsForQuiz,
+  generateEnhancedMaterialFromDocument,
 } from "@/server/documents/features";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -504,7 +506,12 @@ export type GenerateDocumentQuizResult =
       ok: true;
       documentId: string;
       originalName: string;
-      quiz: GeneratedQuiz;
+      quiz: {
+        id: string;
+        title: string;
+        questions: any[];
+        attempts: any[];
+      };
     }
   | { ok: false; error: string };
 
@@ -526,21 +533,279 @@ export async function generateDocumentQuizAction(
       doc.originalName,
       count,
     );
+
+    // Save to DB
+    const quizRecord = await prisma.documentQuiz.create({
+      data: {
+        documentId,
+        title: `Latihan: ${doc.originalName} (${quiz.quiz.length} Soal)`,
+        questions: quiz.quiz,
+      },
+    });
+
     await logDocumentEvent({
       documentId: doc.id,
       userId,
       action: "QUIZ_GENERATED",
-      metadata: { count: quiz.quiz.length },
+      metadata: { count: quiz.quiz.length, quizId: quizRecord.id },
     });
+
     return {
       ok: true,
       documentId: doc.id,
       originalName: doc.originalName,
-      quiz,
+      quiz: {
+        id: quizRecord.id,
+        title: quizRecord.title,
+        questions: quizRecord.questions as any[],
+        attempts: quizRecord.attempts as any[],
+      },
     };
   } catch (e) {
     console.error("generateDocumentQuiz failed:", e);
     return { ok: false, error: "Gagal bikin latihan. Coba lagi nanti ya." };
+  }
+}
+
+export type AppendQuestionsToDocumentQuizResult =
+  | {
+      ok: true;
+      quiz: {
+        id: string;
+        title: string;
+        questions: any[];
+        attempts: any[];
+      };
+    }
+  | { ok: false; error: string };
+
+export async function appendQuestionsToDocumentQuizAction(
+  quizId: string,
+  count: number,
+): Promise<AppendQuestionsToDocumentQuizResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+
+  const quizRecord = await prisma.documentQuiz.findUnique({
+    where: { id: quizId },
+    include: { document: true },
+  });
+
+  if (!quizRecord || quizRecord.document.userId !== userId) {
+    return { ok: false, error: "Latihan tidak ditemukan." };
+  }
+
+  try {
+    const existingQuestions = (quizRecord.questions as any[]) || [];
+    const generated = await generateMoreQuestionsForQuiz(
+      quizRecord.document.content,
+      quizRecord.document.originalName,
+      existingQuestions,
+      count,
+    );
+
+    const updatedQuestions = [...existingQuestions, ...generated.quiz];
+    const updated = await prisma.documentQuiz.update({
+      where: { id: quizId },
+      data: {
+        questions: updatedQuestions,
+        title: `Latihan: ${quizRecord.document.originalName} (${updatedQuestions.length} Soal)`,
+      },
+    });
+
+    return {
+      ok: true,
+      quiz: {
+        id: updated.id,
+        title: updated.title,
+        questions: updated.questions as any[],
+        attempts: updated.attempts as any[],
+      },
+    };
+  } catch (e) {
+    console.error("appendQuestionsToDocumentQuiz failed:", e);
+    return { ok: false, error: "Gagal menambahkan soal baru." };
+  }
+}
+
+export type SubmitDocumentQuizAttemptResult =
+  | {
+      ok: true;
+      attempts: any[];
+    }
+  | { ok: false; error: string };
+
+export async function submitDocumentQuizAttemptAction(
+  quizId: string,
+  answers: number[],
+  score: number,
+): Promise<SubmitDocumentQuizAttemptResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+
+  const quizRecord = await prisma.documentQuiz.findUnique({
+    where: { id: quizId },
+    include: { document: true },
+  });
+
+  if (!quizRecord || quizRecord.document.userId !== userId) {
+    return { ok: false, error: "Latihan tidak ditemukan." };
+  }
+
+  try {
+    const attempts = Array.isArray(quizRecord.attempts)
+      ? quizRecord.attempts
+      : [];
+    const newAttempt = {
+      answers,
+      score,
+      completedAt: new Date().toISOString(),
+    };
+
+    const updatedAttempts = [...attempts, newAttempt];
+    const updated = await prisma.documentQuiz.update({
+      where: { id: quizId },
+      data: {
+        attempts: updatedAttempts,
+      },
+    });
+
+    return {
+      ok: true,
+      attempts: updated.attempts as any[],
+    };
+  } catch (e) {
+    console.error("submitDocumentQuizAttempt failed:", e);
+    return { ok: false, error: "Gagal menyimpan jawaban." };
+  }
+}
+
+export type GetDocumentQuizResult =
+  | {
+      ok: true;
+      quiz: {
+        id: string;
+        title: string;
+        questions: any[];
+        attempts: any[];
+      };
+    }
+  | { ok: false; error: string };
+
+export async function getDocumentQuizAction(
+  quizId: string,
+): Promise<GetDocumentQuizResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+
+  const quiz = await prisma.documentQuiz.findUnique({
+    where: { id: quizId },
+    include: { document: true },
+  });
+
+  if (!quiz || quiz.document.userId !== userId) {
+    return { ok: false, error: "Latihan tidak ditemukan." };
+  }
+
+  return {
+    ok: true,
+    quiz: {
+      id: quiz.id,
+      title: quiz.title,
+      questions: quiz.questions as any[],
+      attempts: quiz.attempts as any[],
+    },
+  };
+}
+
+export type DocumentHistoryResult =
+  | {
+      ok: true;
+      quizzes: Array<{
+        id: string;
+        title: string;
+        questionsCount: number;
+        attemptsCount: number;
+        lastScore: number | null;
+        createdAt: string;
+      }>;
+      materials: Array<{
+        id: string;
+        title: string;
+        difficulty: string;
+        estimatedMinutes: number;
+        createdAt: string;
+      }>;
+    }
+  | { ok: false; error: string };
+
+export async function getDocumentHistoryAction(
+  documentId: string,
+): Promise<DocumentHistoryResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+
+  const doc = await prisma.document.findFirst({
+    where: { id: documentId, userId },
+  });
+
+  if (!doc) {
+    return { ok: false, error: "Dokumen tidak ditemukan." };
+  }
+
+  try {
+    const quizzes = await prisma.documentQuiz.findMany({
+      where: { documentId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const materials = await prisma.material.findMany({
+      where: { documentId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      ok: true,
+      quizzes: quizzes.map((q) => {
+        const questionsList = (q.questions as any[]) || [];
+        const attemptsList = (q.attempts as any[]) || [];
+        const lastAttempt = attemptsList[attemptsList.length - 1];
+        return {
+          id: q.id,
+          title: q.title,
+          questionsCount: questionsList.length,
+          attemptsCount: attemptsList.length,
+          lastScore: lastAttempt ? (lastAttempt.score as number) : null,
+          createdAt: q.createdAt.toISOString(),
+        };
+      }),
+      materials: materials.map((m) => ({
+        id: m.id,
+        title: m.title,
+        difficulty: m.difficulty,
+        estimatedMinutes: m.estimatedMinutes,
+        createdAt: m.createdAt.toISOString(),
+      })),
+    };
+  } catch (e) {
+    console.error("getDocumentHistory failed:", e);
+    return { ok: false, error: "Gagal mengambil riwayat dokumen." };
   }
 }
 
@@ -562,6 +827,7 @@ export type GenerateDocumentMaterialResult =
 
 export async function generateDocumentMaterialAction(
   documentId: string,
+  enhance: boolean = false,
 ): Promise<GenerateDocumentMaterialResult> {
   let userId: string;
   try {
@@ -572,15 +838,39 @@ export async function generateDocumentMaterialAction(
   const doc = await loadOwnedDocument(userId, documentId);
   if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
   try {
-    const materialData = await generateMaterialFromDocument(
-      doc.content,
-      doc.originalName,
-    );
+    let materialData;
+
+    if (enhance) {
+      // Find latest material for this document to enhance it
+      const existing = await prisma.material.findFirst({
+        where: { documentId, userId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (existing) {
+        materialData = await generateEnhancedMaterialFromDocument(
+          doc.content,
+          doc.originalName,
+          existing.content,
+        );
+      } else {
+        materialData = await generateMaterialFromDocument(
+          doc.content,
+          doc.originalName,
+        );
+      }
+    } else {
+      materialData = await generateMaterialFromDocument(
+        doc.content,
+        doc.originalName,
+      );
+    }
 
     // Save material to DB
     const m = await prisma.material.create({
       data: {
         userId,
+        documentId,
         title: materialData.title,
         content: materialData.content,
         keyPoints: materialData.keyPoints,
@@ -598,6 +888,7 @@ export async function generateDocumentMaterialAction(
         stage: "material_generated",
         materialId: m.id,
         title: m.title,
+        enhanced: enhance,
       },
     });
 
