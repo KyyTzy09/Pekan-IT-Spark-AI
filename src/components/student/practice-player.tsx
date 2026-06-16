@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { startNewChat } from "@/server/actions/chat";
@@ -34,7 +35,6 @@ import {
   type SubmitPracticeResult,
   submitPracticeAnswer,
 } from "@/server/actions/practice";
-import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 
 const DIFFICULTY_META: Record<
   string,

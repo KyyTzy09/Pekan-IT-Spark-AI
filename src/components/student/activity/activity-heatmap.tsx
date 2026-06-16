@@ -56,8 +56,11 @@ export function ActivityHeatmap({ data, className }: Props) {
   paddedStart.setDate(paddedStart.getDate() - firstDow);
 
   // Build grid: array of weeks, each week = 7 days (Sun..Sat)
-  const cells: Array<{ date: string; count: number; level: 0 | 1 | 2 | 3 | 4 } | null> =
-    [];
+  const cells: Array<{
+    date: string;
+    count: number;
+    level: 0 | 1 | 2 | 3 | 4;
+  } | null> = [];
   const lookup = new Map(data.map((d) => [d.date, d]));
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -169,7 +172,10 @@ export function ActivityHeatmap({ data, className }: Props) {
                   width={cellSize}
                   height={cellSize}
                   rx={2}
-                  className={cn(LEVEL_COLORS[cell.level], "transition-colors hover:opacity-80")}
+                  className={cn(
+                    LEVEL_COLORS[cell.level],
+                    "transition-colors hover:opacity-80",
+                  )}
                 >
                   <title>
                     {cell.date}: {cell.count} aktivitas
@@ -193,7 +199,10 @@ function Legend() {
           <span
             // biome-ignore lint/suspicious/noArrayIndexKey: legend cells are static
             key={lvl}
-            className={cn("size-3 rounded-sm", LEVEL_COLORS[lvl as 0 | 1 | 2 | 3 | 4])}
+            className={cn(
+              "size-3 rounded-sm",
+              LEVEL_COLORS[lvl as 0 | 1 | 2 | 3 | 4],
+            )}
           />
         ))}
       </div>

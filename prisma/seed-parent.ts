@@ -61,7 +61,9 @@ async function main() {
   if (child) {
     console.log(`  - Terhubung ke anak: ${CHILD_EMAIL}`);
   } else {
-    console.log(`  ⚠ Anak (${CHILD_EMAIL}) belum ada di DB. Jalankan seed-student dulu.`);
+    console.log(
+      `  ⚠ Anak (${CHILD_EMAIL}) belum ada di DB. Jalankan seed-student dulu.`,
+    );
   }
 }
 

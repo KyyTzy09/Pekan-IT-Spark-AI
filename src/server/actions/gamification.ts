@@ -80,9 +80,7 @@ export async function addXp(
         userId,
         amount,
         source,
-        metadata: (metadata ?? undefined) as
-          | Prisma.InputJsonValue
-          | undefined,
+        metadata: (metadata ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     });
     const updated = await tx.studentProfile.update({
@@ -325,10 +323,12 @@ const BADGE_RULES: Record<string, BadgeRule> = {
   "50 Soal Dijawab": { test: (s) => s.totalAttempts >= 50 },
   "100 Soal Dijawab": { test: (s) => s.totalAttempts >= 100 },
   "Akurasi 80% (10+ soal)": {
-    test: (s) => s.totalAttempts >= 10 && s.correctAttempts / s.totalAttempts >= 0.8,
+    test: (s) =>
+      s.totalAttempts >= 10 && s.correctAttempts / s.totalAttempts >= 0.8,
   },
   "Akurasi 90% (25+ soal)": {
-    test: (s) => s.totalAttempts >= 25 && s.correctAttempts / s.totalAttempts >= 0.9,
+    test: (s) =>
+      s.totalAttempts >= 25 && s.correctAttempts / s.totalAttempts >= 0.9,
   },
 
   // Activity badges
@@ -359,40 +359,48 @@ export async function checkAndUnlockBadges(
   }
 
   // Load user stats in parallel
-  const [profile, skpCounts, attempts, streak, challengesCompleted, materialsRead, reflections] =
-    await Promise.all([
-      prisma.studentProfile.findUnique({
-        where: { userId },
-        select: { totalXp: true },
-      }),
-      prisma.studentKnowledgeProfile.groupBy({
-        by: ["status"],
-        where: { userId },
-        _count: { _all: true },
-      }),
-      prisma.questionAttempt.groupBy({
-        by: ["isCorrect"],
-        where: { userId },
-        _count: { _all: true },
-      }),
-      prisma.streak.findUnique({
-        where: { userId },
-        select: { currentStreak: true, longestStreak: true },
-      }),
-      prisma.challenge.count({
-        where: { userId, status: "COMPLETED" },
-      }),
-      prisma.materialRead.count({
-        where: { userId, completed: true },
-      }),
-      prisma.reflection.count({ where: { userId } }),
-    ]);
+  const [
+    profile,
+    skpCounts,
+    attempts,
+    streak,
+    challengesCompleted,
+    materialsRead,
+    reflections,
+  ] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { totalXp: true },
+    }),
+    prisma.studentKnowledgeProfile.groupBy({
+      by: ["status"],
+      where: { userId },
+      _count: { _all: true },
+    }),
+    prisma.questionAttempt.groupBy({
+      by: ["isCorrect"],
+      where: { userId },
+      _count: { _all: true },
+    }),
+    prisma.streak.findUnique({
+      where: { userId },
+      select: { currentStreak: true, longestStreak: true },
+    }),
+    prisma.challenge.count({
+      where: { userId, status: "COMPLETED" },
+    }),
+    prisma.materialRead.count({
+      where: { userId, completed: true },
+    }),
+    prisma.reflection.count({ where: { userId } }),
+  ]);
 
   const stats: BadgeCheckStats = {
     totalXp: profile?.totalXp ?? 0,
     currentStreak: streak?.currentStreak ?? 0,
     longestStreak: streak?.longestStreak ?? 0,
-    masteredConcepts: skpCounts.find((c) => c.status === "MASTERED")?._count._all ?? 0,
+    masteredConcepts:
+      skpCounts.find((c) => c.status === "MASTERED")?._count._all ?? 0,
     totalAttempts: attempts.reduce((acc, a) => acc + a._count._all, 0),
     correctAttempts: attempts.find((a) => a.isCorrect)?._count._all ?? 0,
     challengesCompleted,
@@ -578,20 +586,30 @@ export async function updateAvatarCustomizationAction(
   const xp = profile?.totalXp ?? 0;
 
   // Color limits
-  if (color === "green" && xp < 200) return { ok: false, error: "Butuh 200 XP untuk warna Hijau" };
-  if (color === "purple" && xp < 400) return { ok: false, error: "Butuh 400 XP untuk warna Ungu" };
-  if (color === "gold" && xp < 800) return { ok: false, error: "Butuh 800 XP untuk warna Emas" };
+  if (color === "green" && xp < 200)
+    return { ok: false, error: "Butuh 200 XP untuk warna Hijau" };
+  if (color === "purple" && xp < 400)
+    return { ok: false, error: "Butuh 400 XP untuk warna Ungu" };
+  if (color === "gold" && xp < 800)
+    return { ok: false, error: "Butuh 800 XP untuk warna Emas" };
 
   // Accessory limits
-  if (accessory === "glasses" && xp < 300) return { ok: false, error: "Butuh 300 XP untuk Kacamata" };
-  if (accessory === "hat" && xp < 500) return { ok: false, error: "Butuh 500 XP untuk Topi Wisuda" };
-  if (accessory === "crown" && xp < 1000) return { ok: false, error: "Butuh 1000 XP untuk Mahkota Emas" };
-  if (accessory === "ribbon" && xp < 400) return { ok: false, error: "Butuh 400 XP untuk Pita Lucu" };
+  if (accessory === "glasses" && xp < 300)
+    return { ok: false, error: "Butuh 300 XP untuk Kacamata" };
+  if (accessory === "hat" && xp < 500)
+    return { ok: false, error: "Butuh 500 XP untuk Topi Wisuda" };
+  if (accessory === "crown" && xp < 1000)
+    return { ok: false, error: "Butuh 1000 XP untuk Mahkota Emas" };
+  if (accessory === "ribbon" && xp < 400)
+    return { ok: false, error: "Butuh 400 XP untuk Pita Lucu" };
 
   // Background limits
-  if (background === "aurora" && xp < 250) return { ok: false, error: "Butuh 250 XP untuk background Aurora" };
-  if (background === "space" && xp < 500) return { ok: false, error: "Butuh 500 XP untuk background Space" };
-  if (background === "neon" && xp < 750) return { ok: false, error: "Butuh 750 XP untuk background Neon" };
+  if (background === "aurora" && xp < 250)
+    return { ok: false, error: "Butuh 250 XP untuk background Aurora" };
+  if (background === "space" && xp < 500)
+    return { ok: false, error: "Butuh 500 XP untuk background Space" };
+  if (background === "neon" && xp < 750)
+    return { ok: false, error: "Butuh 750 XP untuk background Neon" };
 
   await prisma.avatarCustomization.upsert({
     where: { userId },

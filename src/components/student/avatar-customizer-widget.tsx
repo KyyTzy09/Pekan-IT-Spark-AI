@@ -1,12 +1,21 @@
 "use client";
 
+import { Loader2, Lock, Sparkles, Wand2 } from "lucide-react";
 import * as React from "react";
-import { Lock, Sparkles, Wand2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { SparkCharacter } from "@/components/student/spark-character";
-import { getAvatarCustomizationAction, updateAvatarCustomizationAction } from "@/server/actions/gamification";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+  getAvatarCustomizationAction,
+  updateAvatarCustomizationAction,
+} from "@/server/actions/gamification";
 
 type OptionState = {
   color: string;
@@ -82,7 +91,7 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
       const res = await updateAvatarCustomizationAction(
         preview.color,
         preview.accessory,
-        preview.background
+        preview.background,
       );
       if (res.ok) {
         setCurrent(preview);
@@ -115,7 +124,12 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
       <div className="relative flex items-center gap-4">
         {/* Mascot Avatar view */}
         <div className="shrink-0">
-          <SparkCharacter size="md" color={current.color} accessory={current.accessory} background={current.background} />
+          <SparkCharacter
+            size="md"
+            color={current.color}
+            accessory={current.accessory}
+            background={current.background}
+          />
         </div>
 
         <div>
@@ -127,7 +141,8 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
             Kustomisasi Karakter
           </h3>
           <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-            Dandani maskot Spark kamu dengan style favoritmu sesuai pencapaian belajarmu!
+            Dandani maskot Spark kamu dengan style favoritmu sesuai pencapaian
+            belajarmu!
           </p>
         </div>
       </div>
@@ -145,13 +160,22 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
           </DialogTrigger>
           <DialogContent className="max-w-md rounded-3xl p-5 overflow-y-auto max-h-[85vh]">
             <DialogHeader>
-              <DialogTitle className="font-heading text-base font-bold">Kustomisasi Maskot Spark</DialogTitle>
+              <DialogTitle className="font-heading text-base font-bold">
+                Kustomisasi Maskot Spark
+              </DialogTitle>
             </DialogHeader>
 
             {/* Live Preview Container */}
             <div className="my-5 flex flex-col items-center justify-center rounded-2xl bg-muted/30 p-4 border border-border/20">
-              <SparkCharacter size="lg" color={preview.color} accessory={preview.accessory} background={preview.background} />
-              <p className="mt-3 text-[10.5px] font-semibold text-muted-foreground">Pratinjau Spark</p>
+              <SparkCharacter
+                size="lg"
+                color={preview.color}
+                accessory={preview.accessory}
+                background={preview.background}
+              />
+              <p className="mt-3 text-[10.5px] font-semibold text-muted-foreground">
+                Pratinjau Spark
+              </p>
             </div>
 
             {error && (
@@ -163,7 +187,9 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
             <div className="space-y-4">
               {/* Color options */}
               <div>
-                <h4 className="text-[11.5px] font-bold text-foreground mb-1.5 uppercase tracking-wider">Warna Dasar</h4>
+                <h4 className="text-[11.5px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                  Warna Dasar
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {COLOR_OPTIONS.map((o) => {
                     const isLocked = totalXp < o.xp;
@@ -173,7 +199,10 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
                       <button
                         key={o.id}
                         type="button"
-                        onClick={() => !isLocked && setPreview((p) => ({ ...p, color: o.id }))}
+                        onClick={() =>
+                          !isLocked &&
+                          setPreview((p) => ({ ...p, color: o.id }))
+                        }
                         disabled={isLocked}
                         className={cn(
                           "relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border font-medium transition-all",
@@ -181,12 +210,17 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
                             ? "border-purple-500 bg-purple-500/5 text-purple-600 font-bold"
                             : isLocked
                               ? "border-muted bg-muted/40 text-muted-foreground/60 cursor-not-allowed opacity-60"
-                              : "border-border bg-background hover:bg-muted/50 text-foreground/80"
+                              : "border-border bg-background hover:bg-muted/50 text-foreground/80",
                         )}
                       >
                         <span className={cn("size-2 rounded-full", o.css)} />
                         <span>{o.name}</span>
-                        {isLocked && <Lock size={9} className="ml-0.5 text-muted-foreground" />}
+                        {isLocked && (
+                          <Lock
+                            size={9}
+                            className="ml-0.5 text-muted-foreground"
+                          />
+                        )}
                       </button>
                     );
                   })}
@@ -195,7 +229,9 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
 
               {/* Accessory options */}
               <div>
-                <h4 className="text-[11.5px] font-bold text-foreground mb-1.5 uppercase tracking-wider">Aksesoris</h4>
+                <h4 className="text-[11.5px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                  Aksesoris
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {ACCESSORY_OPTIONS.map((o) => {
                     const isLocked = totalXp < o.xp;
@@ -205,7 +241,10 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
                       <button
                         key={o.id}
                         type="button"
-                        onClick={() => !isLocked && setPreview((p) => ({ ...p, accessory: o.id }))}
+                        onClick={() =>
+                          !isLocked &&
+                          setPreview((p) => ({ ...p, accessory: o.id }))
+                        }
                         disabled={isLocked}
                         className={cn(
                           "relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border font-medium transition-all",
@@ -213,12 +252,17 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
                             ? "border-purple-500 bg-purple-500/5 text-purple-600 font-bold"
                             : isLocked
                               ? "border-muted bg-muted/40 text-muted-foreground/60 cursor-not-allowed opacity-60"
-                              : "border-border bg-background hover:bg-muted/50 text-foreground/80"
+                              : "border-border bg-background hover:bg-muted/50 text-foreground/80",
                         )}
                       >
                         <span>{o.emoji}</span>
                         <span>{o.name}</span>
-                        {isLocked && <Lock size={9} className="ml-0.5 text-muted-foreground" />}
+                        {isLocked && (
+                          <Lock
+                            size={9}
+                            className="ml-0.5 text-muted-foreground"
+                          />
+                        )}
                       </button>
                     );
                   })}
@@ -227,7 +271,9 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
 
               {/* Background glow options */}
               <div>
-                <h4 className="text-[11.5px] font-bold text-foreground mb-1.5 uppercase tracking-wider">Aura Glow</h4>
+                <h4 className="text-[11.5px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                  Aura Glow
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {BACKGROUND_OPTIONS.map((o) => {
                     const isLocked = totalXp < o.xp;
@@ -237,7 +283,10 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
                       <button
                         key={o.id}
                         type="button"
-                        onClick={() => !isLocked && setPreview((p) => ({ ...p, background: o.id }))}
+                        onClick={() =>
+                          !isLocked &&
+                          setPreview((p) => ({ ...p, background: o.id }))
+                        }
                         disabled={isLocked}
                         className={cn(
                           "relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border font-medium transition-all",
@@ -245,11 +294,16 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
                             ? "border-purple-500 bg-purple-500/5 text-purple-600 font-bold"
                             : isLocked
                               ? "border-muted bg-muted/40 text-muted-foreground/60 cursor-not-allowed opacity-60"
-                              : "border-border bg-background hover:bg-muted/50 text-foreground/80"
+                              : "border-border bg-background hover:bg-muted/50 text-foreground/80",
                         )}
                       >
                         <span>{o.name}</span>
-                        {isLocked && <Lock size={9} className="ml-0.5 text-muted-foreground" />}
+                        {isLocked && (
+                          <Lock
+                            size={9}
+                            className="ml-0.5 text-muted-foreground"
+                          />
+                        )}
                       </button>
                     );
                   })}

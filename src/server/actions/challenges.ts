@@ -5,7 +5,11 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
-import { addXp, recordActivity, checkAndUnlockBadges } from "@/server/actions/gamification";
+import {
+  addXp,
+  checkAndUnlockBadges,
+  recordActivity,
+} from "@/server/actions/gamification";
 import { recordQuestionAttempt } from "@/server/actions/subjects";
 import {
   analyzeReflection,
@@ -738,12 +742,10 @@ export async function completeChallengeItem(input: {
     }
 
     if (isCorrect) {
-      await addXp(
-        userId,
-        XP_REWARDS.ANSWER_CORRECT,
-        "ANSWER_CORRECT",
-        { questionId: item.questionId, challengeItemId: item.id },
-      );
+      await addXp(userId, XP_REWARDS.ANSWER_CORRECT, "ANSWER_CORRECT", {
+        questionId: item.questionId,
+        challengeItemId: item.id,
+      });
     }
 
     const challengeCompleted = await checkAndCompleteChallenge(
@@ -773,12 +775,10 @@ export async function completeChallengeItem(input: {
       where: { id: item.id },
       data: { status: "COMPLETED", completedAt: new Date() },
     });
-    await addXp(
-      userId,
-      XP_REWARDS.CHAT_SESSION,
-      "CHAT_SESSION",
-      { challengeItemId: item.id, kind: "MATERIAL" },
-    );
+    await addXp(userId, XP_REWARDS.CHAT_SESSION, "CHAT_SESSION", {
+      challengeItemId: item.id,
+      kind: "MATERIAL",
+    });
     const challengeCompleted = await checkAndCompleteChallenge(
       item.challengeId,
     );
@@ -873,12 +873,10 @@ export async function submitReflection(input: {
     },
   });
 
-  await addXp(
-    userId,
-    15,
-    "DAILY_QUEST",
-    { challengeId: challenge.id, kind: "REFLECTION" },
-  );
+  await addXp(userId, 15, "DAILY_QUEST", {
+    challengeId: challenge.id,
+    kind: "REFLECTION",
+  });
 
   const completedAfter = await checkAndCompleteChallenge(challenge.id);
   await aggregateDailyProgress(userId, challenge.scheduledFor);
@@ -1669,48 +1667,55 @@ export async function aggregateStudentProgress(
   const perSubject = (
     await Promise.all(
       Array.from(subjectMap.values()).map(
-        async ({ subject, masteryScores }): Promise<SubjectProgressBreakdown> => {
+        async ({
+          subject,
+          masteryScores,
+        }): Promise<SubjectProgressBreakdown> => {
           const masteryAvg =
             masteryScores.length > 0
               ? masteryScores.reduce((a, b) => a + b, 0) / masteryScores.length
               : 0;
           const masteryScore = Math.round(masteryAvg * 100);
 
-          const [completedChallenges, totalChallenges, materialReads, reflections] =
-            await Promise.all([
-              prisma.challenge.count({
-                where: {
-                  userId,
-                  subjectId: subject.id,
-                  status: "COMPLETED",
-                  scheduledFor: { gte: windowStart },
-                },
-              }),
-              prisma.challenge.count({
-                where: {
-                  userId,
-                  subjectId: subject.id,
-                  scheduledFor: { gte: windowStart },
-                },
-              }),
-              prisma.materialRead.findMany({
-                where: {
-                  userId,
-                  completed: true,
-                  readAt: { gte: windowStart },
-                  material: { subjectId: subject.id },
-                },
-                select: { readSeconds: true },
-              }),
-              prisma.reflection.findMany({
-                where: {
-                  userId,
-                  submittedAt: { gte: windowStart },
-                  challenge: { subjectId: subject.id },
-                },
-                select: { depth: true },
-              }),
-            ]);
+          const [
+            completedChallenges,
+            totalChallenges,
+            materialReads,
+            reflections,
+          ] = await Promise.all([
+            prisma.challenge.count({
+              where: {
+                userId,
+                subjectId: subject.id,
+                status: "COMPLETED",
+                scheduledFor: { gte: windowStart },
+              },
+            }),
+            prisma.challenge.count({
+              where: {
+                userId,
+                subjectId: subject.id,
+                scheduledFor: { gte: windowStart },
+              },
+            }),
+            prisma.materialRead.findMany({
+              where: {
+                userId,
+                completed: true,
+                readAt: { gte: windowStart },
+                material: { subjectId: subject.id },
+              },
+              select: { readSeconds: true },
+            }),
+            prisma.reflection.findMany({
+              where: {
+                userId,
+                submittedAt: { gte: windowStart },
+                challenge: { subjectId: subject.id },
+              },
+              select: { depth: true },
+            }),
+          ]);
 
           const challengeScore =
             totalChallenges > 0
@@ -1833,9 +1838,7 @@ export async function getStudentProgressSummary(
   const tail = timeline.points.slice(-7);
   const head = timeline.points.slice(0, 7);
   const avg = (xs: ProgressTimelinePoint[]) =>
-    xs.length > 0
-      ? xs.reduce((a, p) => a + p.overallScore, 0) / xs.length
-      : 0;
+    xs.length > 0 ? xs.reduce((a, p) => a + p.overallScore, 0) / xs.length : 0;
   const delta = avg(tail) - avg(head);
   let trend: "up" | "down" | "flat" = "flat";
   if (delta > 3) trend = "up";
@@ -1883,7 +1886,8 @@ export async function getProgressTimeline(
   });
   const currentMasteryScore = Math.round(
     profiles.length > 0
-      ? (profiles.reduce((a, p) => a + p.masteryScore, 0) / profiles.length) * 100
+      ? (profiles.reduce((a, p) => a + p.masteryScore, 0) / profiles.length) *
+          100
       : 0,
   );
 

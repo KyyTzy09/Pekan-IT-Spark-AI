@@ -513,16 +513,17 @@ export async function getTopicDetail(
 
   // Fetch all prerequisite profiles in one query to handle cross-topic dependencies
   const allPrereqIds = topic.concepts.flatMap((c) =>
-    c.prerequisites.map((p) => p.prerequisiteId)
+    c.prerequisites.map((p) => p.prerequisiteId),
   );
-  const prereqProfiles = allPrereqIds.length > 0
-    ? await prisma.studentKnowledgeProfile.findMany({
-        where: { userId, conceptId: { in: allPrereqIds } },
-        select: { conceptId: true, masteryScore: true },
-      })
-    : [];
+  const prereqProfiles =
+    allPrereqIds.length > 0
+      ? await prisma.studentKnowledgeProfile.findMany({
+          where: { userId, conceptId: { in: allPrereqIds } },
+          select: { conceptId: true, masteryScore: true },
+        })
+      : [];
   const prereqMasteryMap = new Map(
-    prereqProfiles.map((p) => [p.conceptId, p.masteryScore])
+    prereqProfiles.map((p) => [p.conceptId, p.masteryScore]),
   );
 
   const concepts = topic.concepts.map((c) => {

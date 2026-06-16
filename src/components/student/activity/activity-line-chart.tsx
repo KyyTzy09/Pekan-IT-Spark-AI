@@ -9,8 +9,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { DailySeriesPoint } from "@/server/actions/activity";
 import { cn } from "@/lib/utils";
+import type { DailySeriesPoint } from "@/server/actions/activity";
 
 type Props = {
   data: DailySeriesPoint[];
@@ -22,7 +22,11 @@ type Props = {
  * Line chart for daily activity series (count or XP).
  * Uses recharts for consistency with other student charts.
  */
-export function ActivityLineChart({ data, className, metric = "count" }: Props) {
+export function ActivityLineChart({
+  data,
+  className,
+  metric = "count",
+}: Props) {
   if (data.length === 0) {
     return (
       <div className="rounded-2xl border border-border/40 bg-card/40 p-8 text-center text-muted-foreground">
@@ -51,7 +55,8 @@ export function ActivityLineChart({ data, className, metric = "count" }: Props) 
             {metric === "count" ? "Aktivitas harian" : "XP harian"}
           </h3>
           <p className="text-[11.5px] text-muted-foreground">
-            30 hari terakhir • max {max} {metric === "xp" ? "XP" : "aktivitas"}/hari
+            30 hari terakhir • max {max} {metric === "xp" ? "XP" : "aktivitas"}
+            /hari
           </p>
         </div>
       </div>

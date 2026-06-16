@@ -44,9 +44,9 @@ const quizQuestionSchema = z.object({
 const quizSchema = z.object({
   quiz: z
     .array(quizQuestionSchema)
-    .min(3)
-    .max(8)
-    .describe("3-8 soal pilihan ganda berdasarkan dokumen"),
+    .min(1)
+    .max(15)
+    .describe("Soal pilihan ganda berdasarkan dokumen"),
 });
 
 export type GeneratedQuiz = z.infer<typeof quizSchema>;
@@ -68,7 +68,7 @@ Format output harus JSON valid dengan struktur:
 }`;
 
 const SYSTEM_QUIZ = `Kamu adalah Spark, asisten belajar.
-Dari materi yang diberikan, BUAT soal pilihan ganda (3-8 soal) untuk latihan siswa SMA/SMK.
+Dari materi yang diberikan, BUAT soal pilihan ganda (1-15 soal) untuk latihan siswa SMA/SMK.
 - Setiap soal harus punya tepat 4 opsi.
 - correctIndex harus 0..3.
 - explanation harus jelas kenapa jawaban itu benar.

@@ -4330,7 +4330,8 @@ async function main() {
       },
       {
         name: "Daily Champion",
-        description: "Selesaikan semua tantangan harian selama 7 hari berturut-turut",
+        description:
+          "Selesaikan semua tantangan harian selama 7 hari berturut-turut",
         category: "KEBIASAAN" as const,
         xpReward: 400,
       },

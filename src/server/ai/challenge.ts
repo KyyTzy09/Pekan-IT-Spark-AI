@@ -688,7 +688,8 @@ ${response}
 Analisis jawaban siswa di atas. Tentukan sentimen (POSITIVE jika siswa semangat, NEGATIVE jika frustrasi/merasa gagal, NEUTRAL selain itu), kedalaman (SURFACE = jawaban singkat generik, MODERATE = ada insight tapi belum dalam, DEEP = menunjukkan refleksi bermakna), dan 1-3 saran actionable untuk siswa.`;
 
   try {
-    const systemPrompt = 'Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa. Kembalikan output JSON dengan format:\n{\n  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",\n  "depth": "SURFACE" | "MODERATE" | "DEEP",\n  "suggestions": ["saran 1", "saran 2"]\n}';
+    const systemPrompt =
+      'Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa. Kembalikan output JSON dengan format:\n{\n  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",\n  "depth": "SURFACE" | "MODERATE" | "DEEP",\n  "suggestions": ["saran 1", "saran 2"]\n}';
     console.log("[AI_SERVICE] analyzeReflection request", {
       model: chatModel,
       system: systemPrompt,
@@ -741,7 +742,8 @@ export async function generateReflectionPrompt(args: {
     subjectName: args.subjectName,
   });
   try {
-    const systemPrompt = 'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}';
+    const systemPrompt =
+      'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}';
     const userPrompt = `Buat 1 prompt refleksi untuk siswa ${
       args.userName ?? "SMA/SMK"
     } yang baru saja belajar materi:
@@ -864,7 +866,9 @@ Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" leb
     prompt: userPrompt,
     temperature: 0.6,
   });
-  console.log("[AI_SERVICE] generateMaterialMarkdown response", { text: result.text });
+  console.log("[AI_SERVICE] generateMaterialMarkdown response", {
+    text: result.text,
+  });
 
   const keyPoints = await extractKeyPoints(result.text);
 

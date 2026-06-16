@@ -1,5 +1,3 @@
-import { formatDistanceToNow } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import {
   Award,
   BookOpen,
@@ -9,6 +7,8 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
+import { formatDistanceToNow } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { ActivityEntry, ActivityKind } from "@/server/actions/activity";
 
 const KIND_META: Record<

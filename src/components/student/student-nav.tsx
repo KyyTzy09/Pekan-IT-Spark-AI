@@ -14,14 +14,15 @@ import {
   Menu,
   MessageCircle,
   Sparkles,
+  Trophy,
   Upload,
+  User,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { SparkCharacter } from "@/components/student/spark-character";
 import { cn } from "@/lib/utils";
 import type { DashboardSummary } from "@/server/actions/dashboard";
 
@@ -70,6 +71,13 @@ const SECTIONS: NavSection[] = [
         icon: Activity,
         match: (p) => p.startsWith("/activity"),
       },
+      {
+        href: "/leaderboard",
+        label: "Leaderboard",
+        shortLabel: "Leaderboard",
+        icon: Trophy,
+        match: (p) => p.startsWith("/leaderboard"),
+      },
     ],
   },
   {
@@ -101,6 +109,13 @@ const SECTIONS: NavSection[] = [
   {
     title: "Alat & Pengaturan",
     items: [
+      {
+        href: "/profile",
+        label: "Profil & Avatar",
+        shortLabel: "Profil",
+        icon: User,
+        match: (p) => p.startsWith("/profile"),
+      },
       {
         href: "/upload",
         label: "Upload Dokumen",
@@ -205,7 +220,10 @@ function ProfileWidget() {
   const streak = data.streak.current;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/45 p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] backdrop-blur-md">
+    <Link
+      href="/profile"
+      className="block relative overflow-hidden rounded-2xl border border-border/50 bg-card/45 p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] backdrop-blur-md hover:bg-card/70 hover:border-[var(--coral)]/30 transition-all group"
+    >
       {/* Background neon glows */}
       <div
         aria-hidden
@@ -285,7 +303,7 @@ function ProfileWidget() {
           </span>
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 
@@ -304,19 +322,22 @@ export function StudentNav({
 
   // Bottom Navigation has 4 primary buttons + 1 "Lainnya" button
   const bottomNavItems = [
-    flatItems[0], // Beranda
-    flatItems[1], // Tanya Spark
-    flatItems[2], // Tantangan
-    flatItems[5], // Latihan Soal
-  ];
+    flatItems.find((item) => item.href === "/dashboard"),
+    flatItems.find((item) => item.href === "/chat"),
+    flatItems.find((item) => item.href === "/challenge"),
+    flatItems.find((item) => item.href === "/practice"),
+  ].filter(Boolean) as NavItem[];
 
   // Drawer has secondary navigation items
   const drawerItems = [
-    flatItems[3], // Mapel
-    flatItems[4], // Materi
-    flatItems[6], // Upload
-    flatItems[7], // Orang Tua
-  ];
+    flatItems.find((item) => item.href === "/profile"),
+    flatItems.find((item) => item.href === "/leaderboard"),
+    flatItems.find((item) => item.href === "/subjects"),
+    flatItems.find((item) => item.href === "/materials"),
+    flatItems.find((item) => item.href === "/activity"),
+    flatItems.find((item) => item.href === "/upload"),
+    flatItems.find((item) => item.href === "/settings/invite"),
+  ].filter(Boolean) as NavItem[];
 
   const activeIndex = bottomNavItems.findIndex((item) => item.match(pathname));
   const isDrawerActive = drawerItems.some((item) => item.match(pathname));

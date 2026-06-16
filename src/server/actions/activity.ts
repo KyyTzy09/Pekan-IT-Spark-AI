@@ -107,7 +107,9 @@ export async function getStudentActivity(
 
   const safeWindow = Math.max(1, Math.min(730, Math.floor(windowDays))); // cap 2y
   const now = new Date();
-  const windowStart = startOfDay(new Date(now.getTime() - (safeWindow - 1) * DAY_MS));
+  const windowStart = startOfDay(
+    new Date(now.getTime() - (safeWindow - 1) * DAY_MS),
+  );
   const windowEnd = startOfDay(now);
 
   // ============================================================================
@@ -220,7 +222,8 @@ export async function getStudentActivity(
       id: `r-${r.id}`,
       kind: "REFLECTION",
       title: "Refleksi ditulis",
-      description: r.response.slice(0, 120) + (r.response.length > 120 ? "…" : ""),
+      description:
+        r.response.slice(0, 120) + (r.response.length > 120 ? "…" : ""),
       subjectName: r.challenge.subject?.name ?? null,
       xp: 15,
       timestamp: r.submittedAt.toISOString(),
@@ -246,7 +249,8 @@ export async function getStudentActivity(
   }
 
   for (const x of xpTransactions) {
-    if (x.source === "ANSWER_CORRECT" || x.source === "CONCEPT_MASTERED") continue; // already covered by questionAttempts
+    if (x.source === "ANSWER_CORRECT" || x.source === "CONCEPT_MASTERED")
+      continue; // already covered by questionAttempts
     if (x.amount <= 0) continue;
     const meta = (x.metadata ?? {}) as Record<string, string>;
     entries.push({
@@ -303,7 +307,9 @@ export async function getStudentActivity(
   // Daily series (last 30 days for line chart, separate from heatmap window)
   // ============================================================================
   const seriesDays = Math.min(30, safeWindow);
-  const seriesStart = startOfDay(new Date(now.getTime() - (seriesDays - 1) * DAY_MS));
+  const seriesStart = startOfDay(
+    new Date(now.getTime() - (seriesDays - 1) * DAY_MS),
+  );
   const seriesBuckets = new Map<string, { count: number; xp: number }>();
   for (let i = 0; i < seriesDays; i++) {
     const d = new Date(seriesStart.getTime() + i * DAY_MS);
@@ -337,8 +343,6 @@ export async function getStudentActivity(
     if (heatmap[i]?.count && heatmap[i]!.count > 0) {
       currentStreak++;
     } else if (i === heatmap.length - 1) {
-      // today is allowed to be empty; if so, check yesterday
-      continue;
     } else {
       break;
     }

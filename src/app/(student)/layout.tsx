@@ -1,7 +1,6 @@
 import type * as React from "react";
-
-import { StudentNav } from "@/components/student/student-nav";
 import { BadgeUnlockProvider } from "@/components/student/badge-unlock-provider";
+import { StudentNav } from "@/components/student/student-nav";
 
 export default function StudentLayout({
   children,

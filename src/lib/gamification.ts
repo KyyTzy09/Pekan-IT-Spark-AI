@@ -71,9 +71,10 @@ export function levelFromXp(
   const currentMinXp = current.minXp;
   const nextMinXp = next?.minXp ?? null;
   const span = nextMinXp !== null ? Math.max(1, nextMinXp - currentMinXp) : 1;
-  const progress = nextMinXp !== null
-    ? Math.min(100, Math.max(0, ((safeXp - currentMinXp) / span) * 100))
-    : 100;
+  const progress =
+    nextMinXp !== null
+      ? Math.min(100, Math.max(0, ((safeXp - currentMinXp) / span) * 100))
+      : 100;
   const xpToNext = nextMinXp !== null ? Math.max(0, nextMinXp - safeXp) : null;
 
   return {
@@ -101,7 +102,10 @@ function computeFromFormula(
   const currentMinXp = xpForFormulaLevel(n);
   const nextMinXp = xpForFormulaLevel(n + 1);
   const span = Math.max(1, nextMinXp - currentMinXp);
-  const progress = Math.min(100, Math.max(0, ((totalXp - currentMinXp) / span) * 100));
+  const progress = Math.min(
+    100,
+    Math.max(0, ((totalXp - currentMinXp) / span) * 100),
+  );
   const xpToNext = Math.max(0, nextMinXp - totalXp);
 
   return {
@@ -135,8 +139,14 @@ export type XpRewardKey = keyof typeof XP_REWARDS;
  * Streak milestones and their celebratory message.
  * Brief, positive — no shame per 7.2 anti-patterns.
  */
-export const STREAK_MILESTONES: ReadonlyArray<{ days: number; message: string }> = [
-  { days: 3, message: "3 hari berturut-turut! Konsistensi kecil, dampak besar. ✨" },
+export const STREAK_MILESTONES: ReadonlyArray<{
+  days: number;
+  message: string;
+}> = [
+  {
+    days: 3,
+    message: "3 hari berturut-turut! Konsistensi kecil, dampak besar. ✨",
+  },
   { days: 7, message: "Seminggu penuh! Streak master mode: ON. 🔥" },
   { days: 14, message: "2 minggu! Kamu udah mulai kebiasaan yang keren. 💪" },
   { days: 30, message: "30 hari! Konsistensi adalah superpower. 🌟" },

@@ -14,7 +14,10 @@
  *   "3 bulan yang lalu"
  *   "1 tahun yang lalu"
  */
-export function formatDistanceToNow(date: Date, now: Date = new Date()): string {
+export function formatDistanceToNow(
+  date: Date,
+  now: Date = new Date(),
+): string {
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
@@ -53,7 +56,15 @@ const MONTHS_ID = [
   "Desember",
 ] as const;
 
-const DAYS_ID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"] as const;
+const DAYS_ID = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+] as const;
 
 /**
  * Format a Date as a long Indonesian string.

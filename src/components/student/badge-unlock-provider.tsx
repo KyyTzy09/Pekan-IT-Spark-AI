@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Award, Sparkles, X } from "lucide-react";
+import * as React from "react";
 
 export type BadgeUnlock = {
   badgeId: string;
@@ -16,17 +16,25 @@ type BadgeUnlockContextType = {
   showBadges: (badges: BadgeUnlock[]) => void;
 };
 
-const BadgeUnlockContext = React.createContext<BadgeUnlockContextType | null>(null);
+const BadgeUnlockContext = React.createContext<BadgeUnlockContextType | null>(
+  null,
+);
 
 export function useBadgeCelebration() {
   const context = React.useContext(BadgeUnlockContext);
   if (!context) {
-    throw new Error("useBadgeCelebration must be used within a BadgeUnlockProvider");
+    throw new Error(
+      "useBadgeCelebration must be used within a BadgeUnlockProvider",
+    );
   }
   return context;
 }
 
-export function BadgeUnlockProvider({ children }: { children: React.ReactNode }) {
+export function BadgeUnlockProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [queue, setQueue] = React.useState<BadgeUnlock[]>([]);
   const [current, setCurrent] = React.useState<BadgeUnlock | null>(null);
 
@@ -91,7 +99,10 @@ export function BadgeUnlockProvider({ children }: { children: React.ReactNode })
                   }}
                   className="absolute text-amber-400"
                 >
-                  <Sparkles size={Math.random() * 16 + 12} fill="currentColor" />
+                  <Sparkles
+                    size={Math.random() * 16 + 12}
+                    fill="currentColor"
+                  />
                 </motion.div>
               ))}
             </div>
@@ -127,11 +138,18 @@ export function BadgeUnlockProvider({ children }: { children: React.ReactNode })
                 {/* Rotating icon badge container */}
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 4,
+                    ease: "easeInOut",
+                  }}
                   className="relative flex size-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/20"
                 >
                   <Award size={32} />
-                  <Sparkles size={14} className="absolute -right-1.5 -top-1.5 text-amber-300 animate-pulse" />
+                  <Sparkles
+                    size={14}
+                    className="absolute -right-1.5 -top-1.5 text-amber-300 animate-pulse"
+                  />
                 </motion.div>
 
                 <span className="mt-4 rounded-full border border-amber-300/30 bg-amber-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400">
@@ -154,7 +172,8 @@ export function BadgeUnlockProvider({ children }: { children: React.ReactNode })
                     🦊 Pesan dari Spark
                   </p>
                   <p className="mt-1 text-[11.5px] text-foreground/80 leading-normal italic">
-                    "Keren banget! Kamu baru aja dapet badge baru. Terus semangat belajarnya ya!"
+                    "Keren banget! Kamu baru aja dapet badge baru. Terus
+                    semangat belajarnya ya!"
                   </p>
                 </div>
 

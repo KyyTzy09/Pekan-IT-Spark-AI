@@ -198,7 +198,12 @@ export type RecordAttemptInput = z.infer<typeof recordAttemptSchema>;
 
 export async function recordQuestionAttempt(
   input: RecordAttemptInput,
-): Promise<{ ok: boolean; error?: string; newMastery?: number; unlockedBadges?: any[] }> {
+): Promise<{
+  ok: boolean;
+  error?: string;
+  newMastery?: number;
+  unlockedBadges?: any[];
+}> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, error: "Login dulu" };
   if (session.user.role !== "STUDENT") {
@@ -279,12 +284,9 @@ export async function recordQuestionAttempt(
   }
 
   if (newStatus === "MASTERED" && prevScore < 0.8) {
-    await addXp(
-      userId,
-      XP_REWARDS.CONCEPT_MASTERED,
-      "CONCEPT_MASTERED",
-      { conceptId: question.conceptId },
-    );
+    await addXp(userId, XP_REWARDS.CONCEPT_MASTERED, "CONCEPT_MASTERED", {
+      conceptId: question.conceptId,
+    });
   }
 
   const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);

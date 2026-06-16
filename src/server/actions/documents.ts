@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  checkAndUnlockBadges,
+  recordActivity,
+} from "@/server/actions/gamification";
 import { logDocumentEvent } from "@/server/documents/audit";
 import { validateEducationalContent } from "@/server/documents/content-check";
 import { embedDocumentChunks } from "@/server/documents/embeddings";
@@ -17,12 +21,11 @@ import {
   type DocumentSummary as GeneratedDocSummary,
   type GeneratedQuiz,
   generateDocumentSummary,
-  generateMaterialFromDocument,
-  generateQuizFromDocument,
-  generateMoreQuestionsForQuiz,
   generateEnhancedMaterialFromDocument,
+  generateMaterialFromDocument,
+  generateMoreQuestionsForQuiz,
+  generateQuizFromDocument,
 } from "@/server/documents/features";
-import { recordActivity, checkAndUnlockBadges } from "@/server/actions/gamification";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_PAGES = 50;

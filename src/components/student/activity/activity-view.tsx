@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { ActivityHeatmap } from "@/components/student/activity/activity-heatmap";
 import { ActivityLineChart } from "@/components/student/activity/activity-line-chart";
 import { ActivityList } from "@/components/student/activity/activity-list";
 import { ActivityStats } from "@/components/student/activity/activity-stats";
 import type { StudentActivity } from "@/server/actions/activity";
-import { useState } from "react";
 
 type Props = {
   activity: StudentActivity;

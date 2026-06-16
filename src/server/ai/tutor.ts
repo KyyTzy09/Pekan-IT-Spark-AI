@@ -7,7 +7,6 @@ import type {
   ResponseDepth,
 } from "../../../generated/prisma/client";
 
-
 interface ConceptMastery {
   id: string;
   name: string;
@@ -235,7 +234,7 @@ export async function generateTutorStream(input: {
     input.topicId,
   );
 
-  let contextSnippets: string[] = [];
+  const contextSnippets: string[] = [];
 
   const systemPrompt = buildSystemPrompt(
     {

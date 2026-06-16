@@ -1,4 +1,13 @@
-import { BookOpen, Calendar, Flame, MessageCircle, Sparkles, Target, TrendingUp, Trophy } from "lucide-react";
+import {
+  BookOpen,
+  Calendar,
+  Flame,
+  MessageCircle,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StudentActivity } from "@/server/actions/activity";
 
@@ -104,10 +113,30 @@ export function ActivityStats({
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <KindChip icon={Target} color="text-[var(--coral)] bg-[var(--coral)]/10" label="Soal" count={byKind.QUESTION} />
-        <KindChip icon={BookOpen} color="text-[var(--teal)] bg-[var(--teal)]/10" label="Materi" count={byKind.MATERIAL} />
-        <KindChip icon={MessageCircle} color="text-[var(--purple)] bg-[var(--purple)]/10" label="Refleksi" count={byKind.REFLECTION} />
-        <KindChip icon={Trophy} color="text-[var(--pink)] bg-[var(--pink)]/10" label="Tantangan" count={byKind.CHALLENGE} />
+        <KindChip
+          icon={Target}
+          color="text-[var(--coral)] bg-[var(--coral)]/10"
+          label="Soal"
+          count={byKind.QUESTION}
+        />
+        <KindChip
+          icon={BookOpen}
+          color="text-[var(--teal)] bg-[var(--teal)]/10"
+          label="Materi"
+          count={byKind.MATERIAL}
+        />
+        <KindChip
+          icon={MessageCircle}
+          color="text-[var(--purple)] bg-[var(--purple)]/10"
+          label="Refleksi"
+          count={byKind.REFLECTION}
+        />
+        <KindChip
+          icon={Trophy}
+          color="text-[var(--pink)] bg-[var(--pink)]/10"
+          label="Tantangan"
+          count={byKind.CHALLENGE}
+        />
       </div>
     </section>
   );
@@ -131,9 +160,7 @@ function KindChip({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[10.5px] font-bold text-foreground">{label}</p>
-        <p className="text-[10px] text-muted-foreground">
-          {count} aktivitas
-        </p>
+        <p className="text-[10px] text-muted-foreground">{count} aktivitas</p>
       </div>
     </div>
   );

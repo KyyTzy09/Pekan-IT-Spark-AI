@@ -23,11 +23,11 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { DocumentMarkdownText } from "@/components/shared/document-markdown";
 import { Reveal } from "@/components/shared/reveal";
+import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getMaterialDetail } from "@/server/actions/challenges";
 import { startNewChat } from "@/server/actions/chat";
-import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 import {
   appendQuestionsToDocumentQuizAction,
   type DocumentListItem,

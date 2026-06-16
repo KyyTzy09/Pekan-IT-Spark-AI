@@ -1,12 +1,21 @@
 "use client";
 
-import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Droplet, Sprout, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Droplet, Loader2, RefreshCw, Sparkles, Sprout } from "lucide-react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getStudyBuddyAction, updateStudyBuddyAction } from "@/server/actions/gamification";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+  getStudyBuddyAction,
+  updateStudyBuddyAction,
+} from "@/server/actions/gamification";
 
 type BuddyData = {
   type: string;
@@ -14,10 +23,30 @@ type BuddyData = {
 };
 
 const BUDDY_TYPES = [
-  { id: "bunga", name: "Bunga Melati", emoji: "🌸", desc: "Cantik, harum, dan suka kebersihan belajarmu." },
-  { id: "kaktus", name: "Kaktus Gurun", emoji: "🌵", desc: "Tangguh dan mandiri, lambang ketekunan tanpa batas." },
-  { id: "bonsai", name: "Bonsai Mini", emoji: "🪴", desc: "Estetik dan filosofis, butuh konsistensi tinggi." },
-  { id: "beringin", name: "Pohon Beringin", emoji: "🌳", desc: "Kokoh menaungi, lambang ilmu yang sangat luas." },
+  {
+    id: "bunga",
+    name: "Bunga Melati",
+    emoji: "🌸",
+    desc: "Cantik, harum, dan suka kebersihan belajarmu.",
+  },
+  {
+    id: "kaktus",
+    name: "Kaktus Gurun",
+    emoji: "🌵",
+    desc: "Tangguh dan mandiri, lambang ketekunan tanpa batas.",
+  },
+  {
+    id: "bonsai",
+    name: "Bonsai Mini",
+    emoji: "🪴",
+    desc: "Estetik dan filosofis, butuh konsistensi tinggi.",
+  },
+  {
+    id: "beringin",
+    name: "Pohon Beringin",
+    emoji: "🌳",
+    desc: "Kokoh menaungi, lambang ilmu yang sangat luas.",
+  },
 ];
 
 export function StudyBuddyWidget({ streak }: { streak: number }) {
@@ -75,7 +104,9 @@ export function StudyBuddyWidget({ streak }: { streak: number }) {
   }
 
   // Override emoji based on buddy type & stage
-  const selectedBuddy = BUDDY_TYPES.find((b) => b.id === (buddy?.type ?? "bunga"));
+  const selectedBuddy = BUDDY_TYPES.find(
+    (b) => b.id === (buddy?.type ?? "bunga"),
+  );
   if (selectedBuddy) {
     if (currentStage === 1) {
       stageEmoji = "🌱"; // Bibit
@@ -102,7 +133,10 @@ export function StudyBuddyWidget({ streak }: { streak: number }) {
   const progressPct =
     currentStage === 4
       ? 100
-      : Math.min(100, Math.max(0, (streakForCurrentStage / neededForNextStage) * 100));
+      : Math.min(
+          100,
+          Math.max(0, (streakForCurrentStage / neededForNextStage) * 100),
+        );
 
   if (loading && !buddy) {
     return (
@@ -129,7 +163,8 @@ export function StudyBuddyWidget({ streak }: { streak: number }) {
             {selectedBuddy?.name ?? "Teman Belajar"}
           </h3>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Stage: <span className="font-semibold text-foreground">{stageName}</span>
+            Stage:{" "}
+            <span className="font-semibold text-foreground">{stageName}</span>
           </p>
         </div>
 
@@ -210,7 +245,11 @@ export function StudyBuddyWidget({ streak }: { streak: number }) {
             variant="outline"
             className="rounded-full text-[10px] py-1 h-7 flex-1 border-teal-200/50 bg-teal-500/5 hover:bg-teal-500/10 hover:text-teal-600"
           >
-            <Droplet size={11} className="text-teal-500 mr-1" fill="currentColor" />
+            <Droplet
+              size={11}
+              className="text-teal-500 mr-1"
+              fill="currentColor"
+            />
             Siram Tanaman
           </Button>
 
@@ -227,7 +266,9 @@ export function StudyBuddyWidget({ streak }: { streak: number }) {
             </DialogTrigger>
             <DialogContent className="max-w-md rounded-3xl p-5">
               <DialogHeader>
-                <DialogTitle className="font-heading text-base font-bold">Pilih Virtual Buddy Kamu</DialogTitle>
+                <DialogTitle className="font-heading text-base font-bold">
+                  Pilih Virtual Buddy Kamu
+                </DialogTitle>
               </DialogHeader>
               <div className="grid gap-3 mt-3">
                 {BUDDY_TYPES.map((b) => (
@@ -239,13 +280,17 @@ export function StudyBuddyWidget({ streak }: { streak: number }) {
                       "flex items-center gap-4 text-left p-3 rounded-2xl border transition-all hover:bg-muted/40",
                       buddy?.type === b.id
                         ? "border-teal-500 bg-teal-500/5"
-                        : "border-border/40"
+                        : "border-border/40",
                     )}
                   >
                     <span className="text-3xl">{b.emoji}</span>
                     <div className="flex-1">
-                      <p className="text-xs font-bold text-foreground">{b.name}</p>
-                      <p className="text-[10.5px] text-muted-foreground mt-0.5">{b.desc}</p>
+                      <p className="text-xs font-bold text-foreground">
+                        {b.name}
+                      </p>
+                      <p className="text-[10.5px] text-muted-foreground mt-0.5">
+                        {b.desc}
+                      </p>
                     </div>
                   </button>
                 ))}

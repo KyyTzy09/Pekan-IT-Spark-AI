@@ -49,6 +49,8 @@ export function ChatConversationView({
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
+  const processedMsgId = React.useRef<string | null>(null);
+
   React.useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
@@ -56,8 +58,14 @@ export function ChatConversationView({
   // Trigger assistant response if the last message is from user and we are not pending
   React.useEffect(() => {
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.role === "USER" && !pending) {
+    if (
+      lastMsg &&
+      lastMsg.role === "USER" &&
+      !pending &&
+      processedMsgId.current !== lastMsg.id
+    ) {
       let active = true;
+      processedMsgId.current = lastMsg.id;
       setPending(true);
       setError(null);
 
@@ -72,6 +80,7 @@ export function ChatConversationView({
             setError(
               err instanceof Error ? err.message : "Gagal memuat jawaban.",
             );
+            processedMsgId.current = null;
           }
         })
         .finally(() => {

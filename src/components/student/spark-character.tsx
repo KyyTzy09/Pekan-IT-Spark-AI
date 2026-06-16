@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { getAvatarCustomizationAction } from "@/server/actions/gamification";
 
 export function SparkCharacter({
@@ -25,7 +25,11 @@ export function SparkCharacter({
 
   React.useEffect(() => {
     // Auto-fetch if customization is not explicitly supplied as props
-    if (propColor === undefined && propAccessory === undefined && propBackground === undefined) {
+    if (
+      propColor === undefined &&
+      propAccessory === undefined &&
+      propBackground === undefined
+    ) {
       getAvatarCustomizationAction().then((res) => {
         if (res.ok && res.avatar) {
           setDbCustom({
@@ -59,68 +63,119 @@ export function SparkCharacter({
     size === "lg" ? "size-3" : size === "md" ? "size-2" : "size-1.5";
 
   // Color gradient mappings
-  let gradientBg = "linear-gradient(135deg, oklch(0.78 0.18 25), oklch(0.72 0.18 350))"; // Default red/orange
-  let shadowColor = "0 18px 40px rgba(225, 29, 72, 0.35), inset 0 -10px 20px rgba(160, 18, 60, 0.25)";
+  let gradientBg =
+    "linear-gradient(135deg, oklch(0.78 0.18 25), oklch(0.72 0.18 350))"; // Default red/orange
+  let shadowColor =
+    "0 18px 40px rgba(225, 29, 72, 0.35), inset 0 -10px 20px rgba(160, 18, 60, 0.25)";
 
   if (color === "blue") {
-    gradientBg = "linear-gradient(135deg, oklch(0.72 0.15 190), oklch(0.65 0.15 230))";
-    shadowColor = "0 18px 40px rgba(14, 116, 144, 0.35), inset 0 -10px 20px rgba(8, 86, 107, 0.25)";
+    gradientBg =
+      "linear-gradient(135deg, oklch(0.72 0.15 190), oklch(0.65 0.15 230))";
+    shadowColor =
+      "0 18px 40px rgba(14, 116, 144, 0.35), inset 0 -10px 20px rgba(8, 86, 107, 0.25)";
   } else if (color === "green") {
-    gradientBg = "linear-gradient(135deg, oklch(0.75 0.15 140), oklch(0.68 0.15 160))";
-    shadowColor = "0 18px 40px rgba(16, 185, 129, 0.35), inset 0 -10px 20px rgba(4, 120, 87, 0.25)";
+    gradientBg =
+      "linear-gradient(135deg, oklch(0.75 0.15 140), oklch(0.68 0.15 160))";
+    shadowColor =
+      "0 18px 40px rgba(16, 185, 129, 0.35), inset 0 -10px 20px rgba(4, 120, 87, 0.25)";
   } else if (color === "purple") {
-    gradientBg = "linear-gradient(135deg, oklch(0.65 0.2 290), oklch(0.58 0.2 320))";
-    shadowColor = "0 18px 40px rgba(139, 92, 246, 0.35), inset 0 -10px 20px rgba(91, 33, 182, 0.25)";
+    gradientBg =
+      "linear-gradient(135deg, oklch(0.65 0.2 290), oklch(0.58 0.2 320))";
+    shadowColor =
+      "0 18px 40px rgba(139, 92, 246, 0.35), inset 0 -10px 20px rgba(91, 33, 182, 0.25)";
   } else if (color === "gold") {
-    gradientBg = "linear-gradient(135deg, oklch(0.85 0.15 85), oklch(0.75 0.15 70))";
-    shadowColor = "0 18px 40px rgba(245, 158, 11, 0.35), inset 0 -10px 20px rgba(180, 83, 9, 0.25)";
+    gradientBg =
+      "linear-gradient(135deg, oklch(0.85 0.15 85), oklch(0.75 0.15 70))";
+    shadowColor =
+      "0 18px 40px rgba(245, 158, 11, 0.35), inset 0 -10px 20px rgba(180, 83, 9, 0.25)";
   }
 
   // Glow / background mappings
   let glowStyle: React.CSSProperties = {
-    background: "radial-gradient(circle, oklch(0.82 0.15 25 / 0.55), transparent 70%)",
+    background:
+      "radial-gradient(circle, oklch(0.82 0.15 25 / 0.55), transparent 70%)",
   };
   if (background === "aurora") {
     glowStyle = {
-      background: "linear-gradient(45deg, oklch(0.8 0.12 140 / 0.45), oklch(0.7 0.15 290 / 0.45))",
+      background:
+        "linear-gradient(45deg, oklch(0.8 0.12 140 / 0.45), oklch(0.7 0.15 290 / 0.45))",
     };
   } else if (background === "space") {
     glowStyle = {
-      background: "radial-gradient(circle, oklch(0.3 0.1 240 / 0.7), transparent 75%)",
+      background:
+        "radial-gradient(circle, oklch(0.3 0.1 240 / 0.7), transparent 75%)",
     };
   } else if (background === "neon") {
     glowStyle = {
-      background: "linear-gradient(135deg, oklch(0.7 0.25 330 / 0.5), oklch(0.75 0.2 200 / 0.5))",
+      background:
+        "linear-gradient(135deg, oklch(0.7 0.25 330 / 0.5), oklch(0.75 0.2 200 / 0.5))",
     };
   }
 
   // Accessory overlay sizes and offsets
   let accessoryNode = null;
   if (accessory === "glasses") {
-    const glassesSize = size === "lg" ? "text-4xl -mt-1" : size === "md" ? "text-xl" : "text-[10px]";
+    const glassesSize =
+      size === "lg"
+        ? "text-4xl -mt-1"
+        : size === "md"
+          ? "text-xl"
+          : "text-[10px]";
     accessoryNode = (
-      <span className={cn("absolute z-10 select-none pointer-events-none", glassesSize)}>
+      <span
+        className={cn(
+          "absolute z-10 select-none pointer-events-none",
+          glassesSize,
+        )}
+      >
         👓
       </span>
     );
   } else if (accessory === "hat") {
-    const hatSize = size === "lg" ? "text-5xl -mt-16 sm:-mt-20" : size === "md" ? "text-3xl -mt-11" : "text-base -mt-6";
+    const hatSize =
+      size === "lg"
+        ? "text-5xl -mt-16 sm:-mt-20"
+        : size === "md"
+          ? "text-3xl -mt-11"
+          : "text-base -mt-6";
     accessoryNode = (
-      <span className={cn("absolute z-10 select-none pointer-events-none", hatSize)}>
+      <span
+        className={cn("absolute z-10 select-none pointer-events-none", hatSize)}
+      >
         🎓
       </span>
     );
   } else if (accessory === "crown") {
-    const crownSize = size === "lg" ? "text-5xl -mt-16 sm:-mt-20" : size === "md" ? "text-3xl -mt-11" : "text-base -mt-6";
+    const crownSize =
+      size === "lg"
+        ? "text-5xl -mt-16 sm:-mt-20"
+        : size === "md"
+          ? "text-3xl -mt-11"
+          : "text-base -mt-6";
     accessoryNode = (
-      <span className={cn("absolute z-10 select-none pointer-events-none animate-bounce", crownSize)}>
+      <span
+        className={cn(
+          "absolute z-10 select-none pointer-events-none animate-bounce",
+          crownSize,
+        )}
+      >
         👑
       </span>
     );
   } else if (accessory === "ribbon") {
-    const ribbonSize = size === "lg" ? "text-4xl mt-14 ml-12" : size === "md" ? "text-xl mt-8 ml-8" : "text-[10px] mt-4 ml-4";
+    const ribbonSize =
+      size === "lg"
+        ? "text-4xl mt-14 ml-12"
+        : size === "md"
+          ? "text-xl mt-8 ml-8"
+          : "text-[10px] mt-4 ml-4";
     accessoryNode = (
-      <span className={cn("absolute z-10 select-none pointer-events-none", ribbonSize)}>
+      <span
+        className={cn(
+          "absolute z-10 select-none pointer-events-none",
+          ribbonSize,
+        )}
+      >
         🎀
       </span>
     );

@@ -237,7 +237,7 @@ model ParentStudentLink {
 
 model Subject {
   id          String        @id @default(cuid())
-  slug        SubjectSlug   @unique
+  slug        String        @unique
   name        String
   description String?
   icon        String?
