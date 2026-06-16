@@ -366,19 +366,19 @@
 ## Phase 5 — Document Upload & AI Material Assistant (Minggu 4)
 
 ### 5.1 Document Upload Interface
-- [ ] 🔴 Halaman upload dokumen `/upload`
-- [ ] 🔴 Support format PDF dan DOCX
-- [ ] 🔴 Validasi file: max size (10 MB), max pages (50), tipe file
-- [ ] 🔴 Progress upload dan loading state
-- [ ] 🔴 Tampilkan daftar dokumen yang sudah diunggah per siswa
+- [x] 🔴 Halaman upload dokumen `/upload` — `src/app/(student)/upload/page.tsx` rewrite dari stub
+- [x] 🔴 Support format PDF dan DOCX — validasi `application/pdf` + `.pdf` + DOCX
+- [x] 🔴 Validasi file: max size (10 MB), max pages (50), tipe file — server-side di `uploadDocument()` + client-side di `UploadView`
+- [x] 🔴 Progress upload dan loading state — state machine: `idle|validating|uploading|processing|success|error` dengan status bar
+- [x] 🔴 Tampilkan daftar dokumen yang sudah diunggah per siswa — `listDocuments()` + AnimatePresence list dengan delete + Tanya Spark CTA
 
 ### 5.2 Document Processing Pipeline
-- [ ] 🔴 Extract text dari PDF: `pdf-parse` atau `pdfjs-dist`
-- [ ] 🔴 Extract text dari DOCX: `mammoth`
-- [ ] 🔴 Convert extracted text ke Markdown bersih
-- [ ] 🔴 Simpan Markdown di DB (`Document` model dengan `content` @db.Text)
-- [ ] 🔴 Simpan metadata: originalName, size, pageCount, mimeType, uploadedAt
-- [ ] 🔴 Link dokumen ke `User` (siswa) dan opsional ke `ChatSession`
+- [x] 🔴 Extract text dari PDF: `pdf-parse` (v2.4.5 class API) — `src/server/documents/extract.ts` `extractFromPdf()`
+- [x] 🔴 Extract text dari DOCX: `mammoth` — `extractFromDocx()`
+- [x] 🔴 Convert extracted text ke Markdown bersih — `cleanTextToMarkdown()` (normalisasi whitespace, heading detection dari ALL-CAPS lines)
+- [x] 🔴 Simpan Markdown di DB (`Document` model dengan `content` @db.Text) — `prisma.document.create({ data: { content: extracted.text, ... } })`
+- [x] 🔴 Simpan metadata: originalName, size, pageCount, mimeType, uploadedAt — semua field terisi
+- [x] 🔴 Link dokumen ke `User` (siswa) dan opsional ke `ChatSession` — schema migration `20260616120000_add_document_chat_session` tambah `documents.chatSessionId` nullable + FK + index
 
 ### 5.3 AI-Powered Document Features
 - [ ] 🔴 Generate ringkasan materi inti dari dokumen

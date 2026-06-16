@@ -393,11 +393,12 @@ model ChatSession {
   topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
   subjectId String?
   subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  messages ChatMessage[]
+  messages  ChatMessage[]
+  documents Document[]
 
   @@map("chat_sessions")
 }
@@ -584,18 +585,22 @@ model LearningActivity {
 }
 
 model Document {
-  id           String              @id @default(cuid())
-  userId       String
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  originalName String
-  mimeType     DocumentMimeType
-  size         Int
-  pageCount    Int?
-  content      String              @db.Text
-  summary      String?             @db.Text
-  createdAt    DateTime            @default(now())
-  embeddings   DocumentEmbedding[]
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSessionId String?
+  chatSession   ChatSession?        @relation(fields: [chatSessionId], references: [id], onDelete: SetNull)
+  originalName  String
+  mimeType      DocumentMimeType
+  size          Int
+  pageCount     Int?
+  content       String              @db.Text
+  summary       String?             @db.Text
+  createdAt     DateTime            @default(now())
+  embeddings    DocumentEmbedding[]
 
+  @@index([userId])
+  @@index([chatSessionId])
   @@map("documents")
 }
 
