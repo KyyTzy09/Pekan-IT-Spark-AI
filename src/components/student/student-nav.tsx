@@ -2,11 +2,13 @@
 
 import {
   BookOpen,
+  Brain,
   Calendar,
   Flame,
   Home,
   type LucideIcon,
   MessageCircle,
+  Sparkles,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,11 +33,25 @@ const NAV_ITEMS: NavItem[] = [
     match: (p) => p === "/dashboard",
   },
   {
+    href: "/challenge",
+    label: "Tantangan",
+    shortLabel: "Tantangan",
+    icon: Sparkles,
+    match: (p) => p.startsWith("/challenge"),
+  },
+  {
     href: "/subjects",
     label: "Mapel",
     shortLabel: "Mapel",
     icon: BookOpen,
     match: (p) => p.startsWith("/subjects") || p.startsWith("/topics"),
+  },
+  {
+    href: "/materials",
+    label: "Materi",
+    shortLabel: "Materi",
+    icon: Calendar,
+    match: (p) => p.startsWith("/materials"),
   },
   {
     href: "/chat",
@@ -45,18 +61,18 @@ const NAV_ITEMS: NavItem[] = [
     match: (p) => p.startsWith("/chat"),
   },
   {
-    href: "/practice",
-    label: "Latihan",
-    shortLabel: "Latihan",
-    icon: Calendar,
-    match: (p) => p.startsWith("/practice"),
-  },
-  {
     href: "/upload",
     label: "Upload",
     shortLabel: "Upload",
     icon: Upload,
     match: (p) => p.startsWith("/upload") || p.startsWith("/documents"),
+  },
+  {
+    href: "/practice",
+    label: "Latihan",
+    shortLabel: "Latihan",
+    icon: Brain,
+    match: (p) => p.startsWith("/practice"),
   },
 ];
 

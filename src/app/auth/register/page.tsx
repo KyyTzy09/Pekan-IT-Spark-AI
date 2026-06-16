@@ -1,13 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ArrowRight,
-  GraduationCap,
-  HeartHandshake,
-  Loader2,
-  Rocket,
-} from "lucide-react";
+import { GraduationCap, HeartHandshake, Loader2, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -92,9 +86,9 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: "STUDENT",
-      name: "Rina Aulia",
-      email: "rina@email.com",
-      password: "rina12345",
+      name: "",
+      email: "",
+      password: "",
     } as unknown as RegisterValues,
   });
 
@@ -151,7 +145,7 @@ export default function RegisterPage() {
     await signIn("google", { callbackUrl: "/onboarding" });
   };
 
-  const activeRole = ROLES.find((r) => r.id === role);
+  const _activeRole = ROLES.find((r) => r.id === role);
 
   return (
     <div className="space-y-5">

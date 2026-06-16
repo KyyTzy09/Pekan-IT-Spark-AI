@@ -78,13 +78,17 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
   return (
     <>
       {trigger ? (
-        <button
-          type="button"
+        <span
+          role="button"
+          tabIndex={0}
           onClick={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") setOpen(true);
+          }}
           className="contents"
         >
           {trigger}
-        </button>
+        </span>
       ) : (
         <Button
           type="button"

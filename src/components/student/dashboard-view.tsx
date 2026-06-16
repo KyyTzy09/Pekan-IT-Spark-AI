@@ -489,7 +489,7 @@ function ContinueLearningCard({
           size="sm"
           className="rounded-full bg-[var(--coral)] text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)]"
         >
-          <Link href="/practice">
+          <Link href={`/practice?topicId=${recommendation.topicId}`}>
             <Play size={13} strokeWidth={2.5} />
             Mulai 5 soal
           </Link>

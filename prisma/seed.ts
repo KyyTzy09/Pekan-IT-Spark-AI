@@ -3631,7 +3631,7 @@ async function seedConcepts(
   topicMap: Record<string, Record<string, { id: string }>>,
 ) {
   for (const [subjectSlug, concepts] of Object.entries(CONCEPTS_BY_SUBJECT)) {
-    const subjId = subjects[subjectSlug].id;
+    const _subjId = subjects[subjectSlug].id;
     for (const c of concepts) {
       const topicId = topicMap[subjectSlug]?.[c.topicSlug]?.id;
       if (!topicId) {
@@ -3745,7 +3745,7 @@ async function generateAndSeedEmbeddings() {
 
 async function seedQuestions(
   subjects: Record<string, { id: string }>,
-  topicMap: Record<string, Record<string, { id: string }>>,
+  _topicMap: Record<string, Record<string, { id: string }>>,
 ) {
   let total = 0;
 
@@ -3758,7 +3758,7 @@ async function seedQuestions(
   }
 
   for (const [subjectSlug, questions] of Object.entries(QUESTIONS_BY_SUBJECT)) {
-    const subjId = subjects[subjectSlug].id;
+    const _subjId = subjects[subjectSlug].id;
 
     for (const q of questions) {
       const conceptId = conceptByName[q.conceptName];
@@ -3798,7 +3798,13 @@ async function seedQuestions(
   // Backfill: isi explanation/hint/commonMisconceptions untuk question
   // yang udah ada tapi belum punya (mis. dari seed lama sebelum fase 6.3).
   const allQuestions = await prisma.question.findMany({
-    where: { OR: [{ explanation: null }, { hint: null }, { commonMisconceptions: null }] },
+    where: {
+      OR: [
+        { explanation: null },
+        { hint: null },
+        { commonMisconceptions: null },
+      ],
+    },
     select: {
       id: true,
       questionText: true,
@@ -3828,12 +3834,18 @@ async function seedQuestions(
       data: {
         explanation: buildExplanation(synthetic, conceptName, conceptBody),
         hint: buildHint(conceptName, synthetic.difficulty),
-        commonMisconceptions: buildMisconceptions(synthetic, conceptName, conceptBody),
+        commonMisconceptions: buildMisconceptions(
+          synthetic,
+          conceptName,
+          conceptBody,
+        ),
       },
     });
     backfilled++;
   }
-  console.log(`Questions backfilled with explanation/hint/misconceptions: ${backfilled}`);
+  console.log(
+    `Questions backfilled with explanation/hint/misconceptions: ${backfilled}`,
+  );
 }
 
 async function main() {
@@ -4139,7 +4151,7 @@ type QSeed = {
 function truncate(text: string, max: number): string {
   if (!text) return "";
   if (text.length <= max) return text;
-  return text.slice(0, max - 1).trimEnd() + "…";
+  return `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
 function pickConceptSnippet(content: string, sentence: number): string {
@@ -4182,7 +4194,7 @@ function buildHint(
 function buildMisconceptions(
   q: QSeed,
   conceptName: string,
-  conceptContent: string,
+  _conceptContent: string,
 ): string {
   const wrongIndices = q.options
     .map((_, i) => i)

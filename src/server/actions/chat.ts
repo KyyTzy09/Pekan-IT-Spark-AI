@@ -84,7 +84,7 @@ export async function listChatSessions(): Promise<ChatSessionSummary[]> {
       title: s.title,
       subjectId: s.subject?.id ?? null,
       subjectName: s.subject?.name ?? null,
-      subjectSlug: s.subject?.slug.toLowerCase() ?? null,
+      subjectSlug: s.subject?.slug ?? null,
       topicId: s.topic?.id ?? null,
       topicName: s.topic?.name ?? null,
       createdAt: s.createdAt.toISOString(),
@@ -165,7 +165,7 @@ export async function startNewChat(input: {
   const subject = parsed.data.subjectSlug
     ? await prisma.subject.findUnique({
         where: { slug: parsed.data.subjectSlug as never },
-        select: { id: true },
+        select: { id: true, slug: true },
       })
     : null;
   const topic = parsed.data.topicId
@@ -210,6 +210,34 @@ export async function startNewChat(input: {
       data: { chatSessionId: created.id },
     });
   }
+
+  const subjectSlug = subject?.slug ?? undefined;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+
+  const messages = [
+    { role: "user" as const, content: parsed.data.firstMessage },
+  ];
+
+  const result = await generateTutorStream({
+    userId,
+    userName: user?.name ?? undefined,
+    messages,
+    subjectSlug,
+    topicId: topic?.id ?? undefined,
+    lastUserMessage: parsed.data.firstMessage,
+  });
+
+  const fullText = await result.text;
+  await prisma.chatMessage.create({
+    data: {
+      sessionId: created.id,
+      role: "ASSISTANT",
+      content: fullText,
+    },
+  });
 
   revalidatePath("/chat");
   return { sessionId: created.id };
@@ -325,7 +353,7 @@ export async function sendMessage(input: {
     userId,
     userName: user?.name ?? undefined,
     messages,
-    subjectSlug: subjectSlug?.toLowerCase(),
+    subjectSlug: subjectSlug ?? undefined,
     topicId: session.topicId ?? undefined,
     lastUserMessage: input.content,
   });

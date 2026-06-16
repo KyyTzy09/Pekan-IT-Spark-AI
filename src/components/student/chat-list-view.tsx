@@ -157,12 +157,12 @@ function NewChatCard({
                 {subjects.map((s) => (
                   <SubjectChip
                     key={s.id}
-                    slug={s.slug.toLowerCase()}
+                    slug={s.slug}
                     name={s.name}
                     icon={s.icon ?? "📚"}
                     color={s.color ?? "var(--coral)"}
-                    active={subjectSlug === s.slug.toLowerCase()}
-                    onClick={() => setSubjectSlug(s.slug.toLowerCase())}
+                    active={subjectSlug === s.slug}
+                    onClick={() => setSubjectSlug(s.slug)}
                   />
                 ))}
               </div>
