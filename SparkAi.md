@@ -1,9 +1,13 @@
 # PRODUCT REQUIREMENTS DOCUMENT (PRD)
 # Spark Ai — Asisten Tutor Adaptif Berbasis Kecerdasan Buatan
 
-**Versi:** 1.0
-**Tanggal:** 14 Juni 2026
+**Versi:** 1.1
+**Tanggal:** 16 Juni 2026
 **Tim:** [Nama Tim Anda]
+
+---
+
+> **Changelog v1.1 (16 Juni 2026):** Tambah §4.11 AI Daily Challenge System — 4 tantangan harian campuran (soal + materi markdown + refleksi), hybrid auto+on-demand generation, 4 sumber progress tracking, integrasi dengan Phase 7 gamification.
 
 ---
 
@@ -386,6 +390,164 @@ Engine adaptif adalah pondasi dari personalisasi di Spark Ai. Berbeda dengan LMS
 - Topik mengelompokkan konsep (3–8 konsep per topik).
 - Mata pelajaran mengelompokkan topik (3–8 topik per mapel).
 - Visualisasi sebagai konstelasi bintang (lihat 4.7.e) sudah diimplementasikan.
+
+### 4.11 AI Daily Challenge System (NEW — Juni 2026, pasca-Phase 4)
+
+Untuk menjawab kebutuhan siswa yang bukan hanya butuh "latihan soal" tapi juga **bimbingan belajar yang variatif dan personal setiap hari**, Spark Ai menambahkan sistem **tantangan harian AI-generated** yang menjadi tulang punggung engagement siswa.
+
+#### 4.11.1 Filosofi
+
+Siswa SMA/SMK belajar banyak mapel, dan cara mereka belajar tidak monoton. Tantangan harian adalah **"paket belajar harian"** yang:
+- **Bervariasi** — bukan cuma soal, tapi juga materi bacaan dan refleksi
+- **Personal** — di-generate berdasarkan knowledge profile, mapel fokus, dan progress terkini
+- **Terukur** — AI menilai kemajuan dari 4 sumber: mastery, challenge completion, materials read, refleksi
+- **Fleksibel** — 4 tantangan auto tiap hari, plus bisa minta tambahan kapan saja (hybrid)
+
+#### 4.11.2 Anatomi Tantangan Harian
+
+Setiap hari, siswa mendapat **4 tantangan campuran** (mix config):
+- **2 soal latihan** (multiple choice atau free text) — untukukur pemahaman
+- **1 materi bacaan** (format markdown) — untukambah pengetahuan kontekstual
+- **1 refleksi** (open-ended prompt) — untuk metacognition
+
+Contoh komposisi harian:
+```
+Senin: [2 soal Aljabar] + [Materi: Fungsi Kuadrat] + [Refleksi: "Apa konsep paling menantang minggu ini?"]
+Selasa: [1 soal IPA] + [Materi: Sel Tumbuhan] + [2 soal Biologi] + [Refleksi: "Hubungkan materi dengan kehidupanmu"]
+Rabu:   [3 soal Matematika] + [Materi: Trigonometri Lanjut] + [Refleksi: "Strategi apa yang kamu pakai?"]
+```
+
+#### 4.11.3 Tipe Challenge
+
+**a. Challenge: Soal (`QUESTION`)**
+- Multiple choice dengan 4 opsi + penjelasan
+- Atau free text (esai singkat) — dievaluasi AI (`evaluateAnswer` existing)
+- Track: benar/salah, waktu, hint usage
+- Update mastery score di `StudentKnowledgeProfile` via EMA
+
+**b. Challenge: Materi Markdown (`MATERIAL`)**
+- Konten markdown yang di-render dengan KaTeX support
+- Panjang: 400–800 kata, estimasi 5–10 menit baca
+- Section: intro, konsep inti, contoh, summary, "Coba pikirkan" callout
+- Adaptive: kalau mastery concept rendah → lebih dasar + lebih banyak analogi
+- Disimpan di DB (bukan stream) supaya bisa diulang, dishare, dan di-track progress baca
+- Disclaimer: "Materi ini AI-generated. Konfirmasi ke guru untuk hal-hal penting."
+
+**c. Challenge: Refleksi (`REFLECTION`)**
+- Prompt terbuka (tidak yes/no) yang memicu metacognition
+- Contoh: "Dari materi yang baru dibaca, bagian mana yang masih membingungkan? Kenapa?"
+- Siswa jawab dengan text bebas (min 50 char)
+- AI analyze: sentiment (positive/neutral/negative), depth (surface/moderate/deep), suggestions
+- **BUKAN untuk dinilai "benar/salah"** — untuk self-awareness + sinyal ke AI
+
+#### 4.11.4 Hybrid Generation (Harian + On-Demand)
+
+**Auto harian (1× per user per day):**
+- Setiap hari (reset tengah malam WIB), `getOrCreateTodayChallenges(userId)` jalan
+- Cek apakah `Challenge WHERE userId=X AND scheduledFor=今天` sudah ada
+- Kalau belum → generate 4 tantangan dengan mix default
+- Kalau sudah → return existing (idempotent)
+
+**On-demand (kapan saja):**
+- Siswa klik "Minta tantangan tambahan" di halaman challenge
+- Generate 1 tantangan baru dengan opsi:
+  - Tipe: soal / materi / refleksi (atau mix)
+  - Subject: tertentu atau auto-pick
+  - Difficulty: easy/medium/hard (atau adaptive)
+- Rate limit: max 10/hari/user (anti-spam)
+- On-demand challenges disimpan dengan `scheduledFor = today` dan `source = ON_DEMAND`
+
+#### 4.11.5 AI Menilai Progress dari 4 Sumber
+
+| Sumber | Metrik | Tracking |
+|--------|--------|----------|
+| **Mastery Score** | Avg `StudentKnowledgeProfile.masteryScore` per concept/subject | Existing (EMA) |
+| **Challenge Completion** | Jumlah `ChallengeItem` COMPLETED per hari | New (`UserChallengeProgress`) |
+| **Materials Read** | Jumlah `MaterialRead.completed = true` + total `readSeconds` | New (`MaterialRead`) |
+| **Refleksi** | Jumlah `Reflection` + rata-rata `aiAnalysis.depth` | New (`Reflection.aiAnalysis`) |
+
+**Aggregate Score (0-100):**
+```
+overall = mastery × 0.4 + challenge_completion × 0.3 + materials × 0.2 + reflections × 0.1
+```
+
+Per-subject breakdown juga tersedia untuk dashboard & parent view.
+
+#### 4.11.6 Penyimpanan & Privacy
+
+- Challenge, Material, Reflection, Progress — **disimpan di DB** (bukan di-stream) supaya:
+  - Bisa diulang baca (especially materi)
+  - Track progress baca (`MaterialRead.readSeconds`)
+  - Bisa di-render ulang dengan format konsisten
+  - Bisa di-share ke orang tua (Phase 8)
+- Privacy: sama seperti data lain — UU PDP compliant, bisa dihapus atas request
+
+#### 4.11.7 Anti-Pattern Challenge
+
+- ❌ **Tidak boleh auto-generate soal untuk mapel nasional** — challenge soal ambil dari `Question` bank existing (seed nasional), AI cuma pilih & framing, bukan bikin soal baru
+- ✅ **AI boleh generate materi markdown** — lebih ke penjelasan/kontekstualisasi, bukan fakta keras
+- ❌ **Tidak boleh challenge = gate** — siswa tetap bisa browse materials & akses semua fitur tanpa complete challenges
+- ❌ **Tidak boleh refleksi dipakai untuk judge** — cuma untuk self-reflection + sinyal AI
+- ❌ **Tidak boleh on-demand spam** — rate limit 10/hari
+- ✅ **Challenge completion tetap dikaitkan dengan gamification** (XP, streak) sesuai Phase 7
+
+#### 4.11.8 Diagram Alur
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ HARI BARU (midnight WIB)                                          │
+│   • Cron-style: getOrCreateTodayChallenges(userId)                │
+│   • Cek existing → kalau belum, generate 4 challenges              │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ GENERATE MIX (AI: generateDailyChallengeMix)                      │
+│   • Input: userId, date, profile, focusedSubjects, weak concepts  │
+│   • Decide mix: 2 soal + 1 materi + 1 refleksi (atau variasi)     │
+│   • Pilih subject (rotasi atau auto-pick dari weak concepts)       │
+│   • Generate item details (soal dari Question bank, materi AI,    │
+│     refleksi prompt)                                              │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ SISWA INTERACT                                                     │
+│   • Buka /challenge → lihat 4 challenges hari ini                  │
+│   • Buka challenge item: soal jawab / materi baca / refleksi jawab│
+│   • Track: completion, read time, reflection analysis             │
+│   • Minta tambahan via on-demand → generate 1 challenge baru       │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ PROGRESS AGGREGATION (every night + on-demand)                    │
+│   • aggregateStudentProgress(userId) → combined score             │
+│   • Update XP, streak, badges (Phase 7 integration)               │
+│   • Parent dashboard (Phase 8) bisa lihat                        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 4.11.9 Integrasi dengan Phase 7 (Gamification)
+
+| Challenge Action | XP Reward | Streak Effect |
+|-----------------|-----------|---------------|
+| Selesai 1 soal benar | +10 XP | counts as 1 activity |
+| Selesai 1 materi (read + ack) | +5 XP | counts as 1 activity |
+| Selesai 1 refleksi (≥ 50 char) | +15 XP | counts as 1 activity |
+| Selesai 1 challenge (all items) | +25 XP bonus | — |
+| Selesai semua 4 challenge hari ini | +50 XP bonus | +1 streak day |
+| 7 hari streak full challenges | +100 XP bonus | — |
+
+Daily Quest statis (Phase 7.4) di-deprecate — diganti challenge system ini. Weekly Challenge (Phase 7.5) = summary 7×4 = 28 items.
+
+#### 4.11.10 Yang TIDAK Boleh Dilakukan
+
+- ❌ **Jangan generate soal baru untuk mapel nasional** — pakai `Question` bank existing
+- ❌ **Jangan gate akses siswa pakai challenge** — semua fitur accessible tanpa complete challenges
+- ❌ **Jangan pakai refleksi untuk scoring** — itu self-reflection, bukan rapor
+- ❌ **Jangan spam on-demand** — rate limit 10/hari/user
+- ❌ **Jangan hardcode subject** — subject harus di-pick dari `focusedSubjects` atau `weakConcepts` per user
 
 ---
 

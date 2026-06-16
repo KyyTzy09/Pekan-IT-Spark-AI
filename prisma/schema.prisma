@@ -146,6 +146,11 @@ model User {
   customSubjects      Subject[]                 @relation("CustomSubjects")
   accounts            Account[]
   sessions            Session[]
+  challenges          Challenge[]
+  materials           Material[]
+  materialReads       MaterialRead[]
+  reflections         Reflection[]
+  challengeProgress   UserChallengeProgress[]
 
   @@map("users")
 }
@@ -246,6 +251,8 @@ model Subject {
 
   topics       Topic[]
   chatSessions ChatSession[]
+  challenges   Challenge[]
+  materials    Material[]
 
   @@index([isCustom])
   @@index([source])
@@ -267,6 +274,7 @@ model Topic {
 
   concepts     Concept[]
   chatSessions ChatSession[]
+  materials    Material[]
 
   @@unique([subjectId, slug])
   @@map("topics")
@@ -290,6 +298,7 @@ model Concept {
   questions         Question[]
   knowledgeProfiles StudentKnowledgeProfile[]
   embeddings        ConceptEmbedding[]
+  materials         Material[]
 
   @@unique([topicId, slug])
   @@map("concepts")
@@ -324,8 +333,9 @@ model Question {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
-  attempts      QuestionAttempt[]
-  quizQuestions QuizQuestion[]
+  attempts       QuestionAttempt[]
+  quizQuestions  QuizQuestion[]
+  challengeItems ChallengeItem[]
 
   @@map("questions")
 }
@@ -394,9 +404,9 @@ model ChatSession {
   topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
   subjectId String?
   subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   messages  ChatMessage[]
   documents Document[]
@@ -599,11 +609,11 @@ model Document {
   summary       String?             @db.Text
   createdAt     DateTime            @default(now())
   embeddings    DocumentEmbedding[]
+  auditLogs     DocumentAuditLog[]
 
   @@index([userId])
   @@index([chatSessionId])
   @@map("documents")
-  auditLogs   DocumentAuditLog[]
 }
 
 model ConceptEmbedding {
@@ -630,14 +640,14 @@ model DocumentEmbedding {
 }
 
 model DocumentAuditLog {
-  id         String   @id @default(cuid())
+  id         String              @id @default(cuid())
   documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document   Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   action     DocumentAuditAction
-  metadata   Json?    @db.JsonB
-  createdAt  DateTime @default(now())
+  metadata   Json?               @db.JsonB
+  createdAt  DateTime            @default(now())
 
   @@index([documentId])
   @@index([userId])
@@ -671,4 +681,169 @@ model StudentKnowledgeProfile {
 
   @@unique([userId, conceptId])
   @@map("student_knowledge_profiles")
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  SKIPPED
+  EXPIRED
+}
+
+enum ChallengeItemKind {
+  QUESTION
+  MATERIAL
+  REFLECTION
+}
+
+enum ChallengeItemStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum ChallengeSource {
+  AUTO_DAILY
+  ON_DEMAND
+}
+
+enum MaterialSource {
+  CHALLENGE
+  ON_DEMAND
+  ADAPTIVE
+}
+
+enum ReflectionSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum ReflectionDepth {
+  SURFACE
+  MODERATE
+  DEEP
+}
+
+model Challenge {
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId    String?
+  subject      Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title        String
+  description  String          @db.Text
+  status       ChallengeStatus @default(ACTIVE)
+  source       ChallengeSource @default(AUTO_DAILY)
+  scheduledFor DateTime        @db.Date
+  mixConfig    Json            @db.JsonB
+  generatedAt  DateTime        @default(now())
+  completedAt  DateTime?
+  items        ChallengeItem[]
+  reflections  Reflection[]
+
+  @@index([userId, scheduledFor])
+  @@index([userId, status])
+  @@index([userId, subjectId])
+  @@map("challenges")
+}
+
+model ChallengeItem {
+  id          String              @id @default(cuid())
+  challengeId String
+  challenge   Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  order       Int
+  kind        ChallengeItemKind
+  questionId  String?
+  question    Question?           @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  materialId  String?
+  material    Material?           @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  prompt      String?             @db.Text
+  status      ChallengeItemStatus @default(PENDING)
+  points      Int                 @default(0)
+  completedAt DateTime?
+  answer      String?             @db.Text
+  isCorrect   Boolean?
+
+  @@index([challengeId, order])
+  @@map("challenge_items")
+}
+
+model Material {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId        String?
+  subject          Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId          String?
+  topic            Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  conceptId        String?
+  concept          Concept?        @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  title            String
+  content          String          @db.Text
+  keyPoints        Json?           @db.JsonB
+  difficulty       Difficulty      @default(MEDIUM)
+  estimatedMinutes Int             @default(5)
+  source           MaterialSource  @default(CHALLENGE)
+  createdAt        DateTime        @default(now())
+  challengeItems   ChallengeItem[]
+  reads            MaterialRead[]
+
+  @@index([userId, subjectId])
+  @@index([userId, createdAt])
+  @@index([userId, source])
+  @@map("materials")
+}
+
+model MaterialRead {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materialId  String
+  material    Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  readAt      DateTime @default(now())
+  readSeconds Int      @default(0)
+  completed   Boolean  @default(false)
+
+  @@unique([userId, materialId])
+  @@index([userId, readAt])
+  @@map("material_reads")
+}
+
+model Reflection {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  prompt      String              @db.Text
+  response    String              @db.Text
+  sentiment   ReflectionSentiment @default(NEUTRAL)
+  depth       ReflectionDepth     @default(SURFACE)
+  suggestions Json?               @db.JsonB
+  submittedAt DateTime            @default(now())
+
+  @@index([userId, challengeId])
+  @@index([userId, submittedAt])
+  @@map("reflections")
+}
+
+model UserChallengeProgress {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                 DateTime @db.Date
+  totalActive          Int      @default(0)
+  totalCompleted       Int      @default(0)
+  totalPoints          Int      @default(0)
+  pointsByKind         Json     @db.JsonB
+  questionsCompleted   Int      @default(0)
+  materialsCompleted   Int      @default(0)
+  reflectionsSubmitted Int      @default(0)
+  updatedAt            DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("user_challenge_progress")
 }
