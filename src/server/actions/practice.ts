@@ -226,7 +226,10 @@ export async function getNextPracticeQuestion(
     eligibleConcepts.push(fallbackConcept);
   }
 
-  const candidateConcept = pickConceptWeighted(eligibleConcepts, masteryByConcept);
+  const candidateConcept = pickConceptWeighted(
+    eligibleConcepts,
+    masteryByConcept,
+  );
   if (!candidateConcept) {
     return { ok: false, error: "Tidak ada konsep yang bisa dilatih saat ini" };
   }

@@ -101,8 +101,8 @@ export function SubjectsListView({
                 </h2>
                 <p className="mt-1 flex items-center gap-1 text-[10.5px] leading-relaxed text-muted-foreground">
                   <Sparkles size={10} className="text-[var(--purple)]" />
-                  Mapel di bawah ini AI-generated — bukan kurikulum nasional. Tetap
-                  konfirmasi ke guru untuk hal penting.
+                  Mapel di bawah ini AI-generated — bukan kurikulum nasional.
+                  Tetap konfirmasi ke guru untuk hal penting.
                 </p>
               </div>
               <span className="rounded-full bg-[var(--purple)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]">
@@ -286,8 +286,9 @@ export function SubjectDetailView({
                 <p className="mt-2 flex items-start gap-1.5 rounded-xl border border-[var(--purple)]/20 bg-[var(--purple)]/5 px-3 py-2 text-[11.5px] leading-relaxed text-[var(--purple)] dark:text-[var(--purple)]">
                   <Sparkles size={12} className="mt-0.5 shrink-0" />
                   <span>
-                    Mapel ini AI-generated oleh Spark — bukan kurikulum nasional.
-                    Selalu konfirmasi materi ke guru untuk hal-hal penting.
+                    Mapel ini AI-generated oleh Spark — bukan kurikulum
+                    nasional. Selalu konfirmasi materi ke guru untuk hal-hal
+                    penting.
                   </span>
                 </p>
               )}
