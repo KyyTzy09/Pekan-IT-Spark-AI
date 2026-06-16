@@ -1,7 +1,6 @@
 import "server-only";
 
-import { embed, embedMany } from "ai";
-import { embeddingModel } from "@/lib/ai";
+import { embed, embeddingModel, embedMany } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 
 const CHUNK_SIZE = 900;

@@ -42,6 +42,7 @@ type PretestQuestion = {
   options: string[] | null;
   conceptId: string;
   conceptName: string;
+  subjectId: string;
   subjectName: string;
 };
 
@@ -130,6 +131,18 @@ export function OnboardingWizard({
     Record<string, string>
   >({});
 
+  React.useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
+
+  const visiblePretest = React.useMemo(
+    () =>
+      focusedSubjects.length === 0
+        ? []
+        : pretestQuestions.filter((q) => focusedSubjects.includes(q.subjectId)),
+    [pretestQuestions, focusedSubjects],
+  );
+
   const isStepValid = (s: number): boolean => {
     if (s === 0) return true;
     if (s === 1) return school.trim().length >= 2;
@@ -137,8 +150,8 @@ export function OnboardingWizard({
     if (s === 3) return learningStyle !== null;
     if (s === 4) {
       return (
-        pretestQuestions.length === 0 ||
-        pretestQuestions.every((q) => Boolean(pretestAnswers[q.id]))
+        visiblePretest.length === 0 ||
+        visiblePretest.every((q) => Boolean(pretestAnswers[q.id]))
       );
     }
     return true;
@@ -162,7 +175,7 @@ export function OnboardingWizard({
     if (submitting) return;
     setSubmitting(true);
     setError(null);
-    const answers = pretestQuestions.map((q) => {
+    const answers = visiblePretest.map((q) => {
       const userAnswer = pretestAnswers[q.id] ?? "";
       const correct = correctAnswers[q.id] ?? "";
       return {
@@ -188,7 +201,7 @@ export function OnboardingWizard({
       return;
     }
     await update();
-    router.push("/dashboard");
+    router.replace("/dashboard");
   };
 
   return (
@@ -218,7 +231,7 @@ export function OnboardingWizard({
           {step === 3 &&
             "Gaya belajar + reminder (opsional). Isi yang penting dulu."}
           {step === 4 &&
-            "5 soal per mapel. Bisa di-skip, tapi kalo dijawab Spark bisa lebih nyesuaiin."}
+            "Soal pretest muncul sesuai mapel yang kamu pilih. Bisa di-skip, tapi kalo dijawab Spark bisa lebih nyesuaiin."}
         </p>
       </header>
 
@@ -255,11 +268,12 @@ export function OnboardingWizard({
         )}
         {step === 4 && (
           <PretestStep
-            questions={pretestQuestions}
+            questions={visiblePretest}
             answers={pretestAnswers}
             onAnswer={(qid, letter) =>
               setPretestAnswers((p) => ({ ...p, [qid]: letter }))
             }
+            selectedCount={focusedSubjects.length}
           />
         )}
       </div>
@@ -303,12 +317,17 @@ export function OnboardingWizard({
             size="lg"
             onClick={handleSubmit}
             disabled={!isStepValid(step) || submitting}
-            className="rounded-2xl bg-[var(--coral)] px-5 text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)] hover:bg-[var(--coral)]/90 hover:shadow-[0_10px_32px_rgba(225,29,72,0.5)]"
+            className={cn(
+              "rounded-2xl px-5 text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)] transition-all",
+              submitting
+                ? "bg-[var(--coral)]/70"
+                : "bg-[var(--coral)] hover:bg-[var(--coral)]/90 hover:shadow-[0_10px_32px_rgba(225,29,72,0.5)]",
+            )}
           >
             {submitting ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
-                Menyiapkan...
+                Menyiapkan dashboard kamu...
               </>
             ) : (
               <>
@@ -461,7 +480,7 @@ function WelcomeStep() {
           {
             icon: CircleDashed,
             label: "Pretest (opsional)",
-            desc: "5 soal biar tau level awal",
+            desc: "Biar tau level awal kamu",
             color: "var(--pink)",
           },
         ].map((item) => {
@@ -832,26 +851,15 @@ function PretestStep({
   questions,
   answers,
   onAnswer,
+  selectedCount,
 }: {
   questions: PretestQuestion[];
   answers: Record<string, string>;
   onAnswer: (qid: string, letter: string) => void;
+  selectedCount: number;
 }) {
   if (questions.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-border/60 bg-card/40 p-6 text-center">
-        <span className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white">
-          <CircleDashed size={20} strokeWidth={2.5} />
-        </span>
-        <p className="font-heading text-[15px] font-bold text-foreground">
-          Belum ada soal pretest
-        </p>
-        <p className="mx-auto mt-1 max-w-xs text-[11.5px] leading-relaxed text-muted-foreground">
-          Pilih dulu minimal 1 mapel di step sebelumnya biar soal pretest-nya
-          muncul. Bisa balik ke step 3.
-        </p>
-      </div>
-    );
+    return <PretestEmptyState selectedCount={selectedCount} />;
   }
 
   const grouped = questions.reduce<Record<string, PretestQuestion[]>>(
@@ -863,8 +871,29 @@ function PretestStep({
     {},
   );
 
+  const answered = questions.filter((q) => Boolean(answers[q.id])).length;
+
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 rounded-2xl border border-[var(--teal)]/25 bg-[var(--teal)]/8 px-3.5 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white">
+            <CircleDashed size={13} strokeWidth={2.5} />
+          </span>
+          <div>
+            <p className="font-heading text-[12.5px] font-bold text-foreground">
+              {questions.length} soal dari {Object.keys(grouped).length} mapel
+            </p>
+            <p className="text-[10.5px] text-muted-foreground">
+              Jawaban kamu ngebantu Spark ngerti level awalmu
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full bg-background/60 px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--teal)]">
+          {answered}/{questions.length}
+        </span>
+      </div>
+
       {Object.entries(grouped).map(([subject, qs], gi) => (
         <div key={subject} className="space-y-2">
           <div className="flex items-center gap-2">
@@ -931,6 +960,56 @@ function PretestStep({
           })}
         </div>
       ))}
+    </div>
+  );
+}
+
+function PretestEmptyState({ selectedCount }: { selectedCount: number }) {
+  if (selectedCount === 0) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/60 p-6 text-center">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full opacity-30 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, oklch(0.82 0.15 25 / 0.4), transparent 70%)",
+          }}
+        />
+        <span className="relative mx-auto mb-3 grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white shadow-[0_8px_20px_rgba(20,184,166,0.35)]">
+          <BookOpen size={22} strokeWidth={2.5} />
+        </span>
+        <p className="font-heading text-[15px] font-bold text-foreground">
+          Pilih mapel dulu, yuk
+        </p>
+        <p className="mx-auto mt-1.5 max-w-xs text-[11.5px] leading-relaxed text-muted-foreground">
+          Balik ke step sebelumnya dan pilih minimal 1 mapel fokus. Nanti soal
+          pretest-nya muncul sesuai mapel yang kamu pilih.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/60 p-6 text-center">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full opacity-30 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.82 0.15 25 / 0.4), transparent 70%)",
+        }}
+      />
+      <span className="relative mx-auto mb-3 grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white shadow-[0_8px_20px_rgba(20,184,166,0.35)]">
+        <CircleDashed size={22} strokeWidth={2.5} />
+      </span>
+      <p className="font-heading text-[15px] font-bold text-foreground">
+        Belum ada soal pretest
+      </p>
+      <p className="mx-auto mt-1.5 max-w-xs text-[11.5px] leading-relaxed text-muted-foreground">
+        Mapel yang kamu pilih belum punya bank soal. Bisa langsung lanjut —
+        Spark bakal nyesuaiin level dari aktivitas kamu berikutnya.
+      </p>
     </div>
   );
 }

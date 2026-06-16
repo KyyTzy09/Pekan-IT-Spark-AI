@@ -53,18 +53,67 @@ interface ChallengeListViewProps {
   progress: { total: number; completed: number; points: number };
   dailyProgress: DailyProgress;
   subjectOptions: Array<{ slug: string; name: string }>;
+  initiallyEmpty?: boolean;
 }
 
 type Filter = "all" | "active" | "completed";
 
 export function ChallengeListView({
-  challenges,
-  progress,
-  dailyProgress,
+  challenges: propChallenges,
+  progress: propProgress,
+  dailyProgress: propDailyProgress,
   subjectOptions,
+  initiallyEmpty,
 }: ChallengeListViewProps) {
   const router = useRouter();
+  const [challenges, setChallenges] =
+    React.useState<ChallengeListItem[]>(propChallenges);
+  const [progress, setProgress] = React.useState(propProgress);
+  const [dailyProgress, setDailyProgress] = React.useState(propDailyProgress);
+  const [loading, setLoading] = React.useState(!!initiallyEmpty);
   const [filter, setFilter] = React.useState<Filter>("all");
+
+  React.useEffect(() => {
+    if (!initiallyEmpty) {
+      setChallenges(propChallenges);
+      setProgress(propProgress);
+      setDailyProgress(propDailyProgress);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+
+    fetch("/api/challenge/today")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch challenges");
+        return res.json();
+      })
+      .then((json) => {
+        if (!active) return;
+        setChallenges(json.challenges || []);
+        setProgress(json.progress || { total: 0, completed: 0, points: 0 });
+        return fetch("/api/challenge/progress");
+      })
+      .then((res) => {
+        if (!res || !res.ok) return;
+        return res.json();
+      })
+      .then((progJson) => {
+        if (!active || !progJson) return;
+        setDailyProgress(progJson);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Failed to generate challenges client-side:", err);
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initiallyEmpty, propChallenges, propProgress, propDailyProgress]);
 
   const filtered = React.useMemo(() => {
     if (filter === "active")
@@ -151,25 +200,27 @@ export function ChallengeListView({
             <StatTile
               icon={<Target size={14} />}
               label="Tantangan"
-              value={`${progress.completed}/${progress.total}`}
+              value={
+                loading ? "..." : `${progress.completed}/${progress.total}`
+              }
               color="text-[var(--purple)]"
             />
             <StatTile
               icon={<Trophy size={14} />}
               label="XP"
-              value={String(progress.points)}
+              value={loading ? "..." : String(progress.points)}
               color="text-[var(--coral)]"
             />
             <StatTile
               icon={<Sparkles size={14} />}
               label="Overall"
-              value={`${dailyProgress.overallScore}%`}
+              value={loading ? "..." : `${dailyProgress.overallScore}%`}
               color="text-[var(--teal)]"
             />
             <StatTile
               icon={<Target size={14} />}
               label="Mastery"
-              value={`${dailyProgress.masteryScore}%`}
+              value={loading ? "..." : `${dailyProgress.masteryScore}%`}
               color="text-amber-600"
             />
           </div>
@@ -224,7 +275,22 @@ export function ChallengeListView({
         </div>
       </Reveal>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <Reveal delay={140}>
+          <div className="rounded-3xl border border-border/40 bg-card/80 p-12 text-center shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md">
+            <div className="relative flex size-12 mx-auto items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--coral)]/20 opacity-75" />
+              <span className="absolute inline-flex h-8 w-8 animate-spin rounded-full border-2 border-[var(--coral)] border-t-transparent" />
+            </div>
+            <p className="mt-5 font-heading text-[16px] font-bold">
+              Menyiapkan Tantangan Harian Kamu...
+            </p>
+            <p className="mt-1 text-[12.5px] text-muted-foreground">
+              Spark sedang merancang tantangan belajar khusus untuk hari ini.
+            </p>
+          </div>
+        </Reveal>
+      ) : filtered.length === 0 ? (
         <Reveal delay={140}>
           <div className="rounded-3xl border border-border/40 bg-card/80 p-8 text-center shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-10">
             <Sparkles size={28} className="mx-auto text-[var(--purple)]" />

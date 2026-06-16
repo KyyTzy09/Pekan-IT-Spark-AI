@@ -4,7 +4,20 @@ import { PrismaClient } from "../../generated/prisma/client";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 
-const adapter = new PrismaPg({ connectionString });
-const prisma = new PrismaClient({ adapter });
+const createPrismaClient = () => {
+  const adapter = new PrismaPg({ connectionString });
+  return new PrismaClient({ adapter });
+};
 
-export { prisma };
+type GlobalPrismaCache = {
+  prisma?: PrismaClient;
+};
+
+const globalForPrisma = globalThis as unknown as GlobalPrismaCache;
+
+export const prisma: PrismaClient =
+  globalForPrisma.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}

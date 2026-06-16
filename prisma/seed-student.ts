@@ -7,12 +7,32 @@ const STUDENT_NAME = "Siswa Demo";
 const STUDENT_SCHOOL = "SMA Negeri 1 Demo";
 const FOCUSED_SUBJECT_SLUGS = ["MATEMATIKA", "IPA"] as const;
 
+const DEMO_TOTAL_XP = 350;
+const DEMO_LEVEL = 3;
+const DEMO_STREAK_CURRENT = 5;
+const DEMO_STREAK_LONGEST = 12;
+const DEMO_BUDDY_TYPE = "bunga";
+const DEMO_BUDDY_STAGE = 1;
+const DEMO_AVATAR_COLOR = "default";
+
+const daysAgo = (n: number): Date =>
+  new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+
+type ConceptPick = { id: string; name: string };
+
+type KnowledgeSeed = {
+  concept: ConceptPick | undefined;
+  mastery: number;
+  status: "MASTERED" | "LEARNING" | "STRUGGLING";
+  attempts: number;
+};
+
 async function main() {
   const passwordHash = await bcrypt.hash(STUDENT_PASSWORD, 12);
 
   const subjects = await prisma.subject.findMany({
     where: { slug: { in: [...FOCUSED_SUBJECT_SLUGS] } },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, name: true },
   });
   if (subjects.length !== FOCUSED_SUBJECT_SLUGS.length) {
     const found = new Set(subjects.map((s) => s.slug));
@@ -40,27 +60,182 @@ async function main() {
     },
   });
 
+  const profileFields = {
+    educationLevel: "SMA" as const,
+    grade: 11,
+    school: STUDENT_SCHOOL,
+    focusedSubjects: focusedSubjectIds,
+    learningStyle: "VISUAL" as const,
+    reminderEnabled: false,
+    reminderTime: null,
+    totalXp: DEMO_TOTAL_XP,
+    level: DEMO_LEVEL,
+  };
+
   await prisma.studentProfile.upsert({
     where: { userId: user.id },
+    update: profileFields,
+    create: { userId: user.id, ...profileFields },
+  });
+
+  await prisma.streak.upsert({
+    where: { userId: user.id },
     update: {
-      educationLevel: "SMA",
-      grade: 11,
-      school: STUDENT_SCHOOL,
-      focusedSubjects: focusedSubjectIds,
-      learningStyle: "VISUAL",
-      reminderEnabled: false,
-      reminderTime: null,
+      currentStreak: DEMO_STREAK_CURRENT,
+      longestStreak: DEMO_STREAK_LONGEST,
+      lastActivityAt: new Date(),
+      freezeAvailable: 1,
     },
     create: {
       userId: user.id,
-      educationLevel: "SMA",
-      grade: 11,
-      school: STUDENT_SCHOOL,
-      focusedSubjects: focusedSubjectIds,
-      learningStyle: "VISUAL",
-      reminderEnabled: false,
-      reminderTime: null,
+      currentStreak: DEMO_STREAK_CURRENT,
+      longestStreak: DEMO_STREAK_LONGEST,
+      lastActivityAt: new Date(),
+      freezeAvailable: 1,
     },
+  });
+
+  await prisma.studyBuddy.upsert({
+    where: { userId: user.id },
+    update: { type: DEMO_BUDDY_TYPE, stage: DEMO_BUDDY_STAGE },
+    create: {
+      userId: user.id,
+      type: DEMO_BUDDY_TYPE,
+      stage: DEMO_BUDDY_STAGE,
+    },
+  });
+
+  await prisma.avatarCustomization.upsert({
+    where: { userId: user.id },
+    update: { color: DEMO_AVATAR_COLOR },
+    create: { userId: user.id, color: DEMO_AVATAR_COLOR },
+  });
+
+  const concepts = await prisma.concept.findMany({
+    where: { topic: { subjectId: { in: focusedSubjectIds } } },
+    select: { id: true, name: true, topic: { select: { order: true } } },
+    orderBy: [{ topic: { order: "asc" } }, { order: "asc" }],
+    take: 8,
+  });
+
+  const knowledgeSeed: KnowledgeSeed[] = [
+    { concept: concepts[0], mastery: 0.88, status: "MASTERED", attempts: 8 },
+    { concept: concepts[1], mastery: 0.75, status: "MASTERED", attempts: 6 },
+    { concept: concepts[2], mastery: 0.55, status: "LEARNING", attempts: 5 },
+    { concept: concepts[3], mastery: 0.42, status: "LEARNING", attempts: 4 },
+    { concept: concepts[4], mastery: 0.2, status: "STRUGGLING", attempts: 3 },
+    { concept: concepts[5], mastery: 0.65, status: "LEARNING", attempts: 5 },
+  ];
+
+  for (const seed of knowledgeSeed) {
+    if (!seed.concept) continue;
+    const data = {
+      masteryScore: seed.mastery,
+      status: seed.status,
+      attemptCount: seed.attempts,
+      lastAttemptAt: new Date(),
+    };
+    await prisma.studentKnowledgeProfile.upsert({
+      where: {
+        userId_conceptId: { userId: user.id, conceptId: seed.concept.id },
+      },
+      update: data,
+      create: { userId: user.id, conceptId: seed.concept.id, ...data },
+    });
+  }
+
+  const questions = await prisma.question.findMany({
+    where: {
+      isActive: true,
+      concept: { topic: { subjectId: { in: focusedSubjectIds } } },
+    },
+    take: 18,
+    select: { id: true },
+  });
+
+  if (questions.length > 0) {
+    const letters = ["A", "B", "C", "D"] as const;
+    await prisma.questionAttempt.createMany({
+      data: questions.map((q, i) => ({
+        userId: user.id,
+        questionId: q.id,
+        answer: letters[i % 4] ?? "A",
+        isCorrect: i % 3 !== 0,
+        timeSpent: 25 + ((i * 7) % 50),
+      })),
+    });
+  }
+
+  const xpEntries: Array<{
+    userId: string;
+    source: "ANSWER_CORRECT" | "STREAK" | "CONCEPT_MASTERED" | "DAILY_QUEST";
+    amount: number;
+    createdAt: Date;
+  }> = [
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(7),
+    },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(6),
+    },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(5),
+    },
+    { userId: user.id, source: "STREAK", amount: 20, createdAt: daysAgo(5) },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(4),
+    },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(3),
+    },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(2),
+    },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(1),
+    },
+    {
+      userId: user.id,
+      source: "CONCEPT_MASTERED",
+      amount: 50,
+      createdAt: daysAgo(1),
+    },
+    {
+      userId: user.id,
+      source: "ANSWER_CORRECT",
+      amount: 10,
+      createdAt: daysAgo(0),
+    },
+    { userId: user.id, source: "STREAK", amount: 20, createdAt: daysAgo(0) },
+  ];
+  await prisma.xpTransaction.createMany({ data: xpEntries });
+
+  const knowledgeCount = await prisma.studentKnowledgeProfile.count({
+    where: { userId: user.id },
+  });
+  const attemptCount = await prisma.questionAttempt.count({
+    where: { userId: user.id },
   });
 
   console.log(`✓ Akun siswa dibuat: ${STUDENT_EMAIL} / ${STUDENT_PASSWORD}`);
@@ -68,6 +243,20 @@ async function main() {
   console.log(`  - Profile: SMA kelas 11, ${STUDENT_SCHOOL}`);
   console.log(`  - Fokus: ${FOCUSED_SUBJECT_SLUGS.join(", ")}`);
   console.log(`  - Learning style: VISUAL`);
+  console.log(
+    `  - Level/XP: ${DEMO_LEVEL} (${DEMO_TOTAL_XP} XP) — ${profileFields.learningStyle}`,
+  );
+  console.log(
+    `  - Streak: ${DEMO_STREAK_CURRENT} hari aktif (rekor ${DEMO_STREAK_LONGEST}, 1 freeze)`,
+  );
+  console.log(
+    `  - Knowledge profiles: ${knowledgeCount} konsep (mastered/learning/struggling)`,
+  );
+  console.log(`  - Study buddy: ${DEMO_BUDDY_TYPE} stage ${DEMO_BUDDY_STAGE}`);
+  console.log(`  - Avatar: ${DEMO_AVATAR_COLOR}`);
+  console.log(
+    `  - Total soal dijawab (termasuk seed sebelumnya): ${attemptCount}`,
+  );
 }
 
 main()

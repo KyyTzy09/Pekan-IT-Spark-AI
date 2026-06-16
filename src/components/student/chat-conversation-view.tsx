@@ -13,7 +13,11 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
-import { deleteChatSession, sendMessage } from "@/server/actions/chat";
+import {
+  deleteChatSession,
+  generateAssistantResponse,
+  sendMessage,
+} from "@/server/actions/chat";
 
 type Message = {
   id: string;
@@ -48,6 +52,39 @@ export function ChatConversationView({
   React.useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
+
+  // Trigger assistant response if the last message is from user and we are not pending
+  React.useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === "USER" && !pending) {
+      let active = true;
+      setPending(true);
+      setError(null);
+
+      generateAssistantResponse(sessionId)
+        .then(() => {
+          if (active) {
+            router.refresh();
+          }
+        })
+        .catch((err) => {
+          if (active) {
+            setError(
+              err instanceof Error ? err.message : "Gagal memuat jawaban.",
+            );
+          }
+        })
+        .finally(() => {
+          if (active) {
+            setPending(false);
+          }
+        });
+
+      return () => {
+        active = false;
+      };
+    }
+  }, [messages, sessionId, pending, router]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll runs on length/pending transitions, not on a stable ref read
   React.useEffect(() => {

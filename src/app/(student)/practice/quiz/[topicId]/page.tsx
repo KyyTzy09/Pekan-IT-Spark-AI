@@ -1,49 +1,30 @@
-"use client";
-
-import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Timer } from "lucide-react";
+import { ArrowLeft, Timer } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect } from "react";
+import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { QuizPlayer } from "@/components/student/quiz-player";
 import { Button } from "@/components/ui/button";
-import type { QuizSession } from "@/server/actions/practice";
+import { auth } from "@/lib/auth";
+import { startQuizSession } from "@/server/actions/practice";
 
 export const dynamic = "force-dynamic";
 
-type QuizApiResponse =
-  | { ok: true; session: QuizSession }
-  | { ok: false; error: string };
+type QuizResult = Awaited<ReturnType<typeof startQuizSession>>;
 
-export default function QuizPage() {
-  const { topicId } = useParams<{ topicId: string }>();
-
-  const mutation = useMutation<QuizApiResponse>({
-    mutationFn: async () => {
-      const res = await fetch("/api/practice/quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topicId }),
-      });
-      if (!res.ok) throw new Error("Gagal memulai quiz");
-      return res.json();
-    },
-  });
-
-  useEffect(() => {
-    mutation.mutate();
-  }, [mutation]);
-
-  if (mutation.isPending) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+export default async function QuizPage({
+  params,
+}: {
+  params: Promise<{ topicId: string }>;
+}) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "STUDENT") {
+    redirect("/auth/login");
   }
 
-  if (mutation.isError || !mutation.data?.ok) {
+  const { topicId } = await params;
+  const result: QuizResult = await startQuizSession({ topicId });
+
+  if (!result.ok) {
     return (
       <div className="space-y-5 sm:space-y-7">
         <Reveal>
@@ -64,9 +45,7 @@ export default function QuizPage() {
               Belum bisa mulai quiz
             </h1>
             <p className="relative mt-2 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13.5px]">
-              {mutation.data && "error" in mutation.data
-                ? mutation.data.error
-                : (mutation.error?.message ?? "Terjadi kesalahan")}
+              {result.error}
             </p>
             <div className="relative mt-5 flex flex-wrap gap-2">
               <Button asChild size="sm" className="rounded-full">
@@ -82,7 +61,7 @@ export default function QuizPage() {
     );
   }
 
-  const { session } = mutation.data;
+  const { session: quizSession } = result;
 
   return (
     <div className="space-y-5 sm:space-y-7">
@@ -91,28 +70,28 @@ export default function QuizPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Quiz mini-exam · {session.subjectName}
+                Quiz mini-exam · {quizSession.subjectName}
               </p>
               <h1 className="mt-1 font-heading text-[20px] font-bold leading-tight">
-                {session.topicName}
+                {quizSession.topicName}
               </h1>
             </div>
             <Button asChild variant="ghost" size="sm" className="rounded-full">
-              <Link href={`/topics/${session.topicId}`}>
+              <Link href={`/topics/${quizSession.topicId}`}>
                 <ArrowLeft size={13} />
                 Topik
               </Link>
             </Button>
           </div>
           <p className="mt-2 text-[12.5px] text-muted-foreground">
-            {session.totalQuestions} soal · Timer{" "}
-            {Math.floor(session.timeLimitSec / 60)} menit · Auto-submit kalau
-            waktu habis. Fokus ya 💪
+            {quizSession.totalQuestions} soal · Timer{" "}
+            {Math.floor(quizSession.timeLimitSec / 60)} menit · Auto-submit
+            kalau waktu habis. Fokus ya 💪
           </p>
         </header>
       </Reveal>
       <Reveal delay={80}>
-        <QuizPlayer initialSession={session} />
+        <QuizPlayer initialSession={quizSession} />
       </Reveal>
     </div>
   );

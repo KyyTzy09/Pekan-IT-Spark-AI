@@ -1,5 +1,3 @@
-import "server-only";
-
 const LATEX_INLINE = /\\\((.+?)\\\)|\$([^$\n]+?)\$/g;
 const LATEX_DISPLAY = /\\\[(.+?)\\\]|\$\$([^$]+?)\$\$/g;
 const LATEX_ENV =

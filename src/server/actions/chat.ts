@@ -211,36 +211,103 @@ export async function startNewChat(input: {
     });
   }
 
-  const subjectSlug = subject?.slug ?? undefined;
+  revalidatePath("/chat");
+  return { sessionId: created.id };
+}
+
+export async function generateAssistantResponse(
+  sessionId: string,
+): Promise<void> {
+  const userId = await requireStudent();
+  const session = await prisma.chatSession.findFirst({
+    where: { id: sessionId, userId },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } },
+      documents: { select: { id: true, originalName: true }, take: 1 },
+    },
+  });
+  if (!session) {
+    throw new Error("Chat session not found");
+  }
+
+  // If the last message is already from assistant, skip to prevent double generation
+  const lastMessage = session.messages[session.messages.length - 1];
+  if (!lastMessage || lastMessage.role === "ASSISTANT") {
+    return;
+  }
+
+  const subjectSlug = session.subjectId
+    ? (
+        await prisma.subject.findUnique({
+          where: { id: session.subjectId },
+          select: { slug: true },
+        })
+      )?.slug
+    : undefined;
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { name: true },
   });
 
+  const linkedDoc = session.documents[0];
+  let documentContext: string | null = null;
+  if (linkedDoc) {
+    try {
+      const { context, hasContext } = await buildDocumentChatContext(
+        linkedDoc.id,
+        lastMessage.content,
+        4,
+      );
+      if (hasContext) {
+        documentContext = `DOKUMEN YANG DIBICARAKAN: "${linkedDoc.originalName}"\n\n${context}\n\nATURAN: 
+- Jawab pertanyaan berdasarkan cuplikan di atas. Kalau ga ada jawabannya di cuplikan, bilang "Aku ga nemu jawabannya di dokumenmu" — jangan ngarang dari luar.
+- Gunakan metode Socratic: jangan kasih jawaban final langsung untuk soal/ujian. Bimbing dengan pertanyaan probing.
+- Selalu akhiri dengan pertanyaan terbuka untuk lanjutin dialog.`;
+      }
+    } catch (e) {
+      console.warn("buildDocumentChatContext failed:", e);
+    }
+  }
+
   const messages = [
-    { role: "user" as const, content: parsed.data.firstMessage },
+    ...(documentContext
+      ? [{ role: "system" as const, content: documentContext }]
+      : []),
+    ...session.messages.map((m) => ({
+      role: m.role.toLowerCase() as "user" | "assistant" | "system",
+      content: m.content,
+    })),
   ];
 
   const result = await generateTutorStream({
     userId,
     userName: user?.name ?? undefined,
     messages,
-    subjectSlug,
-    topicId: topic?.id ?? undefined,
-    lastUserMessage: parsed.data.firstMessage,
+    subjectSlug: subjectSlug ?? undefined,
+    topicId: session.topicId ?? undefined,
+    lastUserMessage: lastMessage.content,
   });
 
   const fullText = await result.text;
-  await prisma.chatMessage.create({
-    data: {
-      sessionId: created.id,
-      role: "ASSISTANT",
-      content: fullText,
-    },
-  });
+
+  await prisma.$transaction([
+    prisma.chatMessage.create({
+      data: {
+        sessionId: session.id,
+        role: "ASSISTANT",
+        content: fullText,
+      },
+    }),
+    prisma.chatSession.update({
+      where: { id: session.id },
+      data: { updatedAt: new Date() },
+    }),
+  ]);
 
   revalidatePath("/chat");
-  return { sessionId: created.id };
+  revalidatePath(`/chat/${session.id}`);
+  revalidatePath("/dashboard");
 }
 
 export async function deleteChatSession(sessionId: string): Promise<void> {
@@ -343,7 +410,7 @@ export async function sendMessage(input: {
         ]
       : []),
     ...session.messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
+      role: m.role.toLowerCase() as "user" | "assistant" | "system",
       content: m.content,
     })),
     { role: "user" as const, content: input.content },

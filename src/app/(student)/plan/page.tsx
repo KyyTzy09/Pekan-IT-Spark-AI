@@ -1,52 +1,37 @@
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
+import { redirect } from "next/navigation";
 import { LearningPlanView } from "@/components/student/learning-plan-view";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import type { WeeklyPlan } from "@/server/learning-plan";
 
 export const dynamic = "force-dynamic";
 
-function Skeleton() {
-  return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-      <div className="h-4 w-80 animate-pulse rounded bg-muted" />
-      <div className="grid grid-cols-7 gap-2">
-        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-          <div key={n} className="h-24 animate-pulse rounded-lg bg-muted" />
-        ))}
-      </div>
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map((n) => (
-          <div key={n} className="h-16 animate-pulse rounded-lg bg-muted" />
-        ))}
-      </div>
-    </div>
-  );
-}
+export default async function PlanPage() {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "STUDENT") {
+    redirect("/auth/login");
+  }
 
-export default function PlanPage() {
-  const { data, isLoading, error } = useQuery<WeeklyPlan>({
-    queryKey: ["plan"],
-    queryFn: async () => {
-      const res = await fetch("/api/plan");
-      if (!res.ok) throw new Error("Gagal memuat rencana belajar");
-      return res.json();
+  const userId = session.user.id;
+  const now = new Date();
+  const date = new Date(now);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  const weekStartDateTime = date;
+
+  // Check if plan already exists in database (very fast query)
+  const existing = await prisma.learningPlan.findUnique({
+    where: {
+      userId_weekStart: {
+        userId,
+        weekStart: weekStartDateTime,
+      },
     },
   });
 
-  if (isLoading) return <Skeleton />;
-  if (error) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">
-          Gagal memuat rencana belajar. Coba muat ulang halaman.
-        </p>
-      </div>
-    );
-  }
+  const plan = existing ? (existing.plan as unknown as WeeklyPlan) : null;
 
-  if (!data) return null;
-
-  return <LearningPlanView initialPlan={data} />;
+  return <LearningPlanView initialPlan={plan} />;
 }

@@ -1,7 +1,6 @@
 import "server-only";
 
-import { streamText } from "ai";
-import { chatModel } from "@/lib/ai";
+import { chatModel, streamText } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 import type {
   LearningStyle,
@@ -227,6 +226,9 @@ export async function generateTutorStream(input: {
   topicId?: string;
   lastUserMessage?: string;
 }) {
+  console.log("[AI_SERVICE] generateTutorStream start", {
+    userId: input.userId,
+  });
   const ctx = await loadUserContext(
     input.userId,
     input.subjectSlug,

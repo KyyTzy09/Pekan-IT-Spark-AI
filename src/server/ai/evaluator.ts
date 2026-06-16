@@ -1,7 +1,6 @@
 import "server-only";
 
-import { generateText } from "ai";
-import { chatModel } from "@/lib/ai";
+import { chatModel, generateText } from "@/lib/ai";
 
 interface EvaluationResult {
   isCorrect: boolean;
@@ -17,6 +16,10 @@ export async function evaluateAnswer(
   questionType: string,
   conceptName?: string,
 ): Promise<EvaluationResult> {
+  console.log("[AI_SERVICE] evaluateAnswer start", {
+    questionType,
+    studentAnswer,
+  });
   if (questionType === "MULTIPLE_CHOICE" || questionType === "TRUE_FALSE") {
     const isCorrect =
       studentAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();

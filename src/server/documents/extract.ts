@@ -1,6 +1,7 @@
 import "server-only";
 
 import mammoth from "mammoth";
+import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { detectMarkdownTables, detectMathRegions } from "./content-check";
 
@@ -73,6 +74,7 @@ export async function extractFromPdf(
       console.warn("pdf table extraction skipped:", e);
     }
   } catch (e) {
+    console.error("[extractFromPdf] ERROR:", e);
     const msg = e instanceof Error ? e.message : String(e);
     if (/password|encrypt/i.test(msg)) {
       throw new DocumentExtractionError(
@@ -81,7 +83,9 @@ export async function extractFromPdf(
       );
     }
     throw new DocumentExtractionError(
-      "PDF tidak bisa dibaca. Pastikan file tidak corrupt.",
+      "PDF tidak bisa dibaca. Pastikan file tidak corrupt. (Detail: " +
+        msg +
+        ")",
       "CORRUPT",
     );
   } finally {
@@ -118,23 +122,26 @@ export async function extractFromDocx(
 }
 
 export function cleanTextToMarkdown(raw: string): string {
-  return raw
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\t\f\v]+/g, " ")
-    .replace(/ +\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[\u0000-\u0008\u000B-\u001F\u007F]+/g, "")
-    .split("\n")
-    .map((line) => line.replace(/^ +/, "").replace(/ +$/, ""))
-    .map((line) => {
-      const headingMatch = line.match(/^([A-Z0-9][A-Z0-9 ,.'&:-]{4,})$/);
-      if (headingMatch && line.length < 80) {
-        return `## ${line}`;
-      }
-      return line;
-    })
-    .join("\n")
-    .trim();
+  return (
+    raw
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\t\f\v]+/g, " ")
+      .replace(/ +\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: needed to strip out control characters
+      .replace(/[\u0000-\u0008\u000B-\u001F\u007F]+/g, "")
+      .split("\n")
+      .map((line) => line.replace(/^ +/, "").replace(/ +$/, ""))
+      .map((line) => {
+        const headingMatch = line.match(/^([A-Z0-9][A-Z0-9 ,.'&:-]{4,})$/);
+        if (headingMatch && line.length < 80) {
+          return `## ${line}`;
+        }
+        return line;
+      })
+      .join("\n")
+      .trim()
+  );
 }
 
 function finalize(

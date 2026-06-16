@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -42,6 +42,20 @@ function LoginForm() {
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = React.useState(false);
+  const authError = search.get("error");
+
+  React.useEffect(() => {
+    if (authError) {
+      if (authError === "OAuthAccountNotLinked") {
+        setServerError(
+          "Akun Google ini sudah terhubung dengan email lain. Sesi aktif sebelumnya telah dibersihkan otomatis demi keamanan. Silakan klik 'Lanjut dengan Google' lagi untuk masuk.",
+        );
+        signOut({ redirect: false });
+      } else {
+        setServerError("Gagal masuk dengan Google. Silakan coba lagi.");
+      }
+    }
+  }, [authError]);
 
   const {
     register,
@@ -155,6 +169,22 @@ function LoginForm() {
         />
 
         <AuthError message={serverError ?? undefined} />
+
+        {authError === "OAuthAccountNotLinked" && (
+          <div
+            className="flex justify-center anim-slide-up gpu"
+            style={{ animationDelay: "200ms" }}
+          >
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => signOut({ callbackUrl: "/auth/login" })}
+              className="rounded-2xl border-destructive/30 bg-destructive/5 text-destructive font-bold text-[12px] px-4 py-2 hover:bg-destructive/10 cursor-pointer transition-all active:scale-[0.97] w-full"
+            >
+              Keluar dari Sesi Aktif (Logout)
+            </Button>
+          </div>
+        )}
 
         <Button
           type="submit"
