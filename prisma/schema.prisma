@@ -141,6 +141,7 @@ model User {
   learningPlans       LearningPlan[]
   learningActivities  LearningActivity[]
   documents           Document[]
+  documentAuditLogs   DocumentAuditLog[]
   knowledgeProfiles   StudentKnowledgeProfile[]
   customSubjects      Subject[]                 @relation("CustomSubjects")
   accounts            Account[]
@@ -602,6 +603,7 @@ model Document {
   @@index([userId])
   @@index([chatSessionId])
   @@map("documents")
+  auditLogs   DocumentAuditLog[]
 }
 
 model ConceptEmbedding {
@@ -625,6 +627,34 @@ model DocumentEmbedding {
 
   @@unique([documentId, chunkIndex])
   @@map("document_embeddings")
+}
+
+model DocumentAuditLog {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action     DocumentAuditAction
+  metadata   Json?    @db.JsonB
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([action])
+  @@map("document_audit_logs")
+}
+
+enum DocumentAuditAction {
+  UPLOAD
+  PROCESS
+  SUMMARY_GENERATED
+  QUIZ_GENERATED
+  SHARE_TO_CHAT
+  CHAT_REFERENCED
+  RAG_QUERY
+  DELETE
+  REJECTED
 }
 
 model StudentKnowledgeProfile {
