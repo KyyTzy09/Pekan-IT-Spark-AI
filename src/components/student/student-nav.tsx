@@ -568,17 +568,30 @@ export function StudentNav({
                     <Link
                       href={item.href}
                       className={cn(
-                        "group relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-bold transition-all border-l-2",
+                        "group relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-bold transition-all",
                         active
-                          ? "text-[var(--coral)] border-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.04)]"
-                          : "text-muted-foreground border-transparent hover:bg-muted/40 hover:text-foreground",
+                          ? "text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.04)]"
+                          : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                       )}
                     >
                       {/* Smooth Active Sliding Background */}
                       {active && (
                         <motion.span
                           layoutId="active-nav-bg"
-                          className="absolute inset-0 -z-10 rounded-r-xl bg-gradient-to-r from-[var(--coral)]/8 to-[var(--orange)]/3"
+                          className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-[var(--coral)]/10 to-[var(--orange)]/5 border border-[var(--coral)]/10"
+                          transition={{
+                            type: "spring",
+                            stiffness: 350,
+                            damping: 28,
+                          }}
+                        />
+                      )}
+
+                      {/* Smooth Left Pill Indicator */}
+                      {active && (
+                        <motion.span
+                          layoutId="active-nav-indicator"
+                          className="absolute left-1 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-[var(--coral)] to-[var(--orange)]"
                           transition={{
                             type: "spring",
                             stiffness: 350,
@@ -589,7 +602,7 @@ export function StudentNav({
 
                       <span
                         className={cn(
-                          "grid size-8 place-items-center rounded-lg transition-all duration-300",
+                          "grid size-8 place-items-center rounded-lg transition-all duration-300 ml-1.5",
                           active
                             ? "bg-[var(--coral)] text-white shadow-[0_4px_10px_rgba(225,29,72,0.25)] scale-105"
                             : "bg-muted/60 text-muted-foreground group-hover:bg-muted group-hover:text-foreground group-hover:scale-105",
@@ -616,28 +629,6 @@ export function StudentNav({
             </ul>
           </div>
         ))}
-      </div>
-
-      {/* Helper Card */}
-      <div className="relative mt-auto overflow-hidden rounded-2xl border border-[var(--purple)]/20 bg-gradient-to-br from-[var(--purple)]/5 to-[var(--pink)]/5 p-3.5 shadow-sm">
-        <div className="relative z-10">
-          <div className="mb-2 flex items-center gap-2">
-            <SparkCharacter size="sm" className="animate-float" />
-            <div>
-              <p className="text-[11px] font-bold text-foreground">
-                Spark Tutor AI
-              </p>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[8.5px] font-bold text-emerald-600 dark:text-emerald-400">
-                <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
-                Aktif 24/7
-              </span>
-            </div>
-          </div>
-          <p className="text-[10.5px] leading-relaxed text-muted-foreground">
-            Ada pertanyaan atau PR sulit? Tanya Spark di chat room kapan saja!
-            Sabar & gak ngehakimi.
-          </p>
-        </div>
       </div>
 
       {/* Logout Button */}
