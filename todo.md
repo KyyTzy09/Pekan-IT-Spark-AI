@@ -605,25 +605,25 @@
 ## Phase 8 — Parent Dashboard (Minggu 6)
 
 ### 8.1 Parent Home
-- [ ] 🟠 Dashboard ringkasan perkembangan anak
-- [ ] 🟠 Aktivitas belajar mingguan
-- [ ] 🟠 Streak dan level anak
-- [ ] 🟠 Mata pelajaran yang sedang dipelajari
+- [x] 🟠 Dashboard ringkasan perkembangan anak
+- [x] 🟠 Aktivitas belajar mingguan
+- [x] 🟠 Streak dan level anak
+- [x] 🟠 Mata pelajaran yang sedang dipelajari
 
 ### 8.2 Progress Reports
-- [ ] 🟠 Ringkasan mingguan otomatis
-- [ ] 🟠 Grafik progress per mapel
-- [ ] 🟠 Konsep yang sudah/kurang dikuasai
-- [ ] 🟠 Rekomendasi dukungan untuk orang tua
+- [x] 🟠 Ringkasan mingguan otomatis
+- [x] 🟠 Grafik progress per mapel
+- [x] 🟠 Konsep yang sudah/kurang dikuasai
+- [x] 🟠 Rekomendasi dukungan untuk orang tua
 
 ### 8.3 Notifications
-- [ ] 🟠 Alert jika anak tidak belajar beberapa hari
-- [ ] 🟠 Alert jika anak kesulitan di konsep tertentu
-- [ ] 🟠 Reminder positif, bukan menyalahkan
+- [x] 🟠 Alert jika anak tidak belajar beberapa hari
+- [x] 🟠 Alert jika anak kesulitan di konsep tertentu
+- [x] 🟠 Reminder positif, bukan menyalahkan
 
 ### 8.4 Multi-Child Support (P2)
-- [ ] 🟡 Satu akun orang tua bisa hubungkan beberapa anak
-- [ ] 🟡 Switch antar anak
+- [x] 🟡 Satu akun orang tua bisa hubungkan beberapa anak
+- [x] 🟡 Switch antar anak
 
 ---
 
