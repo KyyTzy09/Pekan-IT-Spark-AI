@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
+import { addXp, checkAndUnlockBadges } from "@/server/actions/gamification";
 import {
   type CurriculumOutline,
   generateCurriculumOutline,
@@ -196,7 +198,7 @@ export type RecordAttemptInput = z.infer<typeof recordAttemptSchema>;
 
 export async function recordQuestionAttempt(
   input: RecordAttemptInput,
-): Promise<{ ok: boolean; error?: string; newMastery?: number }> {
+): Promise<{ ok: boolean; error?: string; newMastery?: number; unlockedBadges?: any[] }> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, error: "Login dulu" };
   if (session.user.role !== "STUDENT") {
@@ -268,10 +270,29 @@ export async function recordQuestionAttempt(
     },
   });
 
+  if (isCorrect) {
+    await addXp(userId, XP_REWARDS.ANSWER_CORRECT, "ANSWER_CORRECT", {
+      questionId,
+      conceptId: question.conceptId,
+      difficulty: question.difficulty,
+    });
+  }
+
+  if (newStatus === "MASTERED" && prevScore < 0.8) {
+    await addXp(
+      userId,
+      XP_REWARDS.CONCEPT_MASTERED,
+      "CONCEPT_MASTERED",
+      { conceptId: question.conceptId },
+    );
+  }
+
+  const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
+
   revalidatePath("/dashboard");
   revalidatePath("/subjects");
 
-  return { ok: true, newMastery };
+  return { ok: true, newMastery, unlockedBadges };
 }
 
 export async function selectNextQuestionDifficulty(

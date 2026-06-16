@@ -486,6 +486,8 @@ export function TopicDetailView({
       description: string | null;
       status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
       masteryScore: number;
+      isLocked: boolean;
+      unmetPrerequisites: Array<{ id: string; name: string }>;
     }>;
   };
 }) {
@@ -589,6 +591,8 @@ function Constellation({
     description: string | null;
     status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
     masteryScore: number;
+    isLocked: boolean;
+    unmetPrerequisites: Array<{ id: string; name: string }>;
   }>;
 }) {
   return (
@@ -604,23 +608,31 @@ function Constellation({
       />
       <div className="relative grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
         {concepts.map((c, i) => {
-          const mastered = c.status === "MASTERED";
-          const learning = c.status === "LEARNING";
-          const struggling = c.status === "STRUGGLING";
+          const mastered = c.status === "MASTERED" && !c.isLocked;
+          const learning = c.status === "LEARNING" && !c.isLocked;
+          const struggling = c.status === "STRUGGLING" && !c.isLocked;
           const masteryPct = Math.round(c.masteryScore * 100);
+
+          // If locked, redirect practice to the first unmet prerequisite
+          const practiceUrl = c.isLocked
+            ? `/practice?concept=${c.unmetPrerequisites[0]?.id}`
+            : `/practice?concept=${c.id}`;
+
           return (
             <Link
               key={c.id}
-              href={`/practice?concept=${c.id}`}
+              href={practiceUrl}
               className={cn(
                 "group/cs relative overflow-hidden rounded-2xl border p-3 backdrop-blur-md transition-all hover:-translate-y-0.5",
-                mastered
-                  ? "border-[var(--yellow)]/40 bg-[color-mix(in_oklch,var(--yellow)_10%,transparent)] shadow-[0_0_24px_rgba(245,158,11,0.18)]"
-                  : learning
-                    ? "border-[var(--teal)]/40 bg-[color-mix(in_oklch,var(--teal)_10%,transparent)]"
-                    : struggling
-                      ? "border-[var(--coral)]/40 bg-[color-mix(in_oklch,var(--coral)_10%,transparent)]"
-                      : "border-white/10 bg-white/5",
+                c.isLocked
+                  ? "border-white/5 bg-white/5 opacity-60 hover:opacity-95"
+                  : mastered
+                    ? "border-[var(--yellow)]/40 bg-[color-mix(in_oklch,var(--yellow)_10%,transparent)] shadow-[0_0_24px_rgba(245,158,11,0.18)]"
+                    : learning
+                      ? "border-[var(--teal)]/40 bg-[color-mix(in_oklch,var(--teal)_10%,transparent)]"
+                      : struggling
+                        ? "border-[var(--coral)]/40 bg-[color-mix(in_oklch,var(--coral)_10%,transparent)]"
+                        : "border-white/10 bg-white/5",
               )}
               style={{
                 animation: mastered
@@ -632,38 +644,56 @@ function Constellation({
                 <span
                   className={cn(
                     "grid size-7 place-items-center rounded-full text-white shadow-[0_0_12px_rgba(255,255,255,0.18)]",
-                    mastered
-                      ? "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]"
-                      : learning
-                        ? "bg-gradient-to-br from-[var(--teal)] to-[var(--blue)]"
-                        : struggling
-                          ? "bg-gradient-to-br from-[var(--coral)] to-[var(--pink)]"
-                          : "bg-white/15",
+                    c.isLocked
+                      ? "bg-muted text-muted-foreground border border-border/30"
+                      : mastered
+                        ? "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]"
+                        : learning
+                          ? "bg-gradient-to-br from-[var(--teal)] to-[var(--blue)]"
+                          : struggling
+                            ? "bg-gradient-to-br from-[var(--coral)] to-[var(--pink)]"
+                            : "bg-white/15",
                   )}
                 >
-                  <Star
-                    size={12}
-                    fill={mastered ? "currentColor" : "none"}
-                    className={cn(mastered ? "text-white" : "text-white/70")}
-                    strokeWidth={2.5}
-                  />
+                  {c.isLocked ? (
+                    <Lock size={11} className="text-muted-foreground/85" />
+                  ) : (
+                    <Star
+                      size={12}
+                      fill={mastered ? "currentColor" : "none"}
+                      className={cn(mastered ? "text-white" : "text-white/70")}
+                      strokeWidth={2.5}
+                    />
+                  )}
                 </span>
                 <span className="font-heading text-[11px] font-bold tabular-nums text-white/90">
-                  {masteryPct}%
+                  {c.isLocked ? "🔒" : `${masteryPct}%`}
                 </span>
               </div>
               <p className="mt-2 line-clamp-2 text-[12px] font-bold leading-snug text-white">
                 {c.name}
               </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/60">
-                {c.status === "MASTERED"
-                  ? "Dikuasai"
-                  : c.status === "LEARNING"
-                    ? "Lagi dipelajari"
-                    : c.status === "STRUGGLING"
-                      ? "Butuh bantuan"
-                      : "Belum mulai"}
+              <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/60">
+                {c.isLocked
+                  ? "Terkunci"
+                  : c.status === "MASTERED"
+                    ? "Dikuasai"
+                    : c.status === "LEARNING"
+                      ? "Lagi dipelajari"
+                      : c.status === "STRUGGLING"
+                        ? "Butuh bantuan"
+                        : "Belum mulai"}
               </p>
+              {c.isLocked && c.unmetPrerequisites.length > 0 && (
+                <div className="mt-2 border-t border-white/5 pt-1.5">
+                  <p className="text-[8.5px] font-semibold text-amber-400 leading-tight">
+                    Butuh: {c.unmetPrerequisites[0].name}
+                  </p>
+                  <p className="text-[7.5px] text-white/40 leading-none mt-0.5">
+                    (Klik untuk latihan)
+                  </p>
+                </div>
+              )}
               <ArrowUpRight
                 size={12}
                 className="absolute right-2 bottom-2 text-white/40 transition-transform group-hover/cs:translate-x-0.5 group-hover/cs:-translate-y-0.5 group-hover/cs:text-white/80"

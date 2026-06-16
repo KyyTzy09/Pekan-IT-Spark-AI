@@ -11,6 +11,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
+import {
+  type BadgeUnlock,
+  useBadgeCelebration,
+} from "@/components/student/badge-unlock-provider";
 import { ChallengeItemRenderer } from "@/components/student/challenge/challenge-item-renderer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -84,16 +88,26 @@ interface ChallengeDetailViewProps {
   onCompleteItem: (
     itemId: string,
     answer?: string,
-  ) => Promise<{ ok: boolean; error?: string; challengeCompleted?: boolean }>;
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    challengeCompleted?: boolean;
+    unlockedBadges?: BadgeUnlock[];
+  }>;
   onMarkMaterialRead: (
     materialId: string,
     readSeconds: number,
     completed: boolean,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{ ok: boolean; error?: string; unlockedBadges?: BadgeUnlock[] }>;
   onSubmitReflection: (
     challengeId: string,
     response: string,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    unlockedBadges?: BadgeUnlock[];
+    analysis?: { sentiment: string; depth: string; suggestions: string[] };
+  }>;
 }
 
 const STATUS_META: Record<
@@ -141,6 +155,7 @@ export function ChallengeDetailView({
   onSubmitReflection,
 }: ChallengeDetailViewProps) {
   const router = useRouter();
+  const { showBadges } = useBadgeCelebration();
   const [localStatus, setLocalStatus] = React.useState(challenge.status);
   const [_busy, setBusy] = React.useState(false);
 
@@ -160,6 +175,9 @@ export function ChallengeDetailView({
     if (res.ok) {
       router.refresh();
       if (res.challengeCompleted) setLocalStatus("COMPLETED");
+      if (res.unlockedBadges?.length) {
+        showBadges(res.unlockedBadges);
+      }
     }
     return res;
   };
@@ -183,7 +201,12 @@ export function ChallengeDetailView({
     setBusy(true);
     const res = await onSubmitReflection(challengeId, response);
     setBusy(false);
-    if (res.ok) router.refresh();
+    if (res.ok) {
+      router.refresh();
+      if (res.unlockedBadges?.length) {
+        showBadges(res.unlockedBadges);
+      }
+    }
     return res;
   };
 
@@ -192,7 +215,10 @@ export function ChallengeDetailView({
     readSeconds: number,
     completed: boolean,
   ) => {
-    await onMarkMaterialRead(materialId, readSeconds, completed);
+    const res = await onMarkMaterialRead(materialId, readSeconds, completed);
+    if (res?.ok && res.unlockedBadges?.length) {
+      showBadges(res.unlockedBadges);
+    }
   };
 
   return (

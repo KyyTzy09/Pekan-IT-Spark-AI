@@ -9,7 +9,13 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  if (!session?.user?.id) {
+    redirect("/auth/login");
+  }
+  if (session.user.role === "PARENT") {
+    redirect("/parent");
+  }
+  if (session.user.role !== "STUDENT") {
     redirect("/auth/login");
   }
 

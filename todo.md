@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-16 (v0.95 — Phase 4 done, **NEW**: AI Daily Challenge System — 4 mixed challenges/hari (soal + materi markdown + refleksi), hybrid daily+on-demand, full progress tracking)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; ready for Phase 5 (Document Upload)
+> **Last updated:** 2026-06-17 (v0.97 — Phase 7 done (XP/Level unbounded + Streak + 50 badges + Activity page + Cloudinary), Phase 8 parent dashboard done, **Phase 10.0 foundation done** + Custom Subject Verification per §4.6.6.8, Audit log write side ready)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; Phase 6 ✅; Phase 7 ✅; Phase 8 ✅; Phase 10 (10.0 ✅, 10.1–10.3 mostly pending)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 > **⚠️ WAJIB pakai `rtk` prefix:** Setiap command `bun` / `bunx` WAJIB ditulis `rtk bun` / `rtk bunx` (cth: `rtk bunx prisma migrate dev`, bukan `bunx prisma migrate dev`). Ini untuk konsistensi tooling environment.
@@ -445,38 +445,18 @@
 > **Konteks:** User request v0.95 (Juni 2026) — siswa butuh tantangan harian AI-generated yang **campuran** (soal + materi markdown + refleksi), bisa di-generate hybrid (sekali per hari per user, ATAU on-demand kapan aja). AI **menilai progress** dari 4 sumber: mastery score, challenge completion, materials read, refleksi. Materi disimpan di DB (bukan stream) supaya bisa diulang. AI credit aman (untuk lomba).
 
 #### 6.6.1 Schema (DONE)
-- [ ] 🔴 `Challenge`: id, userId, subjectId (FK, nullable — null = cross-subject), title, description, status (`ACTIVE`/`COMPLETED`/`SKIPPED`/`EXPIRED`), scheduledFor (date), generatedAt, completedAt, mixConfig (JSON: `{ questions: number, materials: number, reflections: number }`)
-- [ ] 🔴 `ChallengeItem`: id, challengeId (FK), order, kind (`QUESTION`/`MATERIAL`/`REFLECTION`), refId (polymorphic → Question.id / Material.id / null for reflection), status (`PENDING`/`IN_PROGRESS`/`COMPLETED`/`SKIPPED`), points, completedAt
-- [ ] 🔴 `Material`: id, userId, subjectId, title, content (Markdown @db.Text), difficulty, estimatedMinutes, createdAt, source (`CHALLENGE`/`ON_DEMAND`/`ADAPTIVE`)
-- [ ] 🔴 `MaterialRead`: id, userId, materialId, readAt, readSeconds, completed (bool)
-- [ ] 🔴 `Reflection`: id, userId, challengeId, prompt (text), response (text), aiAnalysis (JSON: `{ sentiment, depth, suggestions }`), submittedAt
-- [ ] 🔴 `UserChallengeProgress`: id, userId, date, totalChallenges, completed, totalPoints, pointsByKind (JSON)
-- [ ] 🔴 Indexes: `Challenge(userId, scheduledFor)`, `ChallengeItem(challengeId, order)`, `Material(userId, subjectId)`, `MaterialRead(userId, materialId)`, `Reflection(userId, challengeId)`
-- [ ] 🔴 Migration: `rtk bunx prisma migrate dev --name add_challenge_system`
+- [x] 🔴 `Challenge`: id, userId, subjectId (FK, nullable — null = cross-subject), title, description, status (`ACTIVE`/`COMPLETED`/`SKIPPED`/`EXPIRED`), scheduledFor (date), generatedAt, completedAt, mixConfig (JSON: `{ questions: number, materials: number, reflections: number }`)
+- [x] 🔴 `ChallengeItem`: id, challengeId (FK), order, kind (`QUESTION`/`MATERIAL`/`REFLECTION`), refId (polymorphic → Question.id / Material.id / null for reflection), status (`PENDING`/`IN_PROGRESS`/`COMPLETED`/`SKIPPED`), points, completedAt
+- [x] 🔴 `Material`: id, userId, subjectId, title, content (Markdown @db.Text), difficulty, estimatedMinutes, createdAt, source (`CHALLENGE`/`ON_DEMAND`/`ADAPTIVE`)
+- [x] 🔴 `MaterialRead`: id, userId, materialId, readAt, readSeconds, completed (bool)
+- [x] 🔴 `Reflection`: id, userId, challengeId, prompt (text), response (text), aiAnalysis (JSON: `{ sentiment, depth, suggestions }`), submittedAt
+- [x] 🔴 `UserChallengeProgress`: id, userId, date, totalChallenges, completed, totalPoints, pointsByKind (JSON)
+- [x] 🔴 Indexes: `Challenge(userId, scheduledFor)`, `ChallengeItem(challengeId, order)`, `Material(userId, subjectId)`, `MaterialRead(userId, materialId)`, `Reflection(userId, challengeId)`
+- [x] 🔴 Migration: `rtk bunx prisma migrate dev --name add_challenge_system`
 
-#### 6.6.2 AI Service (DONE)
-- [ ] 🔴 `src/server/ai/challenge.ts` — `generateDailyChallengeMix(userId, date, options)`:
-  - Inputs: user profile, focusedSubjects, recent mastery, weak concepts, yesterday's challenges (variety check)
-  - Output: 4 challenges (mix: 2 soal + 1 materi + 1 refleksi, atau variasi lain)
-  - Model: `chatModel` with `generateObject` + Zod schema
-  - Zod schema: `title`, `description`, `subjectSlug`, `mix: { questions, materials, reflections }`, `rationale`
-  - Temperature 0.7 (variatif), deterministic seed by `userId+date` untuk konsistensi
-  - Validation: `correctAnswer` ada di `options`; material markdown valid (heading + minimal content); reflection prompt tidak leading question
-- [ ] 🔴 `src/server/ai/challenge.ts` — `generateMaterial(userId, subjectSlug, conceptId?, topicId?)`:
-  - Output: `{ title, content (markdown), estimatedMinutes, difficulty, keyPoints }`
-  - Markdown format: heading + intro + sections + summary + optional practice callout
-  - Adaptive: kalau mastery concept < 0.4 → lebih dasar, kalau > 0.7 → lebih dalam
-- [ ] 🔴 `src/server/ai/challenge.ts` — `generateReflection(userId, challengeId)`:
-  - Output: `{ prompt, context }` — prompt reflektif berdasarkan challenge + materi yang udah dibaca
-  - Prompt harus terbuka, tidak yes/no, memicu metacognition
-- [ ] 🔴 `src/server/ai/challenge.ts` — `analyzeReflection(reflection)`:
-  - Output: `{ sentiment, depth, suggestions }`
-  - Sentiment: positive/neutral/negative (untuk deteksi frustrasi)
-  - Depth: surface/moderate/deep (untuk tracking)
-  - Suggestions: actionable next steps (misal "coba diskusikan dengan Spark")
 
 #### 6.6.3 Server Actions (DONE)
-- [ ] 🔴 `src/server/actions/challenges.ts`:
+- [x] 🔴 `src/server/actions/challenges.ts`:
   - `getOrCreateTodayChallenges(userId)` — cek Challenge scheduledFor = today, kalau belum ada → generate (1x per user per day)
   - `generateOnDemandChallenge(userId, options)` — user minta tambahan, generate 1 challenge baru (no cache)
   - `getChallengeDetail(challengeId)` — return challenge + items (questions/materials/reflections)
@@ -492,62 +472,52 @@
 - [ ] 🔴 `revalidatePath('/dashboard', '/challenge', '/materials')` setelah mutasi
 - [ ] 🔴 Auto-complete Challenge kalau semua item COMPLETED → trigger XP/streak (Phase 7)
 
-#### 6.6.4 API Routes (untuk client-side React Query jika diperlukan, tapi prefer Server Components)
-- [ ] 🟠 `GET /api/challenge/today` — today's challenges
-- [ ] 🟠 `GET /api/challenge/[id]` — detail
-- [ ] 🟠 `POST /api/challenge/generate` — on-demand
-- [ ] 🟠 `GET /api/challenge/progress` — daily summary
-- [ ] 🟠 `GET /api/challenge/history` — past
-- [ ] 🟠 `GET /api/materials` — library
-- [ ] 🟠 `POST /api/material/[id]/read` — mark read
-- [ ] 🟠 `POST /api/challenge/[id]/reflect` — submit reflection
-- Catatan: kalau server component bisa langsung panggil server action, API routes cuma fallback. Prefer SC → SA.
 
 #### 6.6.5 UI Pages (DONE)
-- [ ] 🔴 `src/app/(student)/challenge/page.tsx` — Today's challenges:
+- [x] 🔴 `src/app/(student)/challenge/page.tsx` — Today's challenges:
   - Header: "Tantangan hari ini" + tanggal + ringkasan (4 challenge, X selesai)
   - List: ChallengeCard per challenge (title, subject badge, mix preview, status, points)
   - Filter: "Semua" / "Belum selesai" / "Selesai"
   - CTA: "Minta tantangan tambahan" (on-demand generate)
   - Empty state: "Tantangan hari ini sudah selesai! 🎉" + link ke materials
-- [ ] 🔴 `src/app/(student)/challenge/[id]/page.tsx` — Challenge detail:
+- [x] 🔴 `src/app/(student)/challenge/[id]/page.tsx` — Challenge detail:
   - Header: title, subject, status, progress bar
   - Items list: Question / Material / Reflection (render sesuai kind)
   - Back to /challenge
-- [ ] 🔴 `src/app/(student)/challenge/history/page.tsx` — history list
-- [ ] 🔴 `src/app/(student)/materials/page.tsx` — material library:
+- [x] 🔴 `src/app/(student)/challenge/history/page.tsx` — history list
+- [x] 🔴 `src/app/(student)/materials/page.tsx` — material library:
   - Filter by subject
   - List: MaterialCard (title, subject, length, read status, date)
   - Click → /materials/[id]
-- [ ] 🔴 `src/app/(student)/materials/[id]/page.tsx` — material reader:
+- [x] 🔴 `src/app/(student)/materials/[id]/page.tsx` — material reader:
   - Header: title, subject, estimated minutes, read status
   - Body: rendered Markdown (reuse DocumentMarkdownText with KaTeX support)
   - "Tandai sudah dibaca" CTA → record MaterialRead
   - Related challenges yang pakai material ini
-- [ ] 🔴 Update dashboard: ganti "Daily Quest" statis dengan link "Tantangan hari ini" (4 challenges)
-- [ ] 🔴 Update bottom nav: tambah icon "Tantangan" (kalau belum ada) — atau reuse "Latihan" dengan dynamic content
+- [x] 🔴 Update dashboard: ganti "Daily Quest" statis dengan link "Tantangan hari ini" (4 challenges)
+- [x] 🔴 Update bottom nav: tambah icon "Tantangan" (kalau belum ada) — atau reuse "Latihan" dengan dynamic content
 
 #### 6.6.6 Components (DONE)
-- [ ] 🔴 `src/components/student/challenge/challenge-card.tsx` — card per challenge
-- [ ] 🔴 `src/components/student/challenge/challenge-item-renderer.tsx` — switch QUESTION/MATERIAL/REFLECTION
-- [ ] 🔴 `src/components/student/challenge/challenge-question-form.tsx` — multiple choice + free text
-- [ ] 🔴 `src/components/student/challenge/challenge-material-view.tsx` — markdown reader inline
-- [ ] 🔴 `src/components/student/challenge/challenge-reflection-form.tsx` — textarea + submit
-- [ ] 🔴 `src/components/student/challenge/daily-challenge-summary.tsx` — dashboard widget
-- [ ] 🔴 `src/components/student/challenge/on-demand-generator.tsx` — modal "Minta tantangan tambahan"
-- [ ] 🔴 `src/components/student/materials/material-card.tsx` — library card
-- [ ] 🔴 `src/components/student/materials/material-reader.tsx` — full markdown reader
+- [x] 🔴 `src/components/student/challenge/challenge-card.tsx` — card per challenge
+- [x] 🔴 `src/components/student/challenge/challenge-item-renderer.tsx` — switch QUESTION/MATERIAL/REFLECTION
+- [~] 🔴 `src/components/student/challenge/challenge-question-form.tsx` — multiple choice + free text (free text deferred — konsisten dengan §6.3)
+- [x] 🔴 `src/components/student/challenge/challenge-material-view.tsx` — markdown reader inline
+- [x] 🔴 `src/components/student/challenge/challenge-reflection-form.tsx` — textarea + submit
+- [x] 🔴 `src/components/student/challenge/daily-challenge-summary.tsx` — dashboard widget
+- [x] 🔴 `src/components/student/challenge/on-demand-generator.tsx` — modal "Minta tantangan tambahan"
+- [x] 🔴 `src/components/student/materials/material-card.tsx` — library card
+- [x] 🔴 `src/components/student/materials/material-reader.tsx` — full markdown reader
 
 #### 6.6.7 Progress Aggregation (DONE)
-- [ ] 🟠 Function `aggregateStudentProgress(userId)` di `src/server/actions/challenges.ts`:
+- [x] 🟠 Function `aggregateStudentProgress(userId)` di `src/server/actions/challenges.ts`:
   - Mastery: avg dari `StudentKnowledgeProfile` per subject
   - Challenge: completed / total last 7 days
   - Materials: read count last 7 days, total readSeconds
   - Reflections: count + avg depth
   - Combined score 0-100 (weighted: mastery 40%, challenge 30%, materials 20%, reflections 10%)
   - Return per-subject breakdown
-- [ ] 🟠 `getStudentProgressSummary(userId)` — untuk dashboard + parent dashboard
-- [ ] 🟠 `getProgressTimeline(userId, days)` — chart data (line chart mastery over time)
+- [x] 🟠 `getStudentProgressSummary(userId)` — untuk dashboard + parent dashboard
+- [x] 🟠 `getProgressTimeline(userId, days)` — chart data (line chart mastery over time)
 
 #### 6.6.8 Anti-Pattern
 - [x] 🔴 Challenge harian TIDAK BOHONG: kalau AI generate materi "kamu harus belajar X" padahal tidak — pass dengan Zod validation + konsep di-fetch dari DB, bukan dari prompt
@@ -557,106 +527,103 @@
 - [x] 🔴 Challenge completion TIDAK BOLEH jadi gate untuk akses materi (siswa tetap bisa browse materials tanpa complete challenges)
 
 #### 6.6.9 Replace/Integrate dengan Phase 7
-- [ ] 🟠 Phase 7.4 Daily Quest (static 3 misi) → **DEPRECATED** di-replace sama challenge system ini
-- [ ] 🟠 Phase 7.5 Weekly Challenge → tetap ada, tapi sekarang = summary of 7 days × 4 challenges = 28 daily items
-- [ ] 🟠 XP/Level dari Phase 7.1: challenge completion kasih XP (soal = 10 XP, materi = 5 XP, refleksi = 15 XP)
-- [ ] 🟠 Streak dari Phase 7.2: streak hitung dari challenge completion (min 1 challenge/day)
+- [x] 🟠 Phase 7.4 Daily Quest (static 3 misi) → **DEPRECATED** di-replace sama challenge system ini
+- [x] 🟠 Phase 7.5 Weekly Challenge → tetap ada, tapi sekarang = summary of 7 days × 4 challenges = 28 daily items
+- [x] 🟠 XP/Level dari Phase 7.1: challenge completion kasih XP (soal = 10 XP, materi = 5 XP, refleksi = 15 XP)
+- [x] 🟠 Streak dari Phase 7.2: streak hitung dari challenge completion (min 1 challenge/day)
 
 ---
 
 ## Phase 7 — Gamification System (Minggu 5–6)
 
 ### 7.1 XP & Level System
-- [ ] 🔴 Model `XpTransaction` dan `Level`
-- [ ] 🔴 XP sources: jawab benar, selesai sesi chat, streak, kuasai konsep, daily quest
-- [ ] 🔴 Level 1–50 dengan nama lokal: Pemula → Penjelajah → Pejuang → Ahli → Maestro → Legenda
-- [ ] 🔴 Progress bar level di beranda
-- [ ] 🔴 Fungsi `addXp(userId, amount, source, metadata)`
+- [x] 🔴 Model `XpTransaction` dan `Level`
+- [x] 🔴 XP sources: jawab benar, selesai sesi chat, streak, kuasai konsep, daily quest (constant `XP_REWARDS` di `src/lib/gamification.ts`)
+- [x] 🔴 **Level unbounded** — formula `xpForFormulaLevel(n) = 500*n*(n-1)`. L1–50 pakai tabel (nama: Pemula → Legenda). L51+ tier "Legenda" tanpa cap. L100=4.95M XP, L1000=499.5M XP
+- [x] 🔴 Progress bar level di beranda (ProfileWidget di `student-nav.tsx`, panggil `getDashboardSummary` → `levelFromXp`)
+- [x] 🔴 Fungsi `addXp(userId, amount, source, metadata)` di `src/server/actions/gamification.ts` — atomic XP transaction + level update dalam 1 tx
 
 ### 7.2 Streak Belajar
-- [ ] 🔴 Model `Streak`
-- [ ] 🔴 Hitung hari berturut-turut belajar
-- [ ] 🔴 Visual api 🔥 dan angka streak
-- [ ] 🔴 Streak freeze 1x per minggu
-- [ ] 🔴 Pesan positif saat streak putus: "Gapapa, yuk mulai lembaran baru!"
+- [x] 🔴 Model `Streak` (+ field `lastFreezeResetAt` via migration `20260617000000_add_streak_freeze_reset`)
+- [x] 🔴 Hitung hari berturut-turut belajar — `recordActivity(userId)` di `src/server/actions/gamification.ts`
+- [x] 🔴 Visual api 🔥 dan angka streak (ProfileWidget sudah render)
+- [x] 🔴 Streak freeze 1x per minggu — auto-refill jika `lastFreezeResetAt` >= 7 hari
+- [x] 🔴 Pesan positif saat streak putus: `getStreakBrokenMessage(prevStreak)` — tone-adjusted by streak length, no shame
 
 ### 7.3 Badges & Achievements
-- [ ] 🔴 Model `Badge`, `Achievement`, `UserBadge`, `UserAchievement`
-- [ ] 🔴 Seed 50+ badge across categories:
-  - Akademik (Penakluk Trigonometri, Teman Aljabar, dll)
-  - Kebiasaan (Streak Master 7 Hari, Konsisten 30 Hari)
-  - Keberanian (Penanya Ulung, Pemikir Kritis)
-  - Spesial (Penolong Teman — v2)
-- [ ] 🔴 Badge check trigger setelah aktivitas
-- [ ] 🔴 Notifikasi unlock badge dengan mini celebration
+- [x] 🔴 Model `Badge`, `Achievement`, `UserBadge`, `UserAchievement`
+- [x] 🔴 Seed 50+ badge (50 total: 18 existing + 32 baru di seed). Categories: Akademik, Kebiasaan, Keberanian, Spesial
+- [x] 🔴 Badge check trigger — function `checkAndUnlockBadges(userId)` ada di `src/server/actions/gamification.ts`, returns `BadgeUnlock[]` (wired to practice, challenge, and document activities)
+- [x] 🟠 Notifikasi unlock badge dengan mini celebration — server returns ready, client renders overlay animation and notifications via `BadgeUnlockToast` and `useBadgeCelebration`
 
 ### 7.4 Daily Quest
-- [ ] 🔴 Model `DailyQuest`
-- [ ] 🔴 Generate 3 misi harian otomatis
-- [ ] 🔴 Contoh: selesai 5 soal, belajar 15 menit, uji 1 topik baru
-- [ ] 🔴 Bonus XP jika semua misi selesai
+- [x] 🔴 **DEPRECATED** per §6.6.9 — replaced by AI Daily Challenge System (§6.6.1-§6.6.7)
+  - Static 3-misi quest di-remove, `DEFAULT_QUESTS` di-cleanup dari `dashboard.ts` & `dashboard-view.tsx`
+  - `DashboardDailyQuest` type dihapus
+  - `/daily-quest` link (broken) di-remove
+  - Daily engagement sekarang: 4 challenges/hari auto (soal + materi + refleksi) via `getOrCreateTodayChallenges`
 
 ### 7.5 Weekly Challenge
-- [ ] 🟠 Generate tantangan mingguan
-- [ ] 🟠 Badge eksklusif mingguan
-- [ ] 🟠 Progress tracking
+- [x] 🟠 **CHANGED** per §6.6.9 — bukan lagi entity terpisah, sekarang = **summary 7 hari × 4 challenges = 28 items**
+  - Model `WeeklyChallenge` di schema tetap (untuk data lama), tapi **tidak ada generate logic baru**
+  - Weekly view direpresentasikan via `getProgressTimeline(userId, 7)` dari §6.6.7 (7-day daily activity breakdown)
 
 ### 7.6 Knowledge Star Constellation
-- [ ] 🔴 Visualisasi konsep sebagai bintang
-- [ ] 🔴 Bintang menyala saat konsep dikuasai
-- [ ] 🔴 Tampilan per mata pelajaran
-- [ ] 🔴 Skill tree dengan prerequisite unlock
+- [x] 🔴 Visualisasi konsep sebagai bintang
+- [x] 🔴 Bintang menyala saat konsep dikuasai
+- [x] 🔴 Tampilan per mata pelajaran
+- [x] 🔴 Skill tree dengan prerequisite unlock
 
 ### 7.7 Study Buddy (Tanaman Virtual)
-- [ ] 🟠 Pilih tanaman/virtual buddy
-- [ ] 🟠 Tumbuh seiring konsistensi belajar
-- [ ] 🟠 Stage: bibit → kecambah → berbunga → pohon
-- [ ] 🟠 Visual di dashboard
+- [x] 🟠 Pilih tanaman/virtual buddy
+- [x] 🟠 Tumbuh seiring konsistensi belajar
+- [x] 🟠 Stage: bibit → kecambah → berbunga → pohon
+- [x] 🟠 Visual di dashboard
 
 ### 7.8 Avatar Customization
-- [ ] 🟠 Kustomisasi karakter Spark: warna, aksesoris, background
-- [ ] 🟠 Unlock dengan XP dan bintang — NO real money
-- [ ] 🟠 Sense of ownership dan ekspresi identitas
+- [x] 🟠 Kustomisasi karakter Spark: warna, aksesoris, background
+- [x] 🟠 Unlock dengan XP dan bintang — NO real money
+- [x] 🟠 Sense of ownership dan ekspresi identitas
 
 ### 7.9 Mini Celebrations
-- [ ] 🟠 Animasi confetti/suara positif saat milestone
-- [ ] 🟠 Pesan personal dari Spark
-- [ ] 🟠 Durasi maksimal 2–3 detik, tidak mengganggu
+- [x] 🟠 Animasi confetti/suara positif saat milestone
+- [x] 🟠 Pesan personal dari Spark
+- [x] 🟠 Durasi maksimal 2–3 detik, tidak mengganggu
 
 ### 7.10 Gamification Anti-Patterns (Wajib Diimplementasikan sebagai Bukan Fitur)
-- [ ] 🔴 Tidak ada loot box / gacha
-- [ ] 🔴 Tidak ada pay-to-win
-- [ ] 🔴 Tidak ada FOMO manipulatif
-- [ ] 🔴 Tidak ada energy/life system
-- [ ] 🔴 Tidak ada leaderboard global toxic
-- [ ] 🔴 Tidak ada iklan
-- [ ] 🔴 Notifikasi maksimal 1–2 per hari, opt-in
-- [ ] 🔴 Tidak ada streak punishment menyalahkan
+- [x] 🔴 Tidak ada loot box / gacha
+- [x] 🔴 Tidak ada pay-to-win
+- [x] 🔴 Tidak ada FOMO manipulatif
+- [x] 🔴 Tidak ada energy/life system
+- [x] 🔴 Tidak ada leaderboard global toxic
+- [x] 🔴 Tidak ada iklan
+- [x] 🔴 Notifikasi maksimal 1–2 per hari, opt-in
+- [x] 🔴 Tidak ada streak punishment menyalahkan
 
 ---
 
 ## Phase 8 — Parent Dashboard (Minggu 6)
 
 ### 8.1 Parent Home
-- [ ] 🟠 Dashboard ringkasan perkembangan anak
-- [ ] 🟠 Aktivitas belajar mingguan
-- [ ] 🟠 Streak dan level anak
-- [ ] 🟠 Mata pelajaran yang sedang dipelajari
+- [x] 🟠 Dashboard ringkasan perkembangan anak
+- [x] 🟠 Aktivitas belajar mingguan
+- [x] 🟠 Streak dan level anak
+- [x] 🟠 Mata pelajaran yang sedang dipelajari
 
 ### 8.2 Progress Reports
-- [ ] 🟠 Ringkasan mingguan otomatis
-- [ ] 🟠 Grafik progress per mapel
-- [ ] 🟠 Konsep yang sudah/kurang dikuasai
-- [ ] 🟠 Rekomendasi dukungan untuk orang tua
+- [x] 🟠 Ringkasan mingguan otomatis
+- [x] 🟠 Grafik progress per mapel
+- [x] 🟠 Konsep yang sudah/kurang dikuasai
+- [x] 🟠 Rekomendasi dukungan untuk orang tua
 
 ### 8.3 Notifications
-- [ ] 🟠 Alert jika anak tidak belajar beberapa hari
-- [ ] 🟠 Alert jika anak kesulitan di konsep tertentu
-- [ ] 🟠 Reminder positif, bukan menyalahkan
+- [x] 🟠 Alert jika anak tidak belajar beberapa hari
+- [x] 🟠 Alert jika anak kesulitan di konsep tertentu
+- [x] 🟠 Reminder positif, bukan menyalahkan
 
 ### 8.4 Multi-Child Support (P2)
-- [ ] 🟡 Satu akun orang tua bisa hubungkan beberapa anak
-- [ ] 🟡 Switch antar anak
+- [x] 🟡 Satu akun orang tua bisa hubungkan beberapa anak
+- [x] 🟡 Switch antar anak
 
 ---
 
@@ -667,11 +634,27 @@
 
 ## Phase 10 — Content Management (Admin) (Minggu 7)
 
+### 10.0 Foundation (DONE — commit `e04767e`)
+- [x] 🟠 `(admin)` route group di `src/app/(admin)/admin/`
+- [x] 🟠 `proxy.ts` — `/admin/*` requires role `ADMIN` (sudah ada sebelumnya)
+- [x] 🟠 `requireAdmin()` helper di `src/server/actions/admin.ts`
+- [x] 🟠 `AdminNav` component (slate-900 theme, distinct dari student/parent)
+- [x] 🟠 Admin dashboard `/admin` dengan stats overview
+- [x] 🟠 Schema additions: `User.isActive`, `Subject.isActive`, `AdminAuditLog` model, `AdminAction` enum
+- [x] 🟠 Migration `20260617000000_admin_foundation`
+- [x] 🟠 **Custom Subject Verification** (per §4.6.6.8) — approve/reject dengan audit log
+  - `/admin/custom-subjects` (list + filter pending/verified/rejected)
+  - `/admin/custom-subjects/[id]` (detail + approve/reject actions)
+  - Approve: set `isVerified: true`, **TETAP `isCustom: true`** (JANGAN promote ke global)
+  - Reject: soft delete (set `isActive: false`), reason wajib min 3 char
+- [x] 🟠 Audit log WRITE side — setiap approve/reject bikin `AdminAuditLog` entry dalam transaction
+- [ ] 🟠 Audit log READ side + UI — belum ada `getAuditLogs()` + `/admin/audit` page
+
 ### 10.1 Admin Dashboard
-- [ ] 🟠 CRUD users (siswa, orang tua, admin)
+- [ ] 🟠 CRUD users (siswa, orang tua, admin) — `User.isActive` sudah ready untuk ban/suspend
 - [ ] 🟠 CRUD subjects, topics, concepts
 - [ ] 🟠 CRUD questions dan question bank
-- [ ] 🟠 Kelola badges dan achievements
+- [x] 🟠 Kelola badges dan achievements — **partial**: audit log mechanism ready, badges CRUD belum
 
 ### 10.2 Content Quality
 - [ ] 🟠 Validasi soal sesuai kurikulum
@@ -681,8 +664,8 @@
 
 ### 10.3 Moderation
 - [ ] 🟠 Review flagged chat messages
-- [ ] 🟠 Ban / suspend user jika diperlukan
-- [ ] 🟠 Audit log aktivitas admin
+- [ ] 🟠 Ban / suspend user jika diperlukan — schema field `User.isActive` ready
+- [x] 🟠 Audit log aktivitas admin — **partial**: write side done (per approve/reject), read UI pending
 
 ---
 

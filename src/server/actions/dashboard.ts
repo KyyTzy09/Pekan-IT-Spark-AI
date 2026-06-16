@@ -1,5 +1,6 @@
 import "server-only";
 
+import { levelFromXp } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 import type { SubjectSlug } from "../../../generated/prisma/client";
 
@@ -27,14 +28,6 @@ export type DashboardSubjectProgress = {
   notStartedConcepts: number;
   masteryPct: number;
   attemptCount: number;
-};
-
-export type DashboardDailyQuest = {
-  id: string;
-  title: string;
-  description: string;
-  xp: number;
-  emoji: string;
 };
 
 export type DashboardRecommendation = {
@@ -73,7 +66,6 @@ export type DashboardSummary = {
   totalMastered: number;
   totalConcepts: number;
   totalAttempts: number;
-  todayQuests: DashboardDailyQuest[];
   recommendation: DashboardRecommendation | null;
   recentDocuments: number;
 };
@@ -128,30 +120,6 @@ function pickSparkTip(): string {
   const idx = new Date().getDate() % SPARK_TIPS.length;
   return SPARK_TIPS[idx] ?? SPARK_TIPS[0] ?? "";
 }
-
-const DEFAULT_QUESTS: DashboardDailyQuest[] = [
-  {
-    id: "default-1",
-    title: "Selesaikan 5 soal",
-    description: "Pilih topik apa aja — yang penting konsisten.",
-    xp: 30,
-    emoji: "🎯",
-  },
-  {
-    id: "default-2",
-    title: "Belajar 15 menit",
-    description: "Chat bareng Spark atau baca materi. Tanpa jeda.",
-    xp: 20,
-    emoji: "⏱️",
-  },
-  {
-    id: "default-3",
-    title: "Uji 1 konsep baru",
-    description: "Coba konsep yang belum pernah kamu sentuh.",
-    xp: 25,
-    emoji: "✨",
-  },
-];
 
 export async function getDashboardSummary(
   userId: string,
@@ -215,26 +183,10 @@ export async function getDashboardSummary(
     ]);
 
   const totalXp = profile?.totalXp ?? 0;
-  const currentLevel = levels.find((l) => l.level === (profile?.level ?? 1));
-  const nextLevel = levels.find((l) => l.level === (profile?.level ?? 1) + 1);
+  const computed = levelFromXp(totalXp, levels);
   const levelInfo: DashboardLevelInfo = {
-    level: profile?.level ?? 1,
-    name: currentLevel?.name ?? "Pemula",
+    ...computed,
     totalXp,
-    currentMinXp: currentLevel?.minXp ?? 0,
-    nextMinXp: nextLevel?.minXp ?? null,
-    progress: nextLevel
-      ? Math.min(
-          100,
-          Math.max(
-            0,
-            ((totalXp - (currentLevel?.minXp ?? 0)) /
-              Math.max(1, nextLevel.minXp - (currentLevel?.minXp ?? 0))) *
-              100,
-          ),
-        )
-      : 100,
-    xpToNext: nextLevel ? Math.max(0, nextLevel.minXp - totalXp) : null,
   };
 
   const allConcepts = await prisma.concept.findMany({
@@ -393,7 +345,6 @@ export async function getDashboardSummary(
     totalMastered,
     totalConcepts: totalConceptsAll,
     totalAttempts: attempts,
-    todayQuests: DEFAULT_QUESTS,
     recommendation,
     recentDocuments: docs,
   };
@@ -515,6 +466,8 @@ export type TopicDetailSummary = {
     description: string | null;
     status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
     masteryScore: number;
+    isLocked: boolean;
+    unmetPrerequisites: Array<{ id: string; name: string }>;
   }>;
   totalConcepts: number;
   masteredConcepts: number;
@@ -531,7 +484,22 @@ export async function getTopicDetail(
       subject: true,
       concepts: {
         orderBy: { order: "asc" },
-        select: { id: true, name: true, slug: true, description: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          prerequisites: {
+            select: {
+              prerequisiteId: true,
+              prerequisite: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       },
     },
   });
@@ -543,8 +511,36 @@ export async function getTopicDetail(
   });
   const profileMap = new Map(profiles.map((p) => [p.conceptId, p]));
 
+  // Fetch all prerequisite profiles in one query to handle cross-topic dependencies
+  const allPrereqIds = topic.concepts.flatMap((c) =>
+    c.prerequisites.map((p) => p.prerequisiteId)
+  );
+  const prereqProfiles = allPrereqIds.length > 0
+    ? await prisma.studentKnowledgeProfile.findMany({
+        where: { userId, conceptId: { in: allPrereqIds } },
+        select: { conceptId: true, masteryScore: true },
+      })
+    : [];
+  const prereqMasteryMap = new Map(
+    prereqProfiles.map((p) => [p.conceptId, p.masteryScore])
+  );
+
   const concepts = topic.concepts.map((c) => {
     const p = profileMap.get(c.id);
+
+    const unmetPrerequisites = c.prerequisites
+      .filter((prereq) => {
+        const sameTopicProfile = profileMap.get(prereq.prerequisiteId);
+        const score = sameTopicProfile
+          ? sameTopicProfile.masteryScore
+          : (prereqMasteryMap.get(prereq.prerequisiteId) ?? 0);
+        return score < 0.7;
+      })
+      .map((prereq) => ({
+        id: prereq.prerequisiteId,
+        name: prereq.prerequisite.name,
+      }));
+
     return {
       id: c.id,
       name: c.name,
@@ -556,6 +552,8 @@ export async function getTopicDetail(
         | "MASTERED"
         | "STRUGGLING",
       masteryScore: p?.masteryScore ?? 0,
+      isLocked: unmetPrerequisites.length > 0,
+      unmetPrerequisites,
     };
   });
 

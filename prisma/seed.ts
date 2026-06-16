@@ -4123,6 +4123,223 @@ async function main() {
         category: "AKADEMIK" as const,
         xpReward: 200,
       },
+      // ===== Streak =====
+      {
+        name: "Streak Master 3 Hari",
+        description: "Belajar 3 hari berturut-turut",
+        category: "KEBIASAAN" as const,
+        xpReward: 30,
+      },
+      {
+        name: "Streak Master 30 Hari",
+        description: "Belajar 30 hari berturut-turut",
+        category: "KEBIASAAN" as const,
+        xpReward: 300,
+      },
+      {
+        name: "Streak Master 100 Hari",
+        description: "Belajar 100 hari berturut-turut",
+        category: "KEBIASAAN" as const,
+        xpReward: 1000,
+      },
+      {
+        name: "Konsisten 7 Hari",
+        description: "Streak aktif 7 hari",
+        category: "KEBIASAAN" as const,
+        xpReward: 50,
+      },
+      // ===== XP Milestones =====
+      {
+        name: "XP 100",
+        description: "Kumpulkan 100 XP",
+        category: "AKADEMIK" as const,
+        xpReward: 20,
+      },
+      {
+        name: "XP 500",
+        description: "Kumpulkan 500 XP",
+        category: "AKADEMIK" as const,
+        xpReward: 50,
+      },
+      {
+        name: "XP 1000",
+        description: "Kumpulkan 1.000 XP",
+        category: "AKADEMIK" as const,
+        xpReward: 100,
+      },
+      {
+        name: "XP 5000",
+        description: "Kumpulkan 5.000 XP",
+        category: "AKADEMIK" as const,
+        xpReward: 250,
+      },
+      {
+        name: "XP 10000",
+        description: "Kumpulkan 10.000 XP",
+        category: "AKADEMIK" as const,
+        xpReward: 500,
+      },
+      // ===== Mastery Milestones =====
+      {
+        name: "Konsep Pertama Dikuasai",
+        description: "Kuasai konsep pertamamu",
+        category: "AKADEMIK" as const,
+        xpReward: 30,
+      },
+      {
+        name: "5 Konsep Dikuasai",
+        description: "Kuasai 5 konsep",
+        category: "AKADEMIK" as const,
+        xpReward: 50,
+      },
+      {
+        name: "10 Konsep Dikuasai",
+        description: "Kuasai 10 konsep",
+        category: "AKADEMIK" as const,
+        xpReward: 100,
+      },
+      {
+        name: "25 Konsep Dikuasai",
+        description: "Kuasai 25 konsep",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "50 Konsep Dikuasai",
+        description: "Kuasai 50 konsep",
+        category: "AKADEMIK" as const,
+        xpReward: 400,
+      },
+      // ===== Quiz Milestones =====
+      {
+        name: "Soal Pertama Dijawab",
+        description: "Jawab soal pertamamu",
+        category: "KEBERANIAN" as const,
+        xpReward: 10,
+      },
+      {
+        name: "10 Soal Dijawab",
+        description: "Jawab 10 soal",
+        category: "KEBERANIAN" as const,
+        xpReward: 30,
+      },
+      {
+        name: "50 Soal Dijawab",
+        description: "Jawab 50 soal",
+        category: "KEBERANIAN" as const,
+        xpReward: 80,
+      },
+      {
+        name: "100 Soal Dijawab",
+        description: "Jawab 100 soal",
+        category: "KEBERANIAN" as const,
+        xpReward: 150,
+      },
+      {
+        name: "Akurasi 80% (10+ soal)",
+        description: "Pertahankan akurasi 80% di minimal 10 soal",
+        category: "KEBERANIAN" as const,
+        xpReward: 100,
+      },
+      {
+        name: "Akurasi 90% (25+ soal)",
+        description: "Pertahankan akurasi 90% di minimal 25 soal",
+        category: "KEBERANIAN" as const,
+        xpReward: 250,
+      },
+      // ===== Activity Milestones =====
+      {
+        name: "Tantangan Pertama Selesai",
+        description: "Selesaikan tantangan harian pertamamu",
+        category: "KEBIASAAN" as const,
+        xpReward: 25,
+      },
+      {
+        name: "10 Tantangan Selesai",
+        description: "Selesaikan 10 tantangan",
+        category: "KEBIASAAN" as const,
+        xpReward: 100,
+      },
+      {
+        name: "Materi Pertama Dibaca",
+        description: "Baca materi pertamamu",
+        category: "KEBIASAAN" as const,
+        xpReward: 20,
+      },
+      {
+        name: "10 Materi Dibaca",
+        description: "Baca 10 materi",
+        category: "KEBIASAAN" as const,
+        xpReward: 80,
+      },
+      {
+        name: "Refleksi Pertama",
+        description: "Tulis refleksi pertamamu",
+        category: "KEBERANIAN" as const,
+        xpReward: 30,
+      },
+      {
+        name: "10 Refleksi Ditulis",
+        description: "Tulis 10 refleksi",
+        category: "KEBERANIAN" as const,
+        xpReward: 150,
+      },
+      // ===== Additional Akademik =====
+      {
+        name: "Penjelajah Biologi",
+        description: "Kuasai semua konsep Biologi",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Penjelajah Fisika",
+        description: "Kuasai semua konsep Fisika",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Penjelajah Kimia",
+        description: "Kuasai semua konsep Kimia",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Ahli Coding",
+        description: "Kuasai semua konsep Coding",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Seniman Muda",
+        description: "Kuasai semua konsep Seni Budaya",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Atlet Pelajar",
+        description: "Kuasai semua konsep PJOK",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      // ===== Engagement =====
+      {
+        name: "Quiz Master",
+        description: "Selesaikan 10 quiz dengan skor 100%",
+        category: "AKADEMIK" as const,
+        xpReward: 300,
+      },
+      {
+        name: "Daily Champion",
+        description: "Selesaikan semua tantangan harian selama 7 hari berturut-turut",
+        category: "KEBIASAAN" as const,
+        xpReward: 400,
+      },
+      {
+        name: "Kolektor Mapel",
+        description: "Tambah 3 mapel custom ke koleksimu",
+        category: "SPESIAL" as const,
+        xpReward: 100,
+      },
     ].map((b) =>
       prisma.badge.upsert({ where: { name: b.name }, update: {}, create: b }),
     ),

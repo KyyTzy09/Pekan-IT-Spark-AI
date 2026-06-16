@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Activity,
   BookOpen,
   Brain,
   Calendar,
@@ -61,6 +62,13 @@ const SECTIONS: NavSection[] = [
         shortLabel: "Tantangan",
         icon: Sparkles,
         match: (p) => p.startsWith("/challenge"),
+      },
+      {
+        href: "/activity",
+        label: "Aktivitas",
+        shortLabel: "Aktivitas",
+        icon: Activity,
+        match: (p) => p.startsWith("/activity"),
       },
     ],
   },

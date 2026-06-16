@@ -1,0 +1,223 @@
+"use server";
+
+import { generateText } from "@/lib/ai";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getProgressTimeline } from "@/server/actions/challenges";
+import { getDashboardSummary } from "@/server/actions/dashboard";
+
+export type ParentAlert = {
+  id: string;
+  type: "inactivity" | "struggle" | "info";
+  title: string;
+  message: string;
+  severity: "info" | "warning";
+};
+
+export async function getParentDashboardData(activeStudentId?: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "UNAUTHORIZED" };
+  }
+  if (session.user.role !== "PARENT") {
+    return { ok: false, error: "FORBIDDEN" };
+  }
+
+  const parentId = session.user.id;
+
+  // 1. Fetch all linked children (ACCEPTED)
+  const links = await prisma.parentStudentLink.findMany({
+    where: {
+      parentId,
+      status: "ACCEPTED",
+    },
+    include: {
+      student: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (links.length === 0) {
+    return {
+      ok: true,
+      children: [],
+      activeChild: null,
+      summary: null,
+      timeline: null,
+      alerts: [],
+      aiRecommendation: null,
+    };
+  }
+
+  // 2. Select active child
+  let activeLink = links[0];
+  if (activeStudentId) {
+    const found = links.find((l) => l.studentId === activeStudentId);
+    if (found) {
+      activeLink = found;
+    }
+  }
+
+  const studentId = activeLink.studentId;
+  const studentName = activeLink.student.name ?? "Anak";
+
+  // 3. Fetch dashboard summary & progress timeline for active child
+  const [summary, timeline, _levels] = await Promise.all([
+    getDashboardSummary(studentId),
+    getProgressTimeline(studentId, 7),
+    prisma.level.findMany({
+      orderBy: { level: "asc" },
+      select: { level: true, name: true, minXp: true },
+    }),
+  ]);
+
+  // 4. Fetch struggling concepts
+  const struggling = await prisma.studentKnowledgeProfile.findMany({
+    where: {
+      userId: studentId,
+      masteryScore: { lt: 0.7 },
+    },
+    include: {
+      concept: {
+        select: {
+          id: true,
+          name: true,
+          topic: {
+            select: {
+              name: true,
+              subject: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { masteryScore: "asc" },
+    take: 5,
+  });
+
+  // 5. Generate notifications / alerts
+  const alerts: ParentAlert[] = [];
+
+  // Inactivity check: Check last activity date
+  const streak = await prisma.streak.findUnique({
+    where: { userId: studentId },
+    select: { updatedAt: true, currentStreak: true },
+  });
+
+  const now = new Date();
+  const lastActive = streak?.updatedAt ? new Date(streak.updatedAt) : null;
+  const inactiveDays = lastActive
+    ? Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24))
+    : 7; // default to a week if no activity record
+
+  if (
+    inactiveDays >= 2 ||
+    (streak && streak.currentStreak === 0 && inactiveDays >= 1)
+  ) {
+    alerts.push({
+      id: "inactivity-alert",
+      type: "inactivity",
+      title: "Pengingat Keaktifan Belajar",
+      message: `💡 Pengingat Santai: ${studentName} sudah ${inactiveDays > 0 ? `${inactiveDays} hari` : "beberapa waktu"} belum belajar nih. Yuk, kasih semangat hangat atau ajak ngobrol ringan tentang apa yang sedang dipelajarinya!`,
+      severity: "warning",
+    });
+  }
+
+  // Struggle concept checks
+  if (struggling.length > 0) {
+    for (const s of struggling.slice(0, 2)) {
+      const subjectName = s.concept.topic.subject.name;
+      alerts.push({
+        id: `struggle-${s.conceptId}`,
+        type: "struggle",
+        title: "Dukungan Belajar Dibutuhkan",
+        message: `💪 Dukungan Belajar: ${studentName} sedang berusaha keras memahami konsep '${s.concept.name}' di pelajaran ${subjectName}. Bunda/Ayah bisa bantu dengan menanyakan apakah ada bagian yang membingungkan atau belajar santai bersama.`,
+        severity: "info",
+      });
+    }
+  }
+
+  // If no warning/struggle alerts, push a positive reinforcement alert
+  if (alerts.length === 0) {
+    alerts.push({
+      id: "positive-reinforcement",
+      type: "info",
+      title: "Perkembangan Bagus!",
+      message: `🎉 Keren! ${studentName} konsisten belajar minggu ini dengan streak ${summary.streak.current} hari. Berikan pujian kecil atas usahanya hari ini ya!`,
+      severity: "info",
+    });
+  }
+
+  // 6. Generate positive AI recommendations for the parent
+  let aiRecommendation = "";
+  try {
+    const subjectsList = summary.subjects
+      .map((s) => `${s.name} (${s.masteryPct}% dikuasai)`)
+      .join(", ");
+    const strugglingList = struggling
+      .map(
+        (s) =>
+          `'${s.concept.name}' (pelajaran ${s.concept.topic.subject.name})`,
+      )
+      .join(", ");
+
+    const systemPrompt =
+      "Anda adalah Spark, AI konsultan pendidikan anak untuk orang tua. Berikan rekomendasi dukungan belajar yang hangat, ramah, dan positif.";
+    const userPrompt = `
+Nama anak: ${studentName}
+Mata pelajaran saat ini: ${subjectsList || "Belum ada mapel terpilih"}
+Konsep yang sedang dihadapi kesulitan: ${strugglingList || "Tidak ada kesulitan signifikan saat ini"}
+
+Berikan 3 poin rekomendasi dukungan yang konkret, santun, dan positif bagi orang tua untuk mendampingi anak dalam belajar. Pastikan nada bicaranya optimis, tidak menyalahkan anak, dan fokus pada kolaborasi/dukungan psikologis orang tua. Format output langsung berupa 3 paragraf pendek dengan bullet points.
+`;
+
+    const aiRes = await generateText({
+      model: "fast",
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.7,
+    });
+    aiRecommendation = aiRes.text.trim();
+  } catch (err) {
+    console.error("Gagal generate AI parent tips:", err);
+    aiRecommendation = `
+• **Ajak Ngobrol Santai**: Tanyakan kepada ${studentName} pelajaran apa yang paling menarik hari ini tanpa memberi tekanan ujian.
+• **Fokus pada Usaha, Bukan Hasil**: Berikan apresiasi pada konsistensi belajar harian ${studentName} dan bantu dia merasa nyaman jika menemui soal yang sulit.
+• **Ciptakan Ruang Kondusif**: Sediakan tempat belajar yang tenang dan bebas gangguan agar ${studentName} bisa lebih fokus menyelesaikan misi belajarnya.
+`.trim();
+  }
+
+  return {
+    ok: true,
+    children: links.map((l) => ({
+      id: l.student.id,
+      name: l.student.name,
+      email: l.student.email,
+    })),
+    activeChild: {
+      id: activeLink.student.id,
+      name: activeLink.student.name,
+      email: activeLink.student.email,
+    },
+    summary,
+    timeline,
+    alerts,
+    strugglingConcepts: struggling.map((s) => ({
+      id: s.conceptId,
+      name: s.concept.name,
+      subjectName: s.concept.topic.subject.name,
+      masteryScore: s.masteryScore,
+    })),
+    aiRecommendation,
+  };
+}
