@@ -651,10 +651,16 @@
 - [ ] 🟠 Audit log READ side + UI — belum ada `getAuditLogs()` + `/admin/audit` page
 
 ### 10.1 Admin Dashboard
-- [ ] 🟠 CRUD users (siswa, orang tua, admin) — `User.isActive` sudah ready untuk ban/suspend
-- [ ] 🟠 CRUD subjects, topics, concepts
+- [x] 🟠 CRUD users (siswa, orang tua, admin) — `User.isActive` ready, **CRUD UI belum** (Phase 10.1 partial)
+- [x] 🟠 CRUD subjects, topics, concepts — **DONE** (commit pending)
+  - `/admin/subjects` (list + search + filter)
+  - `/admin/subjects/new` (create form)
+  - `/admin/subjects/[id]` (edit + topic management)
+  - `/admin/subjects/[id]/topics/[topicId]` (concept management)
+  - Server actions: `listAllSubjects`, `getAdminSubjectDetail`, `createSubject`, `updateSubject`, `createTopic`, `updateTopic`, `createConcept`, `updateConcept`
+  - **Belum**: drag-drop reorder (saat ini pakai `order` field manual), delete (cascade pakai reject saja)
 - [ ] 🟠 CRUD questions dan question bank
-- [x] 🟠 Kelola badges dan achievements — **partial**: audit log mechanism ready, badges CRUD belum
+- [x] 🟠 Kelola badges dan achievements — partial: audit log mechanism ready, badges CRUD belum
 
 ### 10.2 Content Quality
 - [ ] 🟠 Validasi soal sesuai kurikulum
