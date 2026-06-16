@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logDocumentEvent } from "@/server/documents/audit";
 import { buildDocumentChatContext } from "@/server/documents/features";
 import { generateChatTitle, generateTutorStream } from "@/server/ai/tutor";
 
@@ -284,7 +285,20 @@ export async function sendMessage(input: {
         4,
       );
       if (hasContext) {
-        documentContext = `DOKUMEN YANG DIBICARAKAN: "${linkedDoc.originalName}"\n\n${context}\n\nATURAN: Jawab pertanyaan berdasarkan cuplikan di atas. Kalau ga ada jawabannya di cuplikan, bilang "Aku ga nemu jawabannya di dokumenmu" — jangan ngarang dari luar.`;
+        documentContext = `DOKUMEN YANG DIBICARAKAN: "${linkedDoc.originalName}"\n\n${context}\n\nATURAN: 
+- Jawab pertanyaan berdasarkan cuplikan di atas. Kalau ga ada jawabannya di cuplikan, bilang "Aku ga nemu jawabannya di dokumenmu" — jangan ngarang dari luar.
+- Gunakan metode Socratic: jangan kasih jawaban final langsung untuk soal/ujian. Bimbing dengan pertanyaan probing.
+- Selalu akhiri dengan pertanyaan terbuka untuk lanjutin dialog.`;
+        await logDocumentEvent({
+          documentId: linkedDoc.id,
+          userId,
+          action: "RAG_QUERY",
+          metadata: {
+            chatSessionId: session.id,
+            queryLength: input.content.length,
+            hasContext,
+          },
+        });
       }
     } catch (e) {
       console.warn("buildDocumentChatContext failed:", e);

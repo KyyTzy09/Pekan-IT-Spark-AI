@@ -12,6 +12,7 @@ import {
   ListChecks,
   Loader2,
   MessageCircle,
+  Share2,
   Sparkles,
   Trash2,
   UploadCloud,
@@ -31,6 +32,8 @@ import {
   generateDocumentQuizAction,
   getDocumentSummary,
   listDocuments,
+  listOwnedChats,
+  shareDocumentToChatSession,
   uploadDocument,
 } from "@/server/actions/documents";
 
@@ -86,6 +89,13 @@ export function UploadView({
   const [quizData, setQuizData] = React.useState<GeneratedQuiz | null>(null);
   const [quizLoading, setQuizLoading] = React.useState(false);
   const [quizError, setQuizError] = React.useState<string | null>(null);
+  const [shareFor, setShareFor] = React.useState<string | null>(null);
+  const [chats, setChats] = React.useState<
+    Array<{ id: string; title: string; subjectName: string | null }>
+  >([]);
+  const [chatsLoading, setChatsLoading] = React.useState(false);
+  const [shareError, setShareError] = React.useState<string | null>(null);
+  const [shareDone, setShareDone] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const refresh = React.useCallback(async () => {
@@ -254,6 +264,41 @@ export function UploadView({
     setQuizFor(null);
     setQuizData(null);
     setQuizError(null);
+  };
+
+  const onOpenShare = async (doc: DocumentListItem) => {
+    setShareFor(doc.id);
+    setChatsLoading(true);
+    setShareError(null);
+    setShareDone(null);
+    try {
+      const result = await listOwnedChats(20);
+      if (result.ok) setChats(result.sessions);
+      else setChats([]);
+    } finally {
+      setChatsLoading(false);
+    }
+  };
+
+  const closeShare = () => {
+    setShareFor(null);
+    setShareError(null);
+  };
+
+  const onConfirmShare = async (chatSessionId: string) => {
+    if (!shareFor) return;
+    setShareError(null);
+    const result = await shareDocumentToChatSession(shareFor, chatSessionId);
+    if (!result.ok) {
+      setShareError(result.error);
+      return;
+    }
+    setShareDone(chatSessionId);
+    await refresh();
+    window.setTimeout(() => {
+      setShareFor(null);
+      setShareDone(null);
+    }, 1500);
   };
 
   return (
@@ -467,6 +512,15 @@ export function UploadView({
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() => onOpenShare(doc)}
+                          className="h-7 rounded-full px-2.5 text-[11px]"
+                        >
+                          <Share2 size={11} className="mr-1" />
+                          Share ke chat
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => onDelete(doc.id)}
                           disabled={pendingDelete === doc.id}
                           className="h-7 rounded-full px-2.5 text-[11px] text-muted-foreground hover:text-rose-600"
@@ -492,12 +546,25 @@ export function UploadView({
         <div className="rounded-2xl border border-border/40 bg-card/60 p-4 text-[12px] leading-relaxed text-muted-foreground backdrop-blur-md">
           <div className="flex items-center gap-1.5 font-bold text-foreground">
             <BookOpen size={13} className="text-[var(--teal)]" />
-            Catatan privasi
+            Catatan privasi & kompatibilitas
           </div>
           <p className="mt-1">
             File yang kamu upload cuma dilihat oleh kamu dan Spark. Spark
             nyimpen teks hasil ekstrak (bukan file aslinya) buat bantu rangkum &
-            jawab pertanyaan kamu.
+            jawab pertanyaan kamu. Semua event (upload, share, ringkasan,
+            latihan) di-log buat audit (UU PDP).
+          </p>
+          <p className="mt-1.5">
+            <strong>PDF scan/foto:</strong> sementara ini belum support OCR otomatis
+            (akan ditambah di 5.4 advanced). Sementara itu, minta file PDF yg
+            searchable dari guru, atau convert ke DOCX dulu.
+          </p>
+          <p className="mt-1.5">
+            <strong>Rumus & tabel:</strong> rumus LaTeX-style ($...$ / $$...$$)
+            otomatis ke-render via KaTeX, tabel otomatis ke-detect & format
+            Markdown.{" "}
+            <strong>Wajib edukasi:</strong> dokumen untuk belajar saja — konten
+            di luar kurikulum akan ditolak otomatis.
           </p>
         </div>
       </Reveal>
@@ -522,6 +589,17 @@ export function UploadView({
         error={quizError}
         docName={documents.find((d) => d.id === quizFor)?.originalName}
         onClose={closeQuiz}
+      />
+
+      <ShareModal
+        open={shareFor !== null}
+        chats={chats}
+        chatsLoading={chatsLoading}
+        error={shareError}
+        done={shareDone}
+        docName={documents.find((d) => d.id === shareFor)?.originalName}
+        onClose={closeShare}
+        onConfirm={onConfirmShare}
       />
     </div>
   );
@@ -852,6 +930,136 @@ function QuizModal({
               >
                 Tutup
               </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function ShareModal({
+  open,
+  chats,
+  chatsLoading,
+  error,
+  done,
+  docName,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  chats: Array<{ id: string; title: string; subjectName: string | null }>;
+  chatsLoading: boolean;
+  error: string | null;
+  done: string | null;
+  docName: string | undefined;
+  onClose: () => void;
+  onConfirm: (chatSessionId: string) => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 30, scale: 0.97, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-border/40 bg-card/95 shadow-2xl backdrop-blur-xl sm:rounded-3xl"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-[var(--coral)]/15 blur-3xl"
+            />
+            <div className="relative flex items-start justify-between gap-3 border-b border-border/40 p-5">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--coral)_22%,transparent)] bg-[color-mix(in_oklch,var(--coral)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--coral)]">
+                  <Share2 size={10} strokeWidth={2.5} />
+                  Share ke chat
+                </span>
+                <h2 className="mt-2 font-heading text-[18px] font-bold leading-tight">
+                  {docName ?? "Pilih chat"}
+                </h2>
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Spark bakal jawab berdasarkan dokumen ini di chat yang kamu pilih.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-background/60 text-muted-foreground hover:bg-background"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="relative max-h-[60vh] overflow-y-auto p-3">
+              {chatsLoading && (
+                <div className="flex items-center gap-2 px-3 py-2.5 text-[12.5px] text-muted-foreground">
+                  <Loader2 size={13} className="animate-spin" />
+                  Lagi muat daftar chat...
+                </div>
+              )}
+              {!chatsLoading && chats.length === 0 && (
+                <p className="rounded-2xl border border-dashed border-border/60 bg-card/40 p-4 text-center text-[12.5px] text-muted-foreground">
+                  Belum ada chat. Mulai chat baru dulu dari menu{" "}
+                  <Link href="/chat" className="text-[var(--coral)] underline">
+                    Tanya Spark
+                  </Link>
+                  , nanti balik ke sini buat share dokumen.
+                </p>
+              )}
+              {error && (
+                <p className="rounded-2xl border border-rose-300/50 bg-rose-50/80 p-3 text-[12.5px] text-rose-900 dark:bg-rose-500/10 dark:text-rose-200">
+                  {error}
+                </p>
+              )}
+              {done && (
+                <div className="flex items-center gap-2 rounded-2xl border border-emerald-300/50 bg-emerald-50/80 px-3 py-2.5 text-[12.5px] text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  <CheckCircle2 size={14} />
+                  Berhasil! Dokumen ke-attach ke chat. Lanjut diskusi di sana.
+                </div>
+              )}
+              <ul className="mt-1 space-y-1">
+                {chats.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => onConfirm(c.id)}
+                      disabled={done !== null}
+                      className={cn(
+                        "group/chat flex w-full items-center gap-3 rounded-2xl border border-border/40 bg-background/60 p-3 text-left transition-all hover:border-border/70 hover:bg-background disabled:opacity-50",
+                      )}
+                    >
+                      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--coral)]/10 text-[var(--coral)]">
+                        <MessageCircle size={14} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold">
+                          {c.title}
+                        </p>
+                        {c.subjectName && (
+                          <p className="text-[10.5px] text-muted-foreground">
+                            {c.subjectName}
+                          </p>
+                        )}
+                      </div>
+                      <ChevronRight
+                        size={14}
+                        className="text-muted-foreground/50 group-hover/chat:text-[var(--coral)]"
+                      />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </motion.div>
         </motion.div>

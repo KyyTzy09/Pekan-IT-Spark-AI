@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logDocumentEvent } from "@/server/documents/audit";
+import { validateEducationalContent } from "@/server/documents/content-check";
 import {
   DocumentExtractionError,
   extractFromDocx,
@@ -161,6 +163,29 @@ export async function uploadDocument(
     };
   }
 
+  const contentCheck = validateEducationalContent(extracted.text);
+  if (!contentCheck.ok) {
+    await prisma.documentAuditLog
+      .create({
+        data: {
+          documentId: "PENDING",
+          userId,
+          action: "REJECTED",
+          metadata: {
+            reason: contentCheck.reason,
+            originalName: file.name,
+            size: file.size,
+          },
+        },
+      })
+      .catch(() => undefined);
+    return {
+      ok: false,
+      error: contentCheck.reason,
+      code: "REJECTED",
+    };
+  }
+
   const document = await prisma.document.create({
     data: {
       userId,
@@ -180,14 +205,46 @@ export async function uploadDocument(
     },
   });
 
+  await logDocumentEvent({
+    documentId: document.id,
+    userId,
+    action: "UPLOAD",
+    metadata: {
+      size: file.size,
+      mimeType: isPdf ? "PDF" : "DOCX",
+      pageCount: extracted.pageCount ?? null,
+      charCount: extracted.text.length,
+      mathRegions: extracted.mathRegions.length,
+      tables: extracted.tables.length,
+      chatSessionId: parsed.data.chatSessionId ?? null,
+    },
+  });
+  await logDocumentEvent({
+    documentId: document.id,
+    userId,
+    action: "PROCESS",
+    metadata: {
+      warnings: extracted.warnings,
+    },
+  });
+
   revalidatePath("/upload");
   revalidatePath("/chat");
 
   // Fire-and-forget chunked embeddings so RAG can be used immediately after
   // upload. Errors are logged but don't fail the upload.
-  void embedDocumentChunks(document.id, extracted.text).catch((e) => {
-    console.warn("embedDocumentChunks failed:", e);
-  });
+  void embedDocumentChunks(document.id, extracted.text)
+    .then((res) => {
+      void logDocumentEvent({
+        documentId: document.id,
+        userId,
+        action: "PROCESS",
+        metadata: { chunks: res.chunks, skipped: res.skipped, stage: "embed" },
+      });
+    })
+    .catch((e) => {
+      console.warn("embedDocumentChunks failed:", e);
+    });
 
   return {
     ok: true,
@@ -253,11 +310,17 @@ export async function deleteDocument(
   }
   const existing = await prisma.document.findFirst({
     where: { id: documentId, userId },
-    select: { id: true },
+    select: { id: true, originalName: true },
   });
   if (!existing) {
     return { ok: false, error: "Dokumen tidak ditemukan." };
   }
+  await logDocumentEvent({
+    documentId: existing.id,
+    userId,
+    action: "DELETE",
+    metadata: { originalName: existing.originalName },
+  });
   await prisma.document.delete({ where: { id: documentId } });
   revalidatePath("/upload");
   return { ok: true };
@@ -320,6 +383,15 @@ export async function getDocumentSummary(
       where: { id: doc.id },
       data: { summary: JSON.stringify(summary) },
     });
+    await logDocumentEvent({
+      documentId: doc.id,
+      userId,
+      action: "SUMMARY_GENERATED",
+      metadata: {
+        cached: false,
+        hasHomework: summary.hasHomework,
+      },
+    });
     return {
       ok: true,
       documentId: doc.id,
@@ -365,6 +437,12 @@ export async function generateDocumentQuizAction(
       doc.originalName,
       count,
     );
+    await logDocumentEvent({
+      documentId: doc.id,
+      userId,
+      action: "QUIZ_GENERATED",
+      metadata: { count: quiz.quiz.length },
+    });
     return {
       ok: true,
       documentId: doc.id,
@@ -437,4 +515,82 @@ export async function getDocumentRagContext(
     return { ok: true, documentId: doc.id, query, context: "" };
   }
   return { ok: true, documentId: doc.id, query, context };
+}
+
+export type ShareDocumentResult =
+  | { ok: true; documentId: string; chatSessionId: string }
+  | { ok: false; error: string };
+
+export async function shareDocumentToChatSession(
+  documentId: string,
+  chatSessionId: string,
+): Promise<ShareDocumentResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const [doc, session] = await Promise.all([
+    prisma.document.findFirst({
+      where: { id: documentId, userId },
+      select: { id: true, originalName: true },
+    }),
+    prisma.chatSession.findFirst({
+      where: { id: chatSessionId, userId },
+      select: { id: true },
+    }),
+  ]);
+  if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
+  if (!session) return { ok: false, error: "Chat session tidak ditemukan." };
+  await prisma.document.update({
+    where: { id: doc.id },
+    data: { chatSessionId: session.id },
+  });
+  await logDocumentEvent({
+    documentId: doc.id,
+    userId,
+    action: "SHARE_TO_CHAT",
+    metadata: { chatSessionId: session.id, originalName: doc.originalName },
+  });
+  revalidatePath("/upload");
+  revalidatePath("/chat");
+  revalidatePath(`/chat/${session.id}`);
+  return { ok: true, documentId: doc.id, chatSessionId: session.id };
+}
+
+export type ListOwnedChatsResult =
+  | {
+      ok: true;
+      sessions: Array<{ id: string; title: string; subjectName: string | null }>;
+    }
+  | { ok: false; error: string };
+
+export async function listOwnedChats(
+  limit = 20,
+): Promise<ListOwnedChatsResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const sessions = await prisma.chatSession.findMany({
+    where: { userId, isActive: true },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      subject: { select: { name: true } },
+    },
+  });
+  return {
+    ok: true,
+    sessions: sessions.map((s) => ({
+      id: s.id,
+      title: s.title,
+      subjectName: s.subject?.name ?? null,
+    })),
+  };
 }

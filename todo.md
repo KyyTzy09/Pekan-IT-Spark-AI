@@ -388,17 +388,17 @@
 - [x] 🔴 AI bisa di-tanya spesifik tentang isi dokumen (RAG-based Q&A) — `src/server/documents/embeddings.ts` chunking (900 char + 200 overlap, max 80 chunks/doc) + per-chunk embedding; `retrieveDocumentChunks()` top-k cosine sim; `src/server/actions/chat.ts` `sendMessage()` auto-fetches chunks dari `chatSession.documents[0]` dan include sebagai system message: "Jawab berdasarkan cuplikan; kalau ga ada di cuplikan, bilang ga nemu"
 
 ### 5.4 Advanced Document Handling (P1–P2)
-- [ ] 🟠 OCR untuk PDF hasil scan atau foto dokumen
-- [ ] 🟠 Deteksi dan render rumus matematika (LaTeX/MathML)
-- [ ] 🟠 Handle tabel dan formatting kompleks
-- [ ] 🟠 Generate embeddings dari dokumen untuk retrieval context
-- [ ] 🟠 Dokumen dapat di-share ke chat session tertentu
+- [ ] 🟠 OCR untuk PDF hasil scan atau foto dokumen — DEFERRED ke phase terpisah (butuh Tesseract binary atau tesseract.js WASM ~10MB; tidak di-install di stack ini). Ditandai di privacy note upload page supaya siswa tau.
+- [x] 🟠 Deteksi dan render rumus matematika (LaTeX/MathML) — `src/server/documents/content-check.ts` `detectMathRegions()` regex parse `\(...\)`, `\[...\]`, `$$...$$`, `\begin{env}...\end{env}`; `src/components/shared/document-markdown.tsx` `DocumentMarkdownText` component render math via KaTeX (`renderToString` dengan displayMode); `katex/dist/katex.min.css` di-import di globals.css
+- [x] 🟠 Handle tabel dan formatting kompleks — `src/server/documents/extract.ts` `extractFromPdf` panggil `parser.getTable()` (pdf-parse 2.4.5) dan konversi ke Markdown pipe-table; `detectMarkdownTables()` juga detect Markdown tables di text; `DocumentMarkdownText` render `<table>` dengan header/body styling
+- [x] 🟠 Generate embeddings dari dokumen untuk retrieval context — DONE di 5.3 (`embedDocumentChunks()` per-chunk embeddings, `retrieveDocumentChunks()` cosine sim top-k)
+- [x] 🟠 Dokumen dapat di-share ke chat session tertentu — `src/server/actions/documents.ts` `shareDocumentToChatSession()` update `Document.chatSessionId` + audit log; `listOwnedChats()` helper; `ShareModal` component di upload view (list chat, pick satu, redirect-ready)
 
 ### 5.5 Document Anti-Cheating & Compliance
-- [ ] 🔴 Dokumen hanya diproses untuk tujuan belajar
-- [ ] 🔴 Tolak konten di luar edukasi saat upload/proses
-- [ ] 🔴 Siswa tidak bisa minta AI mengerjakan tugas secara langsung tanpa proses Socratic
-- [ ] 🟠 Log metadata dokumen untuk audit (UU PDP compliance)
+- [x] 🔴 Dokumen hanya diproses untuk tujuan belajar — privacy note di upload page + setiap response Spark/RAG context dimulai dengan "ATURAN: jawab berdasarkan cuplikan; jangan ngarang dari luar"; fitur cuma tersedia di area student
+- [x] 🔴 Tolak konten di luar edukasi saat upload/proses — `src/server/documents/content-check.ts` `validateEducationalContent()` cek 3 hal: (1) min text length 80 char, (2) min alpha ratio 40% (deteksi PDF scan tanpa OCR), (3) regex keyword untuk konten dewasa/berbahaya/ujaran kebencian → return `REJECTED` code; audit log
+- [x] 🔴 Siswa tidak bisa minta AI mengerjakan tugas secara langsung tanpa proses Socratic — `src/server/ai/tutor.ts` system prompt Socratic rules: "JANGAN kasih jawaban final langsung. Bimbing dengan pertanyaan probing" + "Selalu akhiri dengan pertanyaan terbuka". RAG context di-doc merge dgn Socratic rules (lihat 5.3)
+- [x] 🟠 Log metadata dokumen untuk audit (UU PDP compliance) — `prisma/schema.prisma` `DocumentAuditLog` model + `DocumentAuditAction` enum (UPLOAD/PROCESS/SUMMARY_GENERATED/QUIZ_GENERATED/SHARE_TO_CHAT/CHAT_REFERENCED/RAG_QUERY/DELETE/REJECTED); `src/server/documents/audit.ts` `logDocumentEvent()` helper; dipanggil di upload, delete, share, summary, quiz, RAG query, dan rejected uploads
 
 ---
 

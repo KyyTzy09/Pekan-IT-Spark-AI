@@ -2,11 +2,14 @@ import "server-only";
 
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
+import { detectMathRegions, detectMarkdownTables } from "./content-check";
 
 export type ExtractedDocument = {
   text: string;
   pageCount?: number;
   warnings: string[];
+  mathRegions: Array<{ start: number; end: number; latex: string; display: boolean }>;
+  tables: Array<{ start: number; end: number; rows: string[][] }>;
 };
 
 const MAX_TEXT_LENGTH = 200_000;
@@ -32,11 +35,38 @@ export async function extractFromPdf(
   const warnings: string[] = [];
   let pageCount: number | undefined;
   let raw = "";
+  let tableMarkdown = "";
   const parser = new PDFParse({ data: buffer });
   try {
     const parsed = await parser.getText();
     raw = parsed.text ?? "";
     pageCount = parsed.total ?? undefined;
+    try {
+      const tables = await parser.getTable();
+      if (tables.pages && tables.pages.length > 0) {
+        for (const page of tables.pages) {
+          for (const table of page.tables ?? []) {
+            const rows = table as unknown as string[][];
+            if (Array.isArray(rows) && rows.length > 0) {
+              const header = rows[0] ?? [];
+              const sep = header.map(() => "---");
+              tableMarkdown +=
+                "\n\n" +
+                [header, sep, ...rows.slice(1)]
+                  .map((r) => `| ${r.join(" | ")} |`)
+                  .join("\n");
+            }
+          }
+        }
+        if (tableMarkdown.length > 0) {
+          warnings.push(
+            `Ditemukan tabel — sudah dikonversi ke Markdown biar Spark bisa baca.`,
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("pdf table extraction skipped:", e);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (/password|encrypt/i.test(msg)) {
@@ -56,7 +86,7 @@ export async function extractFromPdf(
       // ignore
     }
   }
-  return finalize(raw, warnings, pageCount);
+  return finalize(raw + tableMarkdown, warnings, pageCount);
 }
 
 export async function extractFromDocx(
@@ -122,7 +152,16 @@ function finalize(
         ...warnings,
         `Teks terpotong di ${MAX_TEXT_LENGTH.toLocaleString("id-ID")} karakter.`,
       ],
+      mathRegions: detectMathRegions(markdown.slice(0, MAX_TEXT_LENGTH)),
+      tables: detectMarkdownTables(markdown.slice(0, MAX_TEXT_LENGTH)),
     };
   }
-  return { text: markdown, pageCount, warnings };
+  return {
+    text: markdown,
+    pageCount,
+    warnings,
+    mathRegions: detectMathRegions(markdown),
+    tables: detectMarkdownTables(markdown),
+  };
 }
+
