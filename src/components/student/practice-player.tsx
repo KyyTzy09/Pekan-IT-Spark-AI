@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleDashed,
+  CircleHelp,
   Flame,
   Lightbulb,
   Loader2,
@@ -15,10 +16,12 @@ import {
   Target,
   Timer,
   TrendingUp,
+  X,
   XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { startNewChat } from "@/server/actions/chat";
@@ -123,6 +126,7 @@ export function PracticePlayer({
   const [hintText, setHintText] = React.useState<string | null>(null);
   const [hintLoading, setHintLoading] = React.useState(false);
   const [socraticLoading, setSocraticLoading] = React.useState(false);
+  const [showWhy, setShowWhy] = React.useState(false);
   const startedAt = React.useRef<number>(Date.now());
 
   React.useEffect(() => {
@@ -133,6 +137,7 @@ export function PracticePlayer({
     setShowCelebration(false);
     setHintRevealed(false);
     setHintText(null);
+    setShowWhy(false);
   }, [session.question.id]);
 
   React.useEffect(() => {
@@ -410,7 +415,7 @@ export function PracticePlayer({
           )}
 
           {isAnswered && result?.ok && !result.isCorrect && (
-            <div className="relative mt-3">
+            <div className="relative mt-3 flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -430,6 +435,56 @@ export function PracticePlayer({
                   </>
                 )}
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWhy(true)}
+                className="rounded-full"
+              >
+                <CircleHelp size={12} className="mr-1" />
+                Kenapa?
+              </Button>
+            </div>
+          )}
+
+          {isAnswered && result?.ok && result.isCorrect && (
+            <div className="relative mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWhy(true)}
+                className="rounded-full"
+              >
+                <CircleHelp size={12} className="mr-1" />
+                Kenapa jawabannya begitu?
+              </Button>
+            </div>
+          )}
+
+          {isAnswered && result?.ok && result.stuck.recommendedPrereq && (
+            <div className="relative mt-3 rounded-2xl border border-amber-300/50 bg-amber-50/80 p-3 text-[12.5px] leading-relaxed text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+              <div className="flex items-center gap-1.5 font-bold">
+                <Lock size={12} />
+                Streak salah {result.stuck.wrongStreak}x di "{session.question.conceptName}"
+              </div>
+              <p className="mt-1">
+                Prasyarat <strong>{result.stuck.recommendedPrereq.name}</strong> masih lemah
+                ({Math.round(result.stuck.recommendedPrereq.score * 100)}%). Yuk remedial
+                di sana dulu — nanti konsep ini bakal kebuka otomatis.
+              </p>
+              <div className="mt-2">
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="h-7 rounded-full border-amber-300/60 px-2.5 text-[11px] text-amber-900 hover:bg-amber-100 dark:text-amber-200"
+                >
+                  <Link href={`/practice`}>
+                    Remedial "{result.stuck.recommendedPrereq.name}"
+                    <ArrowRight size={11} className="ml-1" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           )}
 
@@ -475,6 +530,13 @@ export function PracticePlayer({
           </p>
         </div>
       )}
+
+      <WhyModal
+        open={showWhy}
+        onClose={() => setShowWhy(false)}
+        result={result}
+        question={session.question}
+      />
 
       <MasteredCelebration
         open={showCelebration}
@@ -704,4 +766,128 @@ function difficultyHue(d: string): number {
     default:
       return 280;
   }
+}
+
+function WhyModal({
+  open,
+  onClose,
+  result,
+  question,
+}: {
+  open: boolean;
+  onClose: () => void;
+  result: SubmitPracticeResult | null;
+  question: { questionText: string; conceptName: string; topicName: string };
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 30, scale: 0.97, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl overflow-hidden rounded-t-3xl border border-border/40 bg-card/95 shadow-2xl backdrop-blur-xl sm:rounded-3xl"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-[var(--purple)]/15 blur-3xl"
+            />
+            <div className="relative flex items-start justify-between gap-3 border-b border-border/40 p-5">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--purple)_22%,transparent)] bg-[color-mix(in_oklch,var(--purple)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                  <CircleHelp size={10} strokeWidth={2.5} />
+                  Kenapa?
+                </span>
+                <h2 className="mt-2 font-heading text-[18px] font-bold leading-tight">
+                  {question.conceptName} <span className="text-muted-foreground">· {question.topicName}</span>
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-background/60 text-muted-foreground hover:bg-background"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="relative max-h-[70vh] overflow-y-auto p-5 text-[13px] leading-relaxed">
+              {result?.ok && result.isCorrect && (
+                <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                  <CheckCircle2 size={11} />
+                  Benar — jawaban kamu "{result.correctAnswer}"
+                </div>
+              )}
+              {result?.ok && !result.isCorrect && (
+                <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-[11px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                  <XCircle size={11} />
+                  Belum tepat — jawaban yang benar "{result.correctAnswer}"
+                </div>
+              )}
+
+              {result?.ok && result.explanation ? (
+                <section>
+                  <h3 className="font-heading text-[12px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Penjelasan
+                  </h3>
+                  <p className="mt-1.5 whitespace-pre-line text-foreground/90">
+                    {result.explanation}
+                  </p>
+                </section>
+              ) : (
+                <section>
+                  <h3 className="font-heading text-[12px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Penjelasan
+                  </h3>
+                  <p className="mt-1.5 text-muted-foreground">
+                    Belum ada penjelasan tertulis untuk soal ini. Cek materi
+                    tentang "{question.conceptName}" di halaman Topik, atau
+                    tanya Spark via mode Socratic.
+                  </p>
+                </section>
+              )}
+
+              {result?.ok && result.commonMisconceptions && (
+                <section className="mt-4">
+                  <h3 className="font-heading text-[12px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Miskonsepsi umum
+                  </h3>
+                  <p className="mt-1.5 whitespace-pre-line text-foreground/85">
+                    {result.commonMisconceptions}
+                  </p>
+                </section>
+              )}
+
+              {result?.ok && result.hint && (
+                <section className="mt-4">
+                  <h3 className="font-heading text-[12px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Hint
+                  </h3>
+                  <p className="mt-1.5 text-foreground/85">{result.hint}</p>
+                </section>
+              )}
+            </div>
+            <div className="relative flex flex-wrap items-center justify-end gap-2 border-t border-border/40 p-4">
+              <Button
+                onClick={onClose}
+                size="sm"
+                className="rounded-full bg-[var(--purple)] text-white"
+              >
+                Tutup
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }

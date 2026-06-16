@@ -360,10 +360,16 @@ export type SubmitPracticeResult =
       isCorrect: boolean;
       correctAnswer: string;
       explanation: string | null;
+      hint: string | null;
+      commonMisconceptions: string | null;
       newMastery: number;
       newStatus: ConceptStatus;
       masteredNow: boolean;
       unlockedConcepts: Array<{ id: string; name: string }>;
+      stuck: {
+        wrongStreak: number;
+        recommendedPrereq: { id: string; name: string; score: number } | null;
+      };
     }
   | { ok: false; error: string };
 
@@ -751,6 +757,8 @@ export async function submitPracticeAnswer(input: {
       conceptId: true,
       correctAnswer: true,
       explanation: true,
+      hint: true,
+      commonMisconceptions: true,
       concept: { select: { name: true } },
     },
   });
@@ -805,6 +813,54 @@ export async function submitPracticeAnswer(input: {
     }
   }
 
+  // Stuck detection: cek 5 attempt terakhir di konsep ini. Kalo 2+
+  // salah berturut-turut DAN ada prereq yang lemah, rekomendasi remedial.
+  const recentAttempts = await prisma.questionAttempt.findMany({
+    where: { userId, question: { conceptId: question.conceptId } },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: { isCorrect: true, createdAt: true },
+  });
+  let wrongStreak = 0;
+  for (const a of recentAttempts) {
+    if (a.isCorrect) break;
+    wrongStreak++;
+  }
+
+  let recommendedPrereq: {
+    id: string;
+    name: string;
+    score: number;
+  } | null = null;
+  if (wrongStreak >= 2) {
+    const prereqRows = await prisma.conceptPrerequisite.findMany({
+      where: { conceptId: question.conceptId },
+      select: { prerequisiteId: true },
+    });
+    const prereqIds = prereqRows.map((r) => r.prerequisiteId);
+    if (prereqIds.length > 0) {
+      const [prereqs, profiles] = await Promise.all([
+        prisma.concept.findMany({
+          where: { id: { in: prereqIds } },
+          select: { id: true, name: true },
+        }),
+        prisma.studentKnowledgeProfile.findMany({
+          where: { userId, conceptId: { in: prereqIds } },
+          select: { conceptId: true, masteryScore: true },
+        }),
+      ]);
+      const scoreMap = new Map(profiles.map((p) => [p.conceptId, p.masteryScore]));
+      const sorted = prereqs
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          score: scoreMap.get(p.id) ?? 0,
+        }))
+        .sort((a, b) => a.score - b.score);
+      recommendedPrereq = sorted[0] ?? null;
+    }
+  }
+
   revalidatePath("/practice");
   revalidatePath("/dashboard");
   revalidatePath("/subjects");
@@ -814,10 +870,13 @@ export async function submitPracticeAnswer(input: {
     isCorrect,
     correctAnswer: question.correctAnswer,
     explanation: question.explanation,
+    hint: question.hint,
+    commonMisconceptions: question.commonMisconceptions,
     newMastery: result.newMastery,
     newStatus,
     masteredNow,
     unlockedConcepts,
+    stuck: { wrongStreak, recommendedPrereq },
   };
 }
 
