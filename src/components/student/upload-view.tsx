@@ -6,20 +6,30 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronRight,
+  CircleHelp,
   FileText,
+  GraduationCap,
+  ListChecks,
   Loader2,
+  MessageCircle,
   Sparkles,
   Trash2,
   UploadCloud,
+  X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { startNewChat } from "@/server/actions/chat";
 import {
-  type DocumentSummary,
+  type DocumentListItem,
+  type GeneratedQuiz,
   deleteDocument,
+  generateDocumentQuizAction,
+  getDocumentSummary,
   listDocuments,
   uploadDocument,
 } from "@/server/actions/documents";
@@ -54,13 +64,28 @@ function formatDate(iso: string): string {
 export function UploadView({
   initialDocuments,
 }: {
-  initialDocuments: DocumentSummary[];
+  initialDocuments: DocumentListItem[];
 }) {
+  const router = useRouter();
   const [documents, setDocuments] =
-    React.useState<DocumentSummary[]>(initialDocuments);
+    React.useState<DocumentListItem[]>(initialDocuments);
   const [status, setStatus] = React.useState<UploadStatus>({ kind: "idle" });
   const [dragOver, setDragOver] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
+  const [summaryFor, setSummaryFor] = React.useState<string | null>(null);
+  const [summaryData, setSummaryData] = React.useState<{
+    title: string;
+    summary: string;
+    keyPoints: string[];
+    hasHomework: boolean;
+    homeworkTopic?: string;
+  } | null>(null);
+  const [summaryLoading, setSummaryLoading] = React.useState(false);
+  const [summaryError, setSummaryError] = React.useState<string | null>(null);
+  const [quizFor, setQuizFor] = React.useState<string | null>(null);
+  const [quizData, setQuizData] = React.useState<GeneratedQuiz | null>(null);
+  const [quizLoading, setQuizLoading] = React.useState(false);
+  const [quizError, setQuizError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const refresh = React.useCallback(async () => {
@@ -155,6 +180,80 @@ export function UploadView({
         message: res.error,
       });
     }
+  };
+
+  const onAskSpark = async (doc: DocumentListItem) => {
+    const firstMessage = `Halo Spark, aku mau diskusi soal "${doc.originalName}". Bantu aku paham materinya ya.`;
+    try {
+      const result = await startNewChat({
+        firstMessage,
+        documentId: doc.id,
+      });
+      router.push(`/chat/${result.sessionId}`);
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        fileName: doc.originalName,
+        message: err instanceof Error ? err.message : "Gagal mulai chat.",
+      });
+    }
+  };
+
+  const onShowSummary = async (doc: DocumentListItem, force: boolean) => {
+    setSummaryFor(doc.id);
+    setSummaryLoading(true);
+    setSummaryError(null);
+    if (!force && doc.hasSummary) {
+      setSummaryLoading(false);
+    }
+    try {
+      const result = await getDocumentSummary(doc.id, {
+        forceRegenerate: force,
+      });
+      if (!result.ok) {
+        setSummaryError(result.error);
+        setSummaryLoading(false);
+        return;
+      }
+      setSummaryData(result.summary);
+      setSummaryLoading(false);
+      if (force) await refresh();
+    } catch (err) {
+      setSummaryError(err instanceof Error ? err.message : "Gagal.");
+      setSummaryLoading(false);
+    }
+  };
+
+  const closeSummary = () => {
+    setSummaryFor(null);
+    setSummaryData(null);
+    setSummaryError(null);
+  };
+
+  const onShowQuiz = async (doc: DocumentListItem) => {
+    setQuizFor(doc.id);
+    setQuizLoading(true);
+    setQuizError(null);
+    setQuizData(null);
+    try {
+      const result = await generateDocumentQuizAction(doc.id, 5);
+      if (!result.ok) {
+        setQuizError(result.error);
+        setQuizLoading(false);
+        return;
+      }
+      setQuizData(result.quiz);
+      setQuizLoading(false);
+    } catch (err) {
+      setQuizError(err instanceof Error ? err.message : "Gagal.");
+      setQuizLoading(false);
+    }
+  };
+
+  const closeQuiz = () => {
+    setQuizFor(null);
+    setQuizData(null);
+    setQuizError(null);
   };
 
   return (
@@ -313,6 +412,23 @@ export function UploadView({
                           {doc.mimeType}
                           {doc.pageCount ? ` · ${doc.pageCount} hal` : ""}
                         </span>
+                        {doc.chunkCount > 0 ? (
+                          <span
+                            className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300"
+                            title="Dokumen sudah di-index untuk RAG (pencarian berbasis isi)"
+                          >
+                            {doc.chunkCount} chunks indexed
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-300">
+                            Indexing…
+                          </span>
+                        )}
+                        {doc.hasSummary && (
+                          <span className="rounded-full bg-[var(--purple)]/10 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                            Ada ringkasan
+                          </span>
+                        )}
                         <span className="text-[10.5px] text-muted-foreground">
                           {formatBytes(doc.size)} · {formatDate(doc.createdAt)}
                         </span>
@@ -322,15 +438,31 @@ export function UploadView({
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <Button
-                          asChild
                           size="sm"
                           variant="ghost"
+                          onClick={() => onAskSpark(doc)}
+                          className="h-7 rounded-full px-2.5 text-[11px] text-[var(--coral)]"
+                        >
+                          <MessageCircle size={11} className="mr-1" />
+                          Tanya Spark
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onShowSummary(doc, false)}
                           className="h-7 rounded-full px-2.5 text-[11px]"
                         >
-                          <Link href={`/chat?docId=${doc.id}`}>
-                            Tanya Spark
-                            <ChevronRight size={11} className="ml-1" />
-                          </Link>
+                          <Sparkles size={11} className="mr-1" />
+                          {doc.hasSummary ? "Lihat ringkasan" : "Buat ringkasan"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onShowQuiz(doc)}
+                          className="h-7 rounded-full px-2.5 text-[11px]"
+                        >
+                          <GraduationCap size={11} className="mr-1" />
+                          Buat latihan
                         </Button>
                         <Button
                           size="sm"
@@ -369,6 +501,28 @@ export function UploadView({
           </p>
         </div>
       </Reveal>
+
+      <SummaryModal
+        open={summaryFor !== null}
+        loading={summaryLoading}
+        data={summaryData}
+        error={summaryError}
+        docName={documents.find((d) => d.id === summaryFor)?.originalName}
+        onClose={closeSummary}
+        onRegenerate={() => {
+          const doc = documents.find((d) => d.id === summaryFor);
+          if (doc) onShowSummary(doc, true);
+        }}
+      />
+
+      <QuizModal
+        open={quizFor !== null}
+        loading={quizLoading}
+        data={quizData}
+        error={quizError}
+        docName={documents.find((d) => d.id === quizFor)?.originalName}
+        onClose={closeQuiz}
+      />
     </div>
   );
 }
@@ -422,3 +576,288 @@ function UploadStatusBar({ status }: { status: UploadStatus }) {
     </motion.div>
   );
 }
+
+function SummaryModal({
+  open,
+  loading,
+  data,
+  error,
+  docName,
+  onClose,
+  onRegenerate,
+}: {
+  open: boolean;
+  loading: boolean;
+  data: {
+    title: string;
+    summary: string;
+    keyPoints: string[];
+    hasHomework: boolean;
+    homeworkTopic?: string;
+  } | null;
+  error: string | null;
+  docName: string | undefined;
+  onClose: () => void;
+  onRegenerate: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 30, scale: 0.97, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl overflow-hidden rounded-t-3xl border border-border/40 bg-card/95 shadow-2xl backdrop-blur-xl sm:rounded-3xl"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-[var(--teal)]/15 blur-3xl"
+            />
+            <div className="relative flex items-start justify-between gap-3 border-b border-border/40 p-5">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--purple)_22%,transparent)] bg-[color-mix(in_oklch,var(--purple)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                  <Sparkles size={10} strokeWidth={2.5} />
+                  Ringkasan AI
+                </span>
+                <h2 className="mt-2 font-heading text-[18px] font-bold leading-tight">
+                  {data?.title ?? docName ?? "Ringkasan materi"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-background/60 text-muted-foreground hover:bg-background"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="relative max-h-[70vh] overflow-y-auto p-5">
+              {loading && (
+                <div className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
+                  <Loader2 size={14} className="animate-spin text-[var(--purple)]" />
+                  Lagi mikir... Spark baca dokumen kamu terus nge-ekstrak poin
+                  pentingnya.
+                </div>
+              )}
+              {error && (
+                <p className="rounded-2xl border border-rose-300/50 bg-rose-50/80 p-3 text-[12.5px] text-rose-900 dark:bg-rose-500/10 dark:text-rose-200">
+                  {error}
+                </p>
+              )}
+              {data && !loading && (
+                <div className="space-y-4 text-[13px] leading-relaxed">
+                  <p className="whitespace-pre-line text-foreground/90">
+                    {data.summary}
+                  </p>
+                  <div>
+                    <h3 className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Poin kunci
+                    </h3>
+                    <ul className="mt-2 space-y-1.5">
+                      {data.keyPoints.map((kp, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 rounded-xl border border-border/40 bg-background/60 px-3 py-2 text-[12.5px]"
+                        >
+                          <CheckCircle2
+                            size={13}
+                            className="mt-0.5 shrink-0 text-[var(--teal)]"
+                          />
+                          <span>{kp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {data.hasHomework && (
+                    <div className="rounded-2xl border border-amber-300/50 bg-amber-50/80 p-3 text-[12.5px] text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <ListChecks size={13} />
+                        Terdeteksi PR/tugas
+                      </div>
+                      <p className="mt-1">
+                        Dokumen ini sepertinya berisi soal/latihan. Topiknya
+                        kira-kira{" "}
+                        <strong>{data.homeworkTopic ?? "umum"}</strong>. Mau
+                        Spark bantu bahas via mode Socratic? Klik{" "}
+                        <strong>Tanya Spark</strong> di daftar dokumen.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="relative flex flex-wrap items-center justify-end gap-2 border-t border-border/40 p-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRegenerate}
+                disabled={loading}
+                className="rounded-full"
+              >
+                <Sparkles size={12} className="mr-1" />
+                Bikin ulang
+              </Button>
+              <Button
+                onClick={onClose}
+                size="sm"
+                className="rounded-full bg-[var(--purple)] text-white"
+              >
+                Tutup
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function QuizModal({
+  open,
+  loading,
+  data,
+  error,
+  docName,
+  onClose,
+}: {
+  open: boolean;
+  loading: boolean;
+  data: GeneratedQuiz | null;
+  error: string | null;
+  docName: string | undefined;
+  onClose: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 30, scale: 0.97, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 22 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl overflow-hidden rounded-t-3xl border border-border/40 bg-card/95 shadow-2xl backdrop-blur-xl sm:rounded-3xl"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-16 -top-16 size-48 rounded-full bg-[var(--teal)]/15 blur-3xl"
+            />
+            <div className="relative flex items-start justify-between gap-3 border-b border-border/40 p-5">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--teal)_22%,transparent)] bg-[color-mix(in_oklch,var(--teal)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--teal)]">
+                  <GraduationCap size={10} strokeWidth={2.5} />
+                  Latihan otomatis
+                </span>
+                <h2 className="mt-2 font-heading text-[18px] font-bold leading-tight">
+                  {docName ?? "Latihan dari dokumen"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-background/60 text-muted-foreground hover:bg-background"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="relative max-h-[70vh] overflow-y-auto p-5">
+              {loading && (
+                <div className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
+                  <Loader2 size={14} className="animate-spin text-[var(--teal)]" />
+                  Bikinin soal... Spark lagi nyiapin 5 pertanyaan pilihan ganda.
+                </div>
+              )}
+              {error && (
+                <p className="rounded-2xl border border-rose-300/50 bg-rose-50/80 p-3 text-[12.5px] text-rose-900 dark:bg-rose-500/10 dark:text-rose-200">
+                  {error}
+                </p>
+              )}
+              {data && !loading && (
+                <ol className="space-y-4">
+                  {data.quiz.map((q, i) => (
+                    <li
+                      key={i}
+                      className="rounded-2xl border border-border/40 bg-background/60 p-3.5"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg bg-[var(--teal)]/15 text-[10px] font-bold text-[var(--teal)]">
+                          {i + 1}
+                        </span>
+                        <p className="flex-1 text-[13.5px] font-semibold leading-snug">
+                          {q.question}
+                        </p>
+                        <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {q.difficulty}
+                        </span>
+                      </div>
+                      <ul className="mt-3 space-y-1.5">
+                        {q.options.map((opt, j) => (
+                          <li
+                            key={j}
+                            className={cn(
+                              "rounded-xl border px-3 py-2 text-[12.5px]",
+                              j === q.correctIndex
+                                ? "border-emerald-300/50 bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                : "border-border/40 bg-card/60 text-foreground/85",
+                            )}
+                          >
+                            <span className="mr-1.5 font-bold">
+                              {String.fromCharCode(65 + j)}.
+                            </span>
+                            {opt}
+                            {j === q.correctIndex && (
+                              <CheckCircle2
+                                size={11}
+                                className="ml-1.5 inline text-emerald-600"
+                              />
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                        <CircleHelp
+                          size={12}
+                          className="mt-0.5 shrink-0 text-[var(--teal)]"
+                        />
+                        {q.explanation}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+            <div className="relative flex flex-wrap items-center justify-end gap-2 border-t border-border/40 p-4">
+              <Button
+                onClick={onClose}
+                size="sm"
+                className="rounded-full bg-[var(--teal)] text-white"
+              >
+                Tutup
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+void ChevronRight;

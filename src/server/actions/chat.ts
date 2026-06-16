@@ -6,11 +6,13 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { buildDocumentChatContext } from "@/server/documents/features";
 import { generateChatTitle, generateTutorStream } from "@/server/ai/tutor";
 
 const createSchema = z.object({
   subjectSlug: z.string().optional(),
   topicId: z.string().optional(),
+  documentId: z.string().optional(),
   firstMessage: z.string().min(1).max(2000),
 });
 
@@ -150,6 +152,7 @@ export async function getChatMessages(sessionId: string): Promise<
 export async function startNewChat(input: {
   subjectSlug?: string;
   topicId?: string;
+  documentId?: string;
   firstMessage: string;
 }): Promise<{ sessionId: string }> {
   const userId = await requireStudent();
@@ -171,7 +174,18 @@ export async function startNewChat(input: {
       })
     : null;
 
-  const title = await generateChatTitle(parsed.data.firstMessage);
+  let document = null;
+  if (parsed.data.documentId) {
+    document = await prisma.document.findFirst({
+      where: { id: parsed.data.documentId, userId },
+      select: { id: true, originalName: true },
+    });
+  }
+
+  const baseTitle = document
+    ? `Diskusi: ${document.originalName}`
+    : parsed.data.firstMessage;
+  const title = await generateChatTitle(baseTitle);
 
   const created = await prisma.chatSession.create({
     data: {
@@ -188,6 +202,13 @@ export async function startNewChat(input: {
     },
     select: { id: true },
   });
+
+  if (document) {
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { chatSessionId: created.id },
+    });
+  }
 
   revalidatePath("/chat");
   return { sessionId: created.id };
@@ -206,6 +227,7 @@ export async function deleteChatSession(sessionId: string): Promise<void> {
 export type StreamResult = {
   text: AsyncIterable<string>;
   sessionId: string;
+  documentName?: string;
 };
 
 export async function sendMessage(input: {
@@ -221,6 +243,7 @@ export async function sendMessage(input: {
     where: { id: input.sessionId, userId },
     include: {
       messages: { orderBy: { createdAt: "asc" }, take: 20 },
+      documents: { select: { id: true, originalName: true }, take: 1 },
     },
   });
   if (!session) {
@@ -249,7 +272,34 @@ export async function sendMessage(input: {
     select: { name: true },
   });
 
+  const linkedDoc = session.documents[0];
+  let documentContext: string | null = null;
+  let documentName: string | null = null;
+  if (linkedDoc) {
+    documentName = linkedDoc.originalName;
+    try {
+      const { context, hasContext } = await buildDocumentChatContext(
+        linkedDoc.id,
+        input.content,
+        4,
+      );
+      if (hasContext) {
+        documentContext = `DOKUMEN YANG DIBICARAKAN: "${linkedDoc.originalName}"\n\n${context}\n\nATURAN: Jawab pertanyaan berdasarkan cuplikan di atas. Kalau ga ada jawabannya di cuplikan, bilang "Aku ga nemu jawabannya di dokumenmu" — jangan ngarang dari luar.`;
+      }
+    } catch (e) {
+      console.warn("buildDocumentChatContext failed:", e);
+    }
+  }
+
   const messages = [
+    ...(documentContext
+      ? [
+          {
+            role: "system" as const,
+            content: documentContext,
+          },
+        ]
+      : []),
     ...session.messages.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
@@ -293,7 +343,8 @@ export async function sendMessage(input: {
   return {
     sessionId: session.id,
     text: iterator(),
-  };
+    ...(documentName ? { documentName } : {}),
+  } as StreamResult;
 }
 
 export async function sendMessageAndNavigate(input: {

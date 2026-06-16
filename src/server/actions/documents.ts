@@ -9,6 +9,14 @@ import {
   extractFromDocx,
   extractFromPdf,
 } from "@/server/documents/extract";
+import { embedDocumentChunks } from "@/server/documents/embeddings";
+import {
+  type DocumentSummary as GeneratedDocSummary,
+  type GeneratedQuiz,
+  buildDocumentChatContext,
+  generateDocumentSummary,
+  generateQuizFromDocument,
+} from "@/server/documents/features";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_PAGES = 50;
@@ -31,7 +39,7 @@ export type UploadDocumentResult =
     }
   | { ok: false; error: string; code: string };
 
-export type DocumentSummary = {
+export type DocumentListItem = {
   id: string;
   originalName: string;
   mimeType: "PDF" | "DOCX";
@@ -39,10 +47,12 @@ export type DocumentSummary = {
   pageCount: number | null;
   createdAt: string;
   contentPreview: string;
+  hasSummary: boolean;
+  chunkCount: number;
 };
 
 export type ListDocumentsResult =
-  | { ok: true; documents: DocumentSummary[] }
+  | { ok: true; documents: DocumentListItem[] }
   | { ok: false; error: string };
 
 async function requireStudent() {
@@ -173,6 +183,12 @@ export async function uploadDocument(
   revalidatePath("/upload");
   revalidatePath("/chat");
 
+  // Fire-and-forget chunked embeddings so RAG can be used immediately after
+  // upload. Errors are logged but don't fail the upload.
+  void embedDocumentChunks(document.id, extracted.text).catch((e) => {
+    console.warn("embedDocumentChunks failed:", e);
+  });
+
   return {
     ok: true,
     document: {
@@ -204,6 +220,8 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
       pageCount: true,
       createdAt: true,
       content: true,
+      summary: true,
+      _count: { select: { embeddings: true } },
     },
   });
   return {
@@ -216,6 +234,8 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
       pageCount: d.pageCount,
       createdAt: d.createdAt.toISOString(),
       contentPreview: d.content.slice(0, 220),
+      hasSummary: Boolean(d.summary && d.summary.length > 0),
+      chunkCount: d._count.embeddings,
     })),
   };
 }
@@ -241,4 +261,180 @@ export async function deleteDocument(
   await prisma.document.delete({ where: { id: documentId } });
   revalidatePath("/upload");
   return { ok: true };
+}
+
+async function loadOwnedDocument(userId: string, documentId: string) {
+  const doc = await prisma.document.findFirst({
+    where: { id: documentId, userId },
+    select: {
+      id: true,
+      originalName: true,
+      content: true,
+      summary: true,
+    },
+  });
+  return doc;
+}
+
+export type GetDocumentSummaryResult =
+  | {
+      ok: true;
+      documentId: string;
+      originalName: string;
+      summary: GeneratedDocSummary;
+      cached: boolean;
+    }
+  | { ok: false; error: string };
+
+export async function getDocumentSummary(
+  documentId: string,
+  options: { forceRegenerate?: boolean } = {},
+): Promise<GetDocumentSummaryResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const doc = await loadOwnedDocument(userId, documentId);
+  if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
+
+  if (doc.summary && !options.forceRegenerate) {
+    try {
+      const cached = JSON.parse(doc.summary) as GeneratedDocSummary;
+      return {
+        ok: true,
+        documentId: doc.id,
+        originalName: doc.originalName,
+        summary: cached,
+        cached: true,
+      };
+    } catch {
+      // fall through to regenerate
+    }
+  }
+
+  try {
+    const summary = await generateDocumentSummary(doc.content, doc.originalName);
+    await prisma.document.update({
+      where: { id: doc.id },
+      data: { summary: JSON.stringify(summary) },
+    });
+    return {
+      ok: true,
+      documentId: doc.id,
+      originalName: doc.originalName,
+      summary,
+      cached: false,
+    };
+  } catch (e) {
+    console.error("generateDocumentSummary failed:", e);
+    return {
+      ok: false,
+      error: "Gagal bikin ringkasan. Coba lagi nanti ya.",
+    };
+  }
+}
+// GeneratedQuiz is imported above; UI can import it from either path.
+export type { GeneratedQuiz };
+
+export type GenerateDocumentQuizResult =
+  | {
+      ok: true;
+      documentId: string;
+      originalName: string;
+      quiz: GeneratedQuiz;
+    }
+  | { ok: false; error: string };
+
+export async function generateDocumentQuizAction(
+  documentId: string,
+  count: 3 | 5 | 8 = 5,
+): Promise<GenerateDocumentQuizResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const doc = await loadOwnedDocument(userId, documentId);
+  if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
+  try {
+    const quiz = await generateQuizFromDocument(
+      doc.content,
+      doc.originalName,
+      count,
+    );
+    return {
+      ok: true,
+      documentId: doc.id,
+      originalName: doc.originalName,
+      quiz,
+    };
+  } catch (e) {
+    console.error("generateDocumentQuiz failed:", e);
+    return { ok: false, error: "Gagal bikin latihan. Coba lagi nanti ya." };
+  }
+}
+
+export type ReembedDocumentResult =
+  | { ok: true; documentId: string; chunks: number; skipped: boolean }
+  | { ok: false; error: string };
+
+export async function reembedDocument(
+  documentId: string,
+): Promise<ReembedDocumentResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const doc = await loadOwnedDocument(userId, documentId);
+  if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
+  try {
+    const result = await embedDocumentChunks(doc.id, doc.content);
+    revalidatePath("/upload");
+    return {
+      ok: true,
+      documentId: doc.id,
+      chunks: result.chunks,
+      skipped: result.skipped,
+    };
+  } catch (e) {
+    console.error("reembedDocument failed:", e);
+    return { ok: false, error: "Gagal reindex dokumen." };
+  }
+}
+
+export type DocumentRagContextResult =
+  | {
+      ok: true;
+      documentId: string;
+      query: string;
+      context: string;
+    }
+  | { ok: false; error: string };
+
+export async function getDocumentRagContext(
+  documentId: string,
+  query: string,
+): Promise<DocumentRagContextResult> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+  const doc = await loadOwnedDocument(userId, documentId);
+  if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
+  const { context, hasContext } = await buildDocumentChatContext(
+    doc.id,
+    query,
+    4,
+  );
+  if (!hasContext) {
+    return { ok: true, documentId: doc.id, query, context: "" };
+  }
+  return { ok: true, documentId: doc.id, query, context };
 }

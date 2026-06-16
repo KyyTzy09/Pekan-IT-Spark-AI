@@ -381,11 +381,11 @@
 - [x] 🔴 Link dokumen ke `User` (siswa) dan opsional ke `ChatSession` — schema migration `20260616120000_add_document_chat_session` tambah `documents.chatSessionId` nullable + FK + index
 
 ### 5.3 AI-Powered Document Features
-- [ ] 🔴 Generate ringkasan materi inti dari dokumen
-- [ ] 🔴 Generate penjelasan materi berdasarkan dokumen dengan gaya siswa
-- [ ] 🔴 Deteksi apakah dokumen berisi pertanyaan/tugas → ubah jadi sesi latihan Socratic
-- [ ] 🔴 Generate quiz latihan otomatis dari isi dokumen
-- [ ] 🔴 AI bisa di-tanya spesifik tentang isi dokumen (RAG-based Q&A)
+- [x] 🔴 Generate ringkasan materi inti dari dokumen — `src/server/documents/features.ts` `generateDocumentSummary()` pakai fastModel + zod schema (title, summary, keyPoints, hasHomework, homeworkTopic); cached di `Document.summary` (`getDocumentSummary` server action)
+- [x] 🔴 Generate penjelasan materi berdasarkan dokumen dengan gaya siswa — handled via Socratic chat di 5.3 RAG (gaya siswa dipakai dari `studentProfile.learningStyle` + `responseDepth` di system prompt tutor)
+- [x] 🔴 Deteksi apakah dokumen berisi pertanyaan/tugas → ubah jadi sesi latihan Socratic — `detectHomeworkAndSuggest()` + banner amber di SummaryModal: "Terdeteksi PR/tugas, topiknya X. Mau Spark bantu via Socratic?" + Tanya Spark CTA
+- [x] 🔴 Generate quiz latihan otomatis dari isi dokumen — `generateQuizFromDocument()` dengan zod schema `quizQuestionSchema` (3-8 soal, 4 opsi, correctIndex, EASY/MEDIUM/HARD, explanation); `generateDocumentQuizAction` server action; modal UI di `QuizModal` component
+- [x] 🔴 AI bisa di-tanya spesifik tentang isi dokumen (RAG-based Q&A) — `src/server/documents/embeddings.ts` chunking (900 char + 200 overlap, max 80 chunks/doc) + per-chunk embedding; `retrieveDocumentChunks()` top-k cosine sim; `src/server/actions/chat.ts` `sendMessage()` auto-fetches chunks dari `chatSession.documents[0]` dan include sebagai system message: "Jawab berdasarkan cuplikan; kalau ga ada di cuplikan, bilang ga nemu"
 
 ### 5.4 Advanced Document Handling (P1–P2)
 - [ ] 🟠 OCR untuk PDF hasil scan atau foto dokumen
