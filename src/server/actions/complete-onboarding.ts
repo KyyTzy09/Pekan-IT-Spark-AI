@@ -62,82 +62,83 @@ export async function completeOnboarding(
   }
   const data = parsed.data;
 
-  const [validSubjects, userExists] = await Promise.all([
-    prisma.subject.findMany({
-      where: { id: { in: data.focusedSubjects } },
-      select: { id: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    }),
-  ]);
+  const validSubjects = await prisma.subject.findMany({
+    where: { id: { in: data.focusedSubjects } },
+    select: { id: true },
+  });
   if (validSubjects.length !== data.focusedSubjects.length) {
     return { ok: false, message: "Ada mata pelajaran yang nggak valid." };
-  }
-
-  if (!userExists) {
-    redirect("/api/auth/signout");
   }
 
   const reminderTime =
     data.reminderEnabled && data.reminderTime ? data.reminderTime : null;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.studentProfile.upsert({
-      where: { userId },
-      update: {
-        educationLevel: data.educationLevel,
-        grade: data.grade,
-        school: data.school,
-        focusedSubjects: data.focusedSubjects,
-        learningStyle: data.learningStyle,
-        reminderEnabled: data.reminderEnabled,
-        reminderTime,
-      },
-      create: {
+  const profileData = {
+    educationLevel: data.educationLevel,
+    grade: data.grade,
+    school: data.school,
+    focusedSubjects: data.focusedSubjects,
+    learningStyle: data.learningStyle,
+    reminderEnabled: data.reminderEnabled,
+    reminderTime,
+  };
+
+  const knowledgeUpserts: Prisma.StudentKnowledgeProfileCreateManyInput[] = [];
+  if (data.pretestAnswers.length > 0) {
+    const correctByConcept = new Map<
+      string,
+      { correct: number; total: number }
+    >();
+    for (const a of data.pretestAnswers) {
+      const bucket = correctByConcept.get(a.conceptId) ?? {
+        correct: 0,
+        total: 0,
+      };
+      bucket.total += 1;
+      if (a.isCorrect) bucket.correct += 1;
+      correctByConcept.set(a.conceptId, bucket);
+    }
+
+    for (const [conceptId, { correct, total }] of correctByConcept) {
+      const ratio = total > 0 ? correct / total : 0;
+      const masteryScore = Math.round(ratio * 100) / 100;
+      knowledgeUpserts.push({
         userId,
-        educationLevel: data.educationLevel,
-        grade: data.grade,
-        school: data.school,
-        focusedSubjects: data.focusedSubjects,
-        learningStyle: data.learningStyle,
-        reminderEnabled: data.reminderEnabled,
-        reminderTime,
-      },
-    });
+        conceptId,
+        masteryScore,
+        status: ratio > 0 ? ("LEARNING" as const) : ("STRUGGLING" as const),
+        attemptCount: total,
+        lastAttemptAt: new Date(),
+      });
+    }
+  }
 
-    if (data.pretestAnswers.length > 0) {
-      const correctByConcept = new Map<
-        string,
-        { correct: number; total: number }
-      >();
-      for (const a of data.pretestAnswers) {
-        const bucket = correctByConcept.get(a.conceptId) ?? {
-          correct: 0,
-          total: 0,
-        };
-        bucket.total += 1;
-        if (a.isCorrect) bucket.correct += 1;
-        correctByConcept.set(a.conceptId, bucket);
-      }
-
-      const upserts: Prisma.StudentKnowledgeProfileCreateManyInput[] = [];
-      for (const [conceptId, { correct, total }] of correctByConcept) {
-        const ratio = total > 0 ? correct / total : 0;
-        const masteryScore = Math.round(ratio * 100) / 100;
-        upserts.push({
+  const attemptsData =
+    data.pretestAnswers.length > 0
+      ? data.pretestAnswers.map((a) => ({
           userId,
-          conceptId,
-          masteryScore,
-          status: ratio > 0 ? ("LEARNING" as const) : ("STRUGGLING" as const),
-          attemptCount: total,
-          lastAttemptAt: new Date(),
-        });
-      }
+          questionId: a.questionId,
+          answer: a.answer,
+          isCorrect: a.isCorrect,
+        }))
+      : [];
 
-      await Promise.all(
-        upserts.map((u) =>
+  await prisma.$transaction(async (tx) => {
+    const ops: Promise<unknown>[] = [
+      tx.studentProfile.upsert({
+        where: { userId },
+        update: profileData,
+        create: { userId, ...profileData },
+      }),
+      tx.user.update({
+        where: { id: userId },
+        data: { isOnboarded: true },
+      }),
+    ];
+
+    if (knowledgeUpserts.length > 0) {
+      for (const u of knowledgeUpserts) {
+        ops.push(
           tx.studentKnowledgeProfile.upsert({
             where: { userId_conceptId: { userId, conceptId: u.conceptId } },
             create: u,
@@ -148,23 +149,19 @@ export async function completeOnboarding(
               lastAttemptAt: u.lastAttemptAt,
             },
           }),
-        ),
-      );
-
-      await tx.questionAttempt.createMany({
-        data: data.pretestAnswers.map((a) => ({
-          userId,
-          questionId: a.questionId,
-          answer: a.answer,
-          isCorrect: a.isCorrect,
-        })),
-      });
+        );
+      }
     }
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { isOnboarded: true },
-    });
+    if (attemptsData.length > 0) {
+      ops.push(
+        tx.questionAttempt.createMany({
+          data: attemptsData,
+        }),
+      );
+    }
+
+    await Promise.all(ops);
   });
 
   return {
