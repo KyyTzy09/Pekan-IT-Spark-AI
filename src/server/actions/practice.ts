@@ -73,24 +73,27 @@ export async function getNextPracticeQuestion(
   const topicId = options.topicId;
 
   let topicContext: { topicId: string; topicName: string } | null = null;
-  if (topicId) {
-    const topic = await prisma.topic.findFirst({
-      where: {
-        id: topicId,
-        subject: subjectSlug ? { slug: subjectSlug as never } : {},
-      },
-      select: { id: true, name: true, subjectId: true },
-    });
-    if (!topic) {
-      return { ok: false, error: "Topik tidak ditemukan" };
-    }
+  const [topic, subjects] = await Promise.all([
+    topicId
+      ? prisma.topic.findFirst({
+          where: {
+            id: topicId,
+            subject: subjectSlug ? { slug: subjectSlug as never } : {},
+          },
+          select: { id: true, name: true, subjectId: true },
+        })
+      : null,
+    prisma.subject.findMany({
+      where: subjectSlug ? { slug: subjectSlug as never } : {},
+      select: { id: true, slug: true, name: true },
+    }),
+  ]);
+  if (topicId && !topic) {
+    return { ok: false, error: "Topik tidak ditemukan" };
+  }
+  if (topic) {
     topicContext = { topicId: topic.id, topicName: topic.name };
   }
-
-  const subjects = await prisma.subject.findMany({
-    where: subjectSlug ? { slug: subjectSlug as never } : {},
-    select: { id: true, slug: true, name: true },
-  });
   if (subjects.length === 0) {
     return {
       ok: false,
@@ -129,10 +132,37 @@ export async function getNextPracticeQuestion(
     return { ok: false, error: "Belum ada konsep yang bisa dilatih" };
   }
 
-  const profiles = await prisma.studentKnowledgeProfile.findMany({
-    where: { userId, conceptId: { in: concepts.map((c) => c.id) } },
-    select: { conceptId: true, masteryScore: true, status: true },
-  });
+  const [profiles, recentlyAttempted] = await Promise.all([
+    prisma.studentKnowledgeProfile.findMany({
+      where: { userId, conceptId: { in: concepts.map((c) => c.id) } },
+      select: { conceptId: true, masteryScore: true, status: true },
+    }),
+    prisma.questionAttempt.findMany({
+      where: {
+        userId,
+        question: { concept: { id: { in: concepts.map((c) => c.id) } } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 60,
+      select: {
+        isCorrect: true,
+        question: {
+          select: {
+            difficulty: true,
+            conceptId: true,
+            concept: {
+              select: {
+                topic: {
+                  select: { subject: { select: { slug: true } } },
+                },
+              },
+            },
+          },
+        },
+        createdAt: true,
+      },
+    }),
+  ]);
   const masteryByConcept = new Map<
     string,
     { score: number; status: ConceptStatus }
@@ -143,32 +173,6 @@ export async function getNextPracticeQuestion(
       status: p.status,
     });
   }
-
-  const recentlyAttempted = await prisma.questionAttempt.findMany({
-    where: {
-      userId,
-      question: { concept: { id: { in: concepts.map((c) => c.id) } } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-    select: {
-      isCorrect: true,
-      question: {
-        select: {
-          difficulty: true,
-          conceptId: true,
-          concept: {
-            select: {
-              topic: {
-                select: { subject: { select: { slug: true } } },
-              },
-            },
-          },
-        },
-      },
-      createdAt: true,
-    },
-  });
   const seenQuestionByConcept = new Map<string, Set<string>>();
   for (const a of recentlyAttempted) {
     const set =
@@ -849,7 +853,9 @@ export async function submitPracticeAnswer(input: {
           select: { conceptId: true, masteryScore: true },
         }),
       ]);
-      const scoreMap = new Map(profiles.map((p) => [p.conceptId, p.masteryScore]));
+      const scoreMap = new Map(
+        profiles.map((p) => [p.conceptId, p.masteryScore]),
+      );
       const sorted = prereqs
         .map((p) => ({
           id: p.id,

@@ -1,5 +1,6 @@
 import type * as React from "react";
 
+import { QueryProviders } from "@/components/providers/query-client";
 import { StudentNav } from "@/components/student/student-nav";
 
 export default function StudentLayout({
@@ -23,7 +24,7 @@ export default function StudentLayout({
       {/* Main Content Area with offset for fixed sidebar */}
       <div className="flex flex-1 flex-col min-w-0 md:pl-[240px] lg:pl-[256px]">
         <main className="mx-auto w-full max-w-[1120px] p-4 sm:p-6 md:p-8 pb-24 md:pb-8">
-          {children}
+          <QueryProviders>{children}</QueryProviders>
         </main>
       </div>
 

@@ -1,0 +1,1368 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { recordQuestionAttempt } from "@/server/actions/subjects";
+import {
+  analyzeReflection,
+  CHALLENGE_MIX_DEFAULT,
+  type ChallengeMix,
+  generateDailyMix,
+  generateOnDemandChallenge,
+} from "@/server/ai/challenge";
+import type {
+  ChallengeItemKind,
+  ChallengeItemStatus,
+  ChallengeSource,
+  ChallengeStatus,
+  SubjectSlug,
+} from "../../../generated/prisma/client";
+
+async function requireStudent() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
+  if (session.user.role !== "STUDENT") throw new Error("FORBIDDEN");
+  return session.user.id;
+}
+
+function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function toDateOnly(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export interface ChallengeListItem {
+  id: string;
+  title: string;
+  description: string;
+  status: ChallengeStatus;
+  source: ChallengeSource;
+  scheduledFor: string;
+  generatedAt: string;
+  completedAt: string | null;
+  subject: {
+    id: string;
+    name: string;
+    slug: SubjectSlug;
+    icon: string | null;
+    color: string | null;
+  } | null;
+  itemCount: number;
+  completedItemCount: number;
+  totalPoints: number;
+  mixConfig: ChallengeMix;
+}
+
+export interface ChallengeDetailItem {
+  id: string;
+  order: number;
+  kind: ChallengeItemKind;
+  status: ChallengeItemStatus;
+  points: number;
+  completedAt: string | null;
+  prompt: string | null;
+  answer: string | null;
+  isCorrect: boolean | null;
+  question: {
+    id: string;
+    questionText: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string | null;
+    hint: string | null;
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+    conceptName: string;
+    topicName: string;
+  } | null;
+  material: {
+    id: string;
+    title: string;
+    content: string;
+    keyPoints: string[];
+    estimatedMinutes: number;
+    difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+  } | null;
+}
+
+export interface ChallengeDetail {
+  id: string;
+  title: string;
+  description: string;
+  status: ChallengeStatus;
+  source: ChallengeSource;
+  scheduledFor: string;
+  generatedAt: string;
+  completedAt: string | null;
+  subject: {
+    id: string;
+    name: string;
+    slug: SubjectSlug;
+    icon: string | null;
+    color: string | null;
+  } | null;
+  mixConfig: ChallengeMix;
+  items: ChallengeDetailItem[];
+  reflection: {
+    id: string;
+    prompt: string;
+    response: string;
+    sentiment: "POSITIVE" | "NEUTRAL" | "NEGATIVE";
+    depth: "SURFACE" | "MODERATE" | "DEEP";
+    suggestions: string[] | null;
+    submittedAt: string;
+  } | null;
+}
+
+export async function getTodayChallenges(): Promise<{
+  challenges: ChallengeListItem[];
+  progress: { total: number; completed: number; points: number };
+}> {
+  const userId = await requireStudent();
+  const today = startOfToday();
+
+  let challenges = await fetchChallengesForDate(userId, today);
+
+  if (challenges.length === 0) {
+    await generateAndStoreDailyChallenges(userId, today);
+    challenges = await fetchChallengesForDate(userId, today);
+  }
+
+  await aggregateDailyProgress(userId, today);
+
+  const total = challenges.length;
+  const completed = challenges.filter((c) => c.status === "COMPLETED").length;
+  const points = challenges.reduce(
+    (acc, c) => acc + (c.status === "COMPLETED" ? c.totalPoints + 25 : 0),
+    0,
+  );
+
+  return {
+    challenges,
+    progress: {
+      total,
+      completed,
+      points,
+    },
+  };
+}
+
+async function fetchChallengesForDate(
+  userId: string,
+  date: Date,
+): Promise<ChallengeListItem[]> {
+  const dayStart = toDateOnly(date);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const rows = await prisma.challenge.findMany({
+    where: {
+      userId,
+      scheduledFor: { gte: dayStart, lt: dayEnd },
+    },
+    orderBy: { generatedAt: "asc" },
+    include: {
+      subject: {
+        select: { id: true, name: true, slug: true, icon: true, color: true },
+      },
+      items: { select: { id: true, status: true, points: true } },
+    },
+  });
+
+  return rows.map((c) => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    status: c.status,
+    source: c.source,
+    scheduledFor: c.scheduledFor.toISOString(),
+    generatedAt: c.generatedAt.toISOString(),
+    completedAt: c.completedAt?.toISOString() ?? null,
+    subject: c.subject,
+    itemCount: c.items.length,
+    completedItemCount: c.items.filter((i) => i.status === "COMPLETED").length,
+    totalPoints: c.items.reduce((acc, i) => acc + i.points, 0),
+    mixConfig: c.mixConfig as ChallengeMix,
+  }));
+}
+
+async function generateAndStoreDailyChallenges(
+  userId: string,
+  date: Date,
+): Promise<void> {
+  const [
+    profile,
+    weakConcepts,
+    strongConcepts,
+    recentChallenges,
+    availableQuestions,
+  ] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        grade: true,
+        school: true,
+        learningStyle: true,
+        focusedSubjects: true,
+        user: { select: { name: true } },
+      },
+    }),
+    prisma.studentKnowledgeProfile.findMany({
+      where: { userId, masteryScore: { lt: 0.7 } },
+      orderBy: { masteryScore: "asc" },
+      take: 8,
+      include: {
+        concept: {
+          select: {
+            id: true,
+            name: true,
+            topic: { select: { subject: { select: { name: true } } } },
+          },
+        },
+      },
+    }),
+    prisma.studentKnowledgeProfile.findMany({
+      where: { userId, masteryScore: { gte: 0.8 } },
+      orderBy: { masteryScore: "desc" },
+      take: 5,
+      include: {
+        concept: {
+          select: {
+            id: true,
+            name: true,
+            topic: { select: { subject: { select: { name: true } } } },
+          },
+        },
+      },
+    }),
+    prisma.challenge.findMany({
+      where: {
+        userId,
+        scheduledFor: {
+          gte: new Date(date.getTime() - 5 * 24 * 60 * 60 * 1000),
+          lt: date,
+        },
+      },
+      orderBy: { scheduledFor: "desc" },
+      take: 5,
+      include: { items: { select: { kind: true } } },
+    }),
+    prisma.question.findMany({
+      where: { isActive: true },
+      take: 60,
+      select: {
+        id: true,
+        conceptId: true,
+        difficulty: true,
+        concept: {
+          select: {
+            name: true,
+            topic: {
+              select: {
+                name: true,
+                subject: { select: { slug: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const focusedSubjects = profile?.focusedSubjects ?? [];
+
+  try {
+    const plan = await generateDailyMix({
+      userId,
+      userName: profile?.user.name ?? undefined,
+      grade: profile?.grade,
+      school: profile?.school,
+      learningStyle: profile?.learningStyle,
+      focusedSubjects,
+      weakConcepts: weakConcepts.map((w) => ({
+        id: w.concept.id,
+        name: w.concept.name,
+        masteryScore: w.masteryScore,
+        subjectName: w.concept.topic.subject.name,
+      })),
+      strongConcepts: strongConcepts.map((s) => ({
+        id: s.concept.id,
+        name: s.concept.name,
+        masteryScore: s.masteryScore,
+        subjectName: s.concept.topic.subject.name,
+      })),
+      recentChallenges: recentChallenges.map((c) => ({
+        title: c.title,
+        kinds: Array.from(new Set(c.items.map((i) => i.kind))),
+      })),
+      availableQuestions: availableQuestions.map((q) => ({
+        id: q.id,
+        conceptId: q.conceptId,
+        conceptName: q.concept.name,
+        topicName: q.concept.topic.name,
+        subjectSlug: q.concept.topic.subject.slug,
+        difficulty: q.difficulty,
+      })),
+      mix: CHALLENGE_MIX_DEFAULT,
+    });
+
+    await prisma.$transaction(async (tx) => {
+      const uniqueSlugs = Array.from(
+        new Set(plan.items.map((i) => i.subjectSlug)),
+      );
+      const subjects = await tx.subject.findMany({
+        where: { slug: { in: uniqueSlugs as never[] } },
+        select: { id: true, slug: true },
+      });
+      const subjectIdBySlug = new Map(subjects.map((s) => [s.slug, s.id]));
+
+      for (let i = 0; i < plan.items.length; i++) {
+        const item = plan.items[i];
+        const subjectId = subjectIdBySlug.get(item.subjectSlug) ?? null;
+
+        const baseData = {
+          userId,
+          subjectId,
+          title:
+            item.kind === "MATERIAL" && item.material
+              ? item.material.title
+              : item.kind === "REFLECTION" && item.reflection
+                ? `Refleksi: ${item.reflection.context.slice(0, 60)}`
+                : `${item.subjectSlug}: ${item.conceptHint ?? "Latihan"}`,
+          description: item.rationale,
+          status: "ACTIVE" as const,
+          source: "AUTO_DAILY" as const,
+          scheduledFor: toDateOnly(date),
+          mixConfig: CHALLENGE_MIX_DEFAULT,
+        };
+
+        if (item.kind === "QUESTION") {
+          const candidates = availableQuestions.filter(
+            (q) => q.concept.topic.subject.slug === item.subjectSlug,
+          );
+          if (candidates.length === 0) {
+            const fallback = availableQuestions[i % availableQuestions.length];
+            if (!fallback) continue;
+            await createQuestionChallenge(tx, userId, baseData, fallback.id, i);
+            continue;
+          }
+          const picked = candidates[i % candidates.length];
+          if (!picked) continue;
+          await createQuestionChallenge(tx, userId, baseData, picked.id, i);
+        } else if (item.kind === "MATERIAL" && item.material) {
+          await createMaterialChallenge(
+            tx,
+            userId,
+            baseData,
+            item.material,
+            i,
+            subjectId,
+          );
+        } else if (item.kind === "REFLECTION" && item.reflection) {
+          await createReflectionChallenge(
+            tx,
+            userId,
+            baseData,
+            item.reflection,
+            i,
+            subjectId,
+          );
+        }
+      }
+    });
+  } catch (err) {
+    console.error("generateAndStoreDailyChallenges failed:", err);
+  }
+}
+
+async function createQuestionChallenge(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  _userId: string,
+  baseData: {
+    userId: string;
+    subjectId: string | null;
+    title: string;
+    description: string;
+    status: "ACTIVE";
+    source: "AUTO_DAILY";
+    scheduledFor: Date;
+    mixConfig: ChallengeMix;
+  },
+  questionId: string,
+  order: number,
+) {
+  const challenge = await tx.challenge.create({
+    data: { ...baseData, userId: baseData.userId },
+  });
+  await tx.challengeItem.create({
+    data: {
+      challengeId: challenge.id,
+      order,
+      kind: "QUESTION",
+      questionId,
+      points: 10,
+    },
+  });
+}
+
+async function createMaterialChallenge(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  userId: string,
+  baseData: {
+    userId: string;
+    subjectId: string | null;
+    title: string;
+    description: string;
+    status: "ACTIVE";
+    source: "AUTO_DAILY";
+    scheduledFor: Date;
+    mixConfig: ChallengeMix;
+  },
+  material: {
+    title: string;
+    content: string;
+    keyPoints: string[];
+    estimatedMinutes: number;
+    difficulty: "EASY" | "MEDIUM" | "HARD";
+  },
+  order: number,
+  subjectId: string | null,
+) {
+  const challenge = await tx.challenge.create({
+    data: { ...baseData, userId },
+  });
+  const mat = await tx.material.create({
+    data: {
+      userId,
+      subjectId,
+      title: material.title,
+      content: material.content,
+      keyPoints: material.keyPoints,
+      estimatedMinutes: material.estimatedMinutes,
+      difficulty: material.difficulty,
+      source: "CHALLENGE",
+    },
+  });
+  await tx.challengeItem.create({
+    data: {
+      challengeId: challenge.id,
+      order,
+      kind: "MATERIAL",
+      materialId: mat.id,
+      points: 5,
+    },
+  });
+}
+
+async function createReflectionChallenge(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  userId: string,
+  baseData: {
+    userId: string;
+    subjectId: string | null;
+    title: string;
+    description: string;
+    status: "ACTIVE";
+    source: "AUTO_DAILY";
+    scheduledFor: Date;
+    mixConfig: ChallengeMix;
+  },
+  reflection: { prompt: string; context: string },
+  order: number,
+  _subjectId: string | null,
+) {
+  const challenge = await tx.challenge.create({
+    data: { ...baseData, userId },
+  });
+  await tx.challengeItem.create({
+    data: {
+      challengeId: challenge.id,
+      order,
+      kind: "REFLECTION",
+      prompt: `${reflection.prompt}\n\nKonteks: ${reflection.context}`,
+      points: 15,
+    },
+  });
+}
+
+export async function getChallengeDetail(
+  challengeId: string,
+): Promise<ChallengeDetail | null> {
+  const userId = await requireStudent();
+
+  const challenge = await prisma.challenge.findFirst({
+    where: { id: challengeId, userId },
+    include: {
+      subject: {
+        select: { id: true, name: true, slug: true, icon: true, color: true },
+      },
+      items: {
+        orderBy: { order: "asc" },
+        include: {
+          question: {
+            select: {
+              id: true,
+              questionText: true,
+              options: true,
+              correctAnswer: true,
+              explanation: true,
+              hint: true,
+              difficulty: true,
+              concept: {
+                select: { name: true, topic: { select: { name: true } } },
+              },
+            },
+          },
+          material: {
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              keyPoints: true,
+              estimatedMinutes: true,
+              difficulty: true,
+            },
+          },
+        },
+      },
+      reflections: {
+        orderBy: { submittedAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!challenge) return null;
+
+  const reflection = challenge.reflections[0] ?? null;
+
+  return {
+    id: challenge.id,
+    title: challenge.title,
+    description: challenge.description,
+    status: challenge.status,
+    source: challenge.source,
+    scheduledFor: challenge.scheduledFor.toISOString(),
+    generatedAt: challenge.generatedAt.toISOString(),
+    completedAt: challenge.completedAt?.toISOString() ?? null,
+    subject: challenge.subject,
+    mixConfig: challenge.mixConfig as ChallengeMix,
+    items: challenge.items.map((item) => ({
+      id: item.id,
+      order: item.order,
+      kind: item.kind,
+      status: item.status,
+      points: item.points,
+      completedAt: item.completedAt?.toISOString() ?? null,
+      prompt: item.prompt,
+      answer: item.answer,
+      isCorrect: item.isCorrect,
+      question: item.question
+        ? {
+            id: item.question.id,
+            questionText: item.question.questionText,
+            options: Array.isArray(item.question.options)
+              ? (item.question.options as unknown as string[])
+              : [],
+            correctAnswer: item.question.correctAnswer,
+            explanation: item.question.explanation,
+            hint: item.question.hint,
+            difficulty: item.question.difficulty,
+            conceptName: item.question.concept.name,
+            topicName: item.question.concept.topic.name,
+          }
+        : null,
+      material: item.material
+        ? {
+            id: item.material.id,
+            title: item.material.title,
+            content: item.material.content,
+            keyPoints: Array.isArray(item.material.keyPoints)
+              ? (item.material.keyPoints as unknown as string[])
+              : [],
+            estimatedMinutes: item.material.estimatedMinutes,
+            difficulty: item.material.difficulty,
+          }
+        : null,
+    })),
+    reflection: reflection
+      ? {
+          id: reflection.id,
+          prompt: reflection.prompt,
+          response: reflection.response,
+          sentiment: reflection.sentiment,
+          depth: reflection.depth,
+          suggestions: Array.isArray(reflection.suggestions)
+            ? (reflection.suggestions as unknown as string[])
+            : null,
+          submittedAt: reflection.submittedAt.toISOString(),
+        }
+      : null,
+  };
+}
+
+const completeSchema = z.object({
+  itemId: z.string().min(1),
+  answer: z.string().min(1).max(4000).optional(),
+});
+
+export async function completeChallengeItem(input: {
+  itemId: string;
+  answer?: string;
+}): Promise<{
+  ok: boolean;
+  isCorrect?: boolean;
+  correctAnswer?: string;
+  explanation?: string | null;
+  newMastery?: number;
+  newStatus?: string;
+  challengeCompleted?: boolean;
+  error?: string;
+}> {
+  const userId = await requireStudent();
+  const parsed = completeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Input tidak valid" };
+
+  const item = await prisma.challengeItem.findFirst({
+    where: { id: parsed.data.itemId, challenge: { userId } },
+    include: {
+      challenge: true,
+      question: { select: { correctAnswer: true, explanation: true } },
+      material: { select: { id: true } },
+    },
+  });
+
+  if (!item) return { ok: false, error: "Item tidak ditemukan" };
+  if (item.status === "COMPLETED") {
+    return { ok: false, error: "Item sudah selesai" };
+  }
+
+  if (item.kind === "QUESTION") {
+    if (!parsed.data.answer) {
+      return { ok: false, error: "Jawaban wajib diisi" };
+    }
+    if (!item.question) {
+      return { ok: false, error: "Soal tidak ditemukan" };
+    }
+
+    const isCorrect =
+      parsed.data.answer.trim() === item.question.correctAnswer.trim();
+
+    await prisma.challengeItem.update({
+      where: { id: item.id },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        answer: parsed.data.answer,
+        isCorrect,
+      },
+    });
+
+    if (item.questionId) {
+      await recordQuestionAttempt({
+        questionId: item.questionId,
+        answer: parsed.data.answer,
+        isCorrect,
+      });
+    }
+
+    const challengeCompleted = await checkAndCompleteChallenge(
+      item.challengeId,
+    );
+    await aggregateDailyProgress(userId, item.challenge.scheduledFor);
+    revalidatePath("/challenge", "layout");
+    revalidatePath("/dashboard", "layout");
+
+    return {
+      ok: true,
+      isCorrect,
+      correctAnswer: item.question.correctAnswer,
+      explanation: item.question.explanation,
+      challengeCompleted,
+    };
+  }
+
+  if (item.kind === "MATERIAL") {
+    if (item.material) {
+      await markMaterialReadInternal(userId, item.material.id, true);
+    }
+    await prisma.challengeItem.update({
+      where: { id: item.id },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+    const challengeCompleted = await checkAndCompleteChallenge(
+      item.challengeId,
+    );
+    await aggregateDailyProgress(userId, item.challenge.scheduledFor);
+    revalidatePath("/challenge", "layout");
+    return { ok: true, challengeCompleted };
+  }
+
+  if (item.kind === "REFLECTION") {
+    return { ok: false, error: "Gunakan submitReflection untuk refleksi" };
+  }
+
+  return { ok: false, error: "Tipe item tidak dikenal" };
+}
+
+export async function skipChallengeItem(input: {
+  itemId: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireStudent();
+  const item = await prisma.challengeItem.findFirst({
+    where: { id: input.itemId, challenge: { userId } },
+  });
+  if (!item) return { ok: false, error: "Item tidak ditemukan" };
+  await prisma.challengeItem.update({
+    where: { id: item.id },
+    data: { status: "SKIPPED", completedAt: new Date() },
+  });
+  await checkAndCompleteChallenge(item.challengeId);
+  revalidatePath("/challenge", "layout");
+  return { ok: true };
+}
+
+const reflectionSchema = z.object({
+  challengeId: z.string().min(1),
+  response: z.string().min(20).max(2000),
+});
+
+export async function submitReflection(input: {
+  challengeId: string;
+  response: string;
+}): Promise<{
+  ok: boolean;
+  analysis?: { sentiment: string; depth: string; suggestions: string[] };
+  error?: string;
+}> {
+  const userId = await requireStudent();
+  const parsed = reflectionSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: "Refleksi minimal 20 karakter" };
+
+  const challenge = await prisma.challenge.findFirst({
+    where: { id: parsed.data.challengeId, userId },
+    include: {
+      subject: { select: { name: true } },
+      items: { where: { kind: "REFLECTION" }, take: 1 },
+    },
+  });
+
+  if (!challenge) return { ok: false, error: "Challenge tidak ditemukan" };
+  const reflectionItem = challenge.items[0];
+  if (!reflectionItem || !reflectionItem.prompt) {
+    return { ok: false, error: "Challenge ini tidak punya refleksi" };
+  }
+
+  const analysis = await analyzeReflection(
+    reflectionItem.prompt,
+    parsed.data.response,
+    challenge.subject?.name,
+  );
+
+  await prisma.reflection.create({
+    data: {
+      userId,
+      challengeId: challenge.id,
+      prompt: reflectionItem.prompt,
+      response: parsed.data.response,
+      sentiment: analysis.sentiment,
+      depth: analysis.depth,
+      suggestions: analysis.suggestions,
+    },
+  });
+
+  await prisma.challengeItem.update({
+    where: { id: reflectionItem.id },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      answer: parsed.data.response,
+    },
+  });
+
+  await checkAndCompleteChallenge(challenge.id);
+  await aggregateDailyProgress(userId, challenge.scheduledFor);
+  revalidatePath("/challenge", "layout");
+  revalidatePath(`/challenge/${challenge.id}`, "layout");
+
+  return {
+    ok: true,
+    analysis: {
+      sentiment: analysis.sentiment,
+      depth: analysis.depth,
+      suggestions: analysis.suggestions,
+    },
+  };
+}
+
+async function checkAndCompleteChallenge(
+  challengeId: string,
+): Promise<boolean> {
+  const items = await prisma.challengeItem.findMany({
+    where: { challengeId },
+    select: { status: true },
+  });
+  const allDone = items.every(
+    (i) => i.status === "COMPLETED" || i.status === "SKIPPED",
+  );
+  if (allDone) {
+    await prisma.challenge.update({
+      where: { id: challengeId },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+  }
+  return allDone;
+}
+
+const markReadSchema = z.object({
+  materialId: z.string().min(1),
+  readSeconds: z.number().int().min(0).max(3600).default(0),
+  completed: z.boolean().default(false),
+});
+
+export async function markMaterialRead(input: {
+  materialId: string;
+  readSeconds?: number;
+  completed?: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireStudent();
+  const parsed = markReadSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Input tidak valid" };
+
+  const material = await prisma.material.findFirst({
+    where: { id: parsed.data.materialId, userId },
+  });
+  if (!material) return { ok: false, error: "Materi tidak ditemukan" };
+
+  await markMaterialReadInternal(
+    userId,
+    parsed.data.materialId,
+    parsed.data.completed,
+    parsed.data.readSeconds,
+  );
+  revalidatePath("/materials", "layout");
+  return { ok: true };
+}
+
+async function markMaterialReadInternal(
+  userId: string,
+  materialId: string,
+  completed: boolean,
+  readSeconds = 0,
+) {
+  await prisma.materialRead.upsert({
+    where: { userId_materialId: { userId, materialId } },
+    create: {
+      userId,
+      materialId,
+      readSeconds,
+      completed,
+    },
+    update: {
+      readSeconds: { increment: readSeconds },
+      completed: completed || undefined,
+    },
+  });
+}
+
+const generateSchema = z.object({
+  kind: z.enum(["QUESTION", "MATERIAL", "REFLECTION", "MIX"]).default("MIX"),
+  subjectSlug: z.string().optional(),
+  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
+});
+
+export async function generateOnDemand(input: {
+  kind?: "QUESTION" | "MATERIAL" | "REFLECTION" | "MIX";
+  subjectSlug?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+}): Promise<{ ok: boolean; challengeId?: string; error?: string }> {
+  const userId = await requireStudent();
+  const parsed = generateSchema.safeParse(input ?? {});
+  if (!parsed.success) return { ok: false, error: "Input tidak valid" };
+
+  const today = startOfToday();
+  const todayCount = await prisma.challenge.count({
+    where: {
+      userId,
+      source: "ON_DEMAND",
+      scheduledFor: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
+    },
+  });
+  if (todayCount >= 10) {
+    return {
+      ok: false,
+      error:
+        "Batas tantangan tambahan hari ini sudah tercapai (10x). Coba lagi besok ya!",
+    };
+  }
+
+  const [profile, availableQuestions] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { focusedSubjects: true },
+    }),
+    prisma.question.findMany({
+      where: { isActive: true },
+      take: 30,
+      select: {
+        id: true,
+        conceptId: true,
+        difficulty: true,
+        concept: {
+          select: {
+            name: true,
+            topic: {
+              select: { name: true, subject: { select: { slug: true } } },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  try {
+    const plan = await generateOnDemandChallenge({
+      userId,
+      kind: parsed.data.kind,
+      subjectSlug: parsed.data.subjectSlug,
+      difficulty: parsed.data.difficulty,
+      focusedSubjects: profile?.focusedSubjects ?? [],
+      availableQuestions: availableQuestions.map((q) => ({
+        id: q.id,
+        conceptId: q.conceptId,
+        conceptName: q.concept.name,
+        topicName: q.concept.topic.name,
+        subjectSlug: q.concept.topic.subject.slug,
+        difficulty: q.difficulty,
+      })),
+    });
+
+    const item = plan.items[0];
+    if (!item) return { ok: false, error: "AI gagal generate tantangan" };
+
+    const slugToLookup = parsed.data.subjectSlug ?? item.subjectSlug;
+    const subject = slugToLookup
+      ? await prisma.subject.findUnique({
+          where: { slug: slugToLookup as SubjectSlug },
+          select: { id: true },
+        })
+      : null;
+
+    const baseData = {
+      userId,
+      subjectId: subject?.id ?? null,
+      title:
+        item.kind === "MATERIAL" && item.material
+          ? item.material.title
+          : item.kind === "REFLECTION" && item.reflection
+            ? `Refleksi: ${item.reflection.context.slice(0, 60)}`
+            : `${item.subjectSlug}: ${item.conceptHint ?? "Latihan"}`,
+      description: item.rationale,
+      status: "ACTIVE" as const,
+      source: "ON_DEMAND" as const,
+      scheduledFor: toDateOnly(today),
+      mixConfig: { questions: 0, materials: 0, reflections: 0 },
+    };
+
+    let challengeId = "";
+    if (item.kind === "QUESTION") {
+      const candidates = availableQuestions.filter(
+        (q) =>
+          (q.concept.topic.subject as { slug: SubjectSlug }).slug ===
+          item.subjectSlug,
+      );
+      const fallback = candidates[0] ?? availableQuestions[0];
+      if (!fallback) return { ok: false, error: "Tidak ada soal di bank" };
+      const c = await prisma.challenge.create({ data: baseData });
+      await prisma.challengeItem.create({
+        data: {
+          challengeId: c.id,
+          order: 0,
+          kind: "QUESTION",
+          questionId: fallback.id,
+          points: 10,
+        },
+      });
+      challengeId = c.id;
+    } else if (item.kind === "MATERIAL" && item.material) {
+      const c = await prisma.challenge.create({ data: baseData });
+      const m = await prisma.material.create({
+        data: {
+          userId,
+          subjectId: subject?.id ?? null,
+          title: item.material.title,
+          content: item.material.content,
+          keyPoints: item.material.keyPoints,
+          estimatedMinutes: item.material.estimatedMinutes,
+          difficulty: item.material.difficulty,
+          source: "ON_DEMAND",
+        },
+      });
+      await prisma.challengeItem.create({
+        data: {
+          challengeId: c.id,
+          order: 0,
+          kind: "MATERIAL",
+          materialId: m.id,
+          points: 5,
+        },
+      });
+      challengeId = c.id;
+    } else if (item.kind === "REFLECTION" && item.reflection) {
+      const c = await prisma.challenge.create({ data: baseData });
+      await prisma.challengeItem.create({
+        data: {
+          challengeId: c.id,
+          order: 0,
+          kind: "REFLECTION",
+          prompt: `${item.reflection.prompt}\n\nKonteks: ${item.reflection.context}`,
+          points: 15,
+        },
+      });
+      challengeId = c.id;
+    }
+
+    revalidatePath("/challenge", "layout");
+    return { ok: true, challengeId };
+  } catch (err) {
+    console.error("generateOnDemand failed:", err);
+    return { ok: false, error: "Gagal generate tantangan" };
+  }
+}
+
+export async function getChallengeHistory(input: {
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  items: ChallengeListItem[];
+  total: number;
+}> {
+  const userId = await requireStudent();
+  const limit = input.limit ?? 20;
+  const offset = input.offset ?? 0;
+
+  const [rows, total] = await Promise.all([
+    prisma.challenge.findMany({
+      where: { userId },
+      orderBy: { scheduledFor: "desc" },
+      take: limit,
+      skip: offset,
+      include: {
+        subject: {
+          select: { id: true, name: true, slug: true, icon: true, color: true },
+        },
+        items: { select: { id: true, status: true, points: true } },
+      },
+    }),
+    prisma.challenge.count({ where: { userId } }),
+  ]);
+
+  return {
+    total,
+    items: rows.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      status: c.status,
+      source: c.source,
+      scheduledFor: c.scheduledFor.toISOString(),
+      generatedAt: c.generatedAt.toISOString(),
+      completedAt: c.completedAt?.toISOString() ?? null,
+      subject: c.subject,
+      itemCount: c.items.length,
+      completedItemCount: c.items.filter((i) => i.status === "COMPLETED")
+        .length,
+      totalPoints: c.items.reduce((acc, i) => acc + i.points, 0),
+      mixConfig: c.mixConfig as ChallengeMix,
+    })),
+  };
+}
+
+export interface MaterialLibraryItem {
+  id: string;
+  title: string;
+  estimatedMinutes: number;
+  difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+  source: "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+  createdAt: string;
+  read: { completed: boolean; readAt: string; readSeconds: number } | null;
+  subject: {
+    id: string;
+    name: string;
+    slug: SubjectSlug;
+    icon: string | null;
+    color: string | null;
+  } | null;
+}
+
+export async function getMaterialLibrary(input: {
+  subjectId?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ items: MaterialLibraryItem[]; total: number }> {
+  const userId = await requireStudent();
+  const limit = input.limit ?? 30;
+  const offset = input.offset ?? 0;
+
+  const [rows, total] = await Promise.all([
+    prisma.material.findMany({
+      where: {
+        userId,
+        subjectId: input.subjectId ?? undefined,
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+      include: {
+        subject: {
+          select: { id: true, name: true, slug: true, icon: true, color: true },
+        },
+        reads: { where: { userId }, take: 1, orderBy: { readAt: "desc" } },
+      },
+    }),
+    prisma.material.count({
+      where: { userId, subjectId: input.subjectId ?? undefined },
+    }),
+  ]);
+
+  return {
+    total,
+    items: rows.map((m) => ({
+      id: m.id,
+      title: m.title,
+      estimatedMinutes: m.estimatedMinutes,
+      difficulty: m.difficulty,
+      source: m.source,
+      createdAt: m.createdAt.toISOString(),
+      read: m.reads[0]
+        ? {
+            completed: m.reads[0].completed,
+            readAt: m.reads[0].readAt.toISOString(),
+            readSeconds: m.reads[0].readSeconds,
+          }
+        : null,
+      subject: m.subject,
+    })),
+  };
+}
+
+export interface MaterialDetail {
+  id: string;
+  title: string;
+  content: string;
+  keyPoints: string[];
+  estimatedMinutes: number;
+  difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
+  source: "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+  createdAt: string;
+  read: { completed: boolean; readAt: string; readSeconds: number } | null;
+  subject: {
+    id: string;
+    name: string;
+    slug: SubjectSlug;
+    icon: string | null;
+    color: string | null;
+  } | null;
+  relatedChallenges: Array<{
+    id: string;
+    title: string;
+    status: ChallengeStatus;
+  }>;
+}
+
+export async function getMaterialDetail(
+  materialId: string,
+): Promise<MaterialDetail | null> {
+  const userId = await requireStudent();
+  const material = await prisma.material.findFirst({
+    where: { id: materialId, userId },
+    include: {
+      subject: {
+        select: { id: true, name: true, slug: true, icon: true, color: true },
+      },
+      reads: { where: { userId }, take: 1, orderBy: { readAt: "desc" } },
+      challengeItems: {
+        include: {
+          challenge: { select: { id: true, title: true, status: true } },
+        },
+      },
+    },
+  });
+  if (!material) return null;
+
+  return {
+    id: material.id,
+    title: material.title,
+    content: material.content,
+    keyPoints: Array.isArray(material.keyPoints)
+      ? (material.keyPoints as unknown as string[])
+      : [],
+    estimatedMinutes: material.estimatedMinutes,
+    difficulty: material.difficulty,
+    source: material.source,
+    createdAt: material.createdAt.toISOString(),
+    read: material.reads[0]
+      ? {
+          completed: material.reads[0].completed,
+          readAt: material.reads[0].readAt.toISOString(),
+          readSeconds: material.reads[0].readSeconds,
+        }
+      : null,
+    subject: material.subject,
+    relatedChallenges: material.challengeItems.map((ci) => ({
+      id: ci.challenge.id,
+      title: ci.challenge.title,
+      status: ci.challenge.status,
+    })),
+  };
+}
+
+export interface DailyProgress {
+  date: string;
+  totalActive: number;
+  totalCompleted: number;
+  totalPoints: number;
+  questionsCompleted: number;
+  materialsCompleted: number;
+  reflectionsSubmitted: number;
+  overallScore: number;
+  masteryScore: number;
+  challengeScore: number;
+  materialsScore: number;
+  reflectionsScore: number;
+}
+
+export async function getDailyProgress(date?: Date): Promise<DailyProgress> {
+  const userId = await requireStudent();
+  const targetDate = toDateOnly(date ?? new Date());
+
+  let progress = await prisma.userChallengeProgress.findUnique({
+    where: { userId_date: { userId, date: targetDate } },
+  });
+
+  if (!progress) {
+    await aggregateDailyProgress(userId, targetDate);
+    progress = await prisma.userChallengeProgress.findUnique({
+      where: { userId_date: { userId, date: targetDate } },
+    });
+  }
+
+  const [mastery, materials, reflections] = await Promise.all([
+    prisma.studentKnowledgeProfile.aggregate({
+      where: { userId },
+      _avg: { masteryScore: true },
+    }),
+    prisma.materialRead.count({
+      where: {
+        userId,
+        completed: true,
+        readAt: {
+          gte: targetDate,
+          lt: new Date(targetDate.getTime() + 86_400_000),
+        },
+      },
+    }),
+    prisma.reflection.count({
+      where: {
+        userId,
+        submittedAt: {
+          gte: targetDate,
+          lt: new Date(targetDate.getTime() + 86_400_000),
+        },
+      },
+    }),
+  ]);
+
+  const masteryScore = Math.round((mastery._avg.masteryScore ?? 0) * 100);
+  const target = 4;
+  const challengeScore = Math.min(
+    100,
+    Math.round(((progress?.totalCompleted ?? 0) / target) * 100),
+  );
+  const materialsScore = Math.min(100, materials * 33);
+  const reflectionsScore = Math.min(100, reflections * 100);
+
+  const overall = Math.round(
+    masteryScore * 0.4 +
+      challengeScore * 0.3 +
+      materialsScore * 0.2 +
+      reflectionsScore * 0.1,
+  );
+
+  return {
+    date: targetDate.toISOString(),
+    totalActive: progress?.totalActive ?? 0,
+    totalCompleted: progress?.totalCompleted ?? 0,
+    totalPoints: progress?.totalPoints ?? 0,
+    questionsCompleted: progress?.questionsCompleted ?? 0,
+    materialsCompleted: progress?.materialsCompleted ?? 0,
+    reflectionsSubmitted: progress?.reflectionsSubmitted ?? 0,
+    overallScore: overall,
+    masteryScore,
+    challengeScore,
+    materialsScore,
+    reflectionsScore,
+  };
+}
+
+async function aggregateDailyProgress(
+  userId: string,
+  date: Date,
+): Promise<void> {
+  const dayStart = toDateOnly(date);
+  const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+
+  const [challenges, items] = await Promise.all([
+    prisma.challenge.findMany({
+      where: { userId, scheduledFor: { gte: dayStart, lt: dayEnd } },
+      include: { items: true },
+    }),
+    prisma.challengeItem.findMany({
+      where: {
+        challenge: { userId, scheduledFor: { gte: dayStart, lt: dayEnd } },
+        status: "COMPLETED",
+        completedAt: { gte: dayStart, lt: dayEnd },
+      },
+      include: { challenge: { select: { scheduledFor: true } } },
+    }),
+  ]);
+
+  const totalActive = challenges.length;
+  const totalCompleted = challenges.filter(
+    (c) => c.status === "COMPLETED",
+  ).length;
+  const totalPoints = items.reduce((acc, i) => acc + i.points, 0);
+  const questionsCompleted = items.filter((i) => i.kind === "QUESTION").length;
+  const materialsCompleted = items.filter((i) => i.kind === "MATERIAL").length;
+  const reflectionsSubmitted = items.filter(
+    (i) => i.kind === "REFLECTION",
+  ).length;
+
+  await prisma.userChallengeProgress.upsert({
+    where: { userId_date: { userId, date: dayStart } },
+    create: {
+      userId,
+      date: dayStart,
+      totalActive,
+      totalCompleted,
+      totalPoints,
+      pointsByKind: { question: 10, material: 5, reflection: 15 },
+      questionsCompleted,
+      materialsCompleted,
+      reflectionsSubmitted,
+    },
+    update: {
+      totalActive,
+      totalCompleted,
+      totalPoints,
+      questionsCompleted,
+      materialsCompleted,
+      reflectionsSubmitted,
+    },
+  });
+}

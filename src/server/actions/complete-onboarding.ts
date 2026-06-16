@@ -62,21 +62,20 @@ export async function completeOnboarding(
   }
   const data = parsed.data;
 
-  const validSubjects = await prisma.subject.findMany({
-    where: { id: { in: data.focusedSubjects } },
-    select: { id: true },
-  });
+  const [validSubjects, userExists] = await Promise.all([
+    prisma.subject.findMany({
+      where: { id: { in: data.focusedSubjects } },
+      select: { id: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    }),
+  ]);
   if (validSubjects.length !== data.focusedSubjects.length) {
     return { ok: false, message: "Ada mata pelajaran yang nggak valid." };
   }
 
-  // Defensive: kalau session punya userId yang udah ga ada di DB (mis.
-  // user dihapus manual, atau JWT stale), jangan sampai FK violation
-  // bocor keluar sebagai 500. Bersihin session + tendang ke login.
-  const userExists = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
   if (!userExists) {
     redirect("/api/auth/signout");
   }

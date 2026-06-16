@@ -9,7 +9,7 @@ type FieldProps = {
   id: string;
   label: string;
   type?: string;
-  value?: string;
+  defaultValue?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -31,7 +31,7 @@ export function AuthField({
   id,
   label,
   type = "text",
-  value,
+  defaultValue,
   onChange,
   onBlur,
   placeholder,
@@ -44,6 +44,8 @@ export function AuthField({
   rightSlot,
   leftSlot,
   className,
+  name,
+  ref,
   layout = "stacked",
 }: FieldProps) {
   const [show, setShow] = React.useState(false);
@@ -67,9 +69,9 @@ export function AuthField({
       {leftSlot && <div className="pl-3.5">{leftSlot}</div>}
       <input
         id={id}
-        name={id}
+        name={name ?? id}
         type={inputType}
-        value={value}
+        defaultValue={defaultValue}
         onChange={onChange}
         onBlur={onBlur}
         placeholder={placeholder}
@@ -77,6 +79,7 @@ export function AuthField({
         required={required}
         disabled={disabled}
         inputMode={inputMode}
+        ref={ref}
         aria-invalid={Boolean(error)}
         aria-describedby={
           error ? `${id}-error` : hint ? `${id}-hint` : undefined

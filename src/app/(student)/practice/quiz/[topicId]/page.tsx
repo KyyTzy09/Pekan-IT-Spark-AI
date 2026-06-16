@@ -1,55 +1,49 @@
-import { ArrowLeft, Timer } from "lucide-react";
-import type { Metadata } from "next";
+"use client";
+
+import { useMutation } from "@tanstack/react-query";
+import { ArrowLeft, Loader2, Timer } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useEffect } from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { QuizPlayer } from "@/components/student/quiz-player";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { startQuizSession } from "@/server/actions/practice";
+import type { QuizSession } from "@/server/actions/practice";
 
-export const metadata: Metadata = {
-  title: "Quiz adaptif — Spark Ai",
-  description: "Mini-exam dengan timer & auto-submit.",
-};
+export const dynamic = "force-dynamic";
 
-export default async function QuizPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ topicId: string }>;
-  searchParams: Promise<{ n?: string; time?: string }>;
-}) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
-    notFound();
-  }
+type QuizApiResponse =
+  | { ok: true; session: QuizSession }
+  | { ok: false; error: string };
 
-  const { topicId } = await params;
-  const { n, time } = await searchParams;
-  const numQ = n === "8" ? 8 : n === "10" ? 10 : 5;
-  const timeLimitSec = time
-    ? Number.parseInt(time, 10) || undefined
-    : undefined;
+export default function QuizPage() {
+  const { topicId } = useParams<{ topicId: string }>();
 
-  const topic = await prisma.topic.findFirst({
-    where: { id: topicId },
-    select: {
-      id: true,
-      name: true,
-      subject: { select: { name: true, slug: true } },
+  const mutation = useMutation<QuizApiResponse>({
+    mutationFn: async () => {
+      const res = await fetch("/api/practice/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topicId }),
+      });
+      if (!res.ok) throw new Error("Gagal memulai quiz");
+      return res.json();
     },
   });
-  if (!topic) notFound();
 
-  const result = await startQuizSession({
-    topicId,
-    numQuestions: numQ,
-    timeLimitSec,
-  });
+  useEffect(() => {
+    mutation.mutate();
+  }, [mutation]);
 
-  if (!result.ok) {
+  if (mutation.isPending) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (mutation.isError || !mutation.data?.ok) {
     return (
       <div className="space-y-5 sm:space-y-7">
         <Reveal>
@@ -70,7 +64,9 @@ export default async function QuizPage({
               Belum bisa mulai quiz
             </h1>
             <p className="relative mt-2 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13.5px]">
-              {result.error}
+              {mutation.data && "error" in mutation.data
+                ? mutation.data.error
+                : (mutation.error?.message ?? "Terjadi kesalahan")}
             </p>
             <div className="relative mt-5 flex flex-wrap gap-2">
               <Button asChild size="sm" className="rounded-full">
@@ -86,6 +82,8 @@ export default async function QuizPage({
     );
   }
 
+  const { session } = mutation.data;
+
   return (
     <div className="space-y-5 sm:space-y-7">
       <Reveal>
@@ -93,28 +91,28 @@ export default async function QuizPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Quiz mini-exam · {topic.subject.name}
+                Quiz mini-exam · {session.subjectName}
               </p>
               <h1 className="mt-1 font-heading text-[20px] font-bold leading-tight">
-                {topic.name}
+                {session.topicName}
               </h1>
             </div>
             <Button asChild variant="ghost" size="sm" className="rounded-full">
-              <Link href={`/topics/${topic.id}`}>
+              <Link href={`/topics/${session.topicId}`}>
                 <ArrowLeft size={13} />
                 Topik
               </Link>
             </Button>
           </div>
           <p className="mt-2 text-[12.5px] text-muted-foreground">
-            {result.session.totalQuestions} soal · Timer{" "}
-            {Math.floor(result.session.timeLimitSec / 60)} menit · Auto-submit
-            kalau waktu habis. Fokus ya 💪
+            {session.totalQuestions} soal · Timer{" "}
+            {Math.floor(session.timeLimitSec / 60)} menit · Auto-submit kalau
+            waktu habis. Fokus ya 💪
           </p>
         </header>
       </Reveal>
       <Reveal delay={80}>
-        <QuizPlayer initialSession={result.session} />
+        <QuizPlayer initialSession={session} />
       </Reveal>
     </div>
   );

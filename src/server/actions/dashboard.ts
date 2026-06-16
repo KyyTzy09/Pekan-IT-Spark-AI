@@ -42,6 +42,7 @@ export type DashboardRecommendation = {
   conceptId: string;
   conceptName: string;
   conceptSlug: string;
+  topicId: string;
   subjectName: string;
   subjectSlug: SubjectSlug;
   subjectColor: string | null;
@@ -155,21 +156,23 @@ const DEFAULT_QUESTS: DashboardDailyQuest[] = [
 export async function getDashboardSummary(
   userId: string,
 ): Promise<DashboardSummary> {
-  const profile = await prisma.studentProfile.findUnique({
-    where: { userId },
-    select: {
-      grade: true,
-      school: true,
-      learningStyle: true,
-      focusedSubjects: true,
-      totalXp: true,
-      level: true,
-    },
-  });
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true },
-  });
+  const [profile, user] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        grade: true,
+        school: true,
+        learningStyle: true,
+        focusedSubjects: true,
+        totalXp: true,
+        level: true,
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true },
+    }),
+  ]);
   const focusedIds = profile?.focusedSubjects ?? [];
 
   const [streak, levels, allSubjects, knowledgeProfiles, attempts, docs] =
@@ -319,6 +322,7 @@ export async function getDashboardSummary(
         conceptId: concept.id,
         conceptName: concept.name,
         conceptSlug: concept.slug,
+        topicId: concept.topic.id,
         subjectName: concept.topic.subject.name,
         subjectSlug: concept.topic.subject.slug,
         subjectColor: concept.topic.subject.color,
@@ -349,6 +353,7 @@ export async function getDashboardSummary(
         conceptId: concept.id,
         conceptName: concept.name,
         conceptSlug: concept.slug,
+        topicId: concept.topicId,
         subjectName: firstSubject.name,
         subjectSlug: firstSubject.slug,
         subjectColor: firstSubject.color,

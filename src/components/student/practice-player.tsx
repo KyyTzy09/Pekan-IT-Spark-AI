@@ -19,9 +19,9 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { startNewChat } from "@/server/actions/chat";
@@ -465,12 +465,14 @@ export function PracticePlayer({
             <div className="relative mt-3 rounded-2xl border border-amber-300/50 bg-amber-50/80 p-3 text-[12.5px] leading-relaxed text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
               <div className="flex items-center gap-1.5 font-bold">
                 <Lock size={12} />
-                Streak salah {result.stuck.wrongStreak}x di "{session.question.conceptName}"
+                Streak salah {result.stuck.wrongStreak}x di "
+                {session.question.conceptName}"
               </div>
               <p className="mt-1">
-                Prasyarat <strong>{result.stuck.recommendedPrereq.name}</strong> masih lemah
-                ({Math.round(result.stuck.recommendedPrereq.score * 100)}%). Yuk remedial
-                di sana dulu — nanti konsep ini bakal kebuka otomatis.
+                Prasyarat <strong>{result.stuck.recommendedPrereq.name}</strong>{" "}
+                masih lemah (
+                {Math.round(result.stuck.recommendedPrereq.score * 100)}%). Yuk
+                remedial di sana dulu — nanti konsep ini bakal kebuka otomatis.
               </p>
               <div className="mt-2">
                 <Button
@@ -808,7 +810,10 @@ function WhyModal({
                   Kenapa?
                 </span>
                 <h2 className="mt-2 font-heading text-[18px] font-bold leading-tight">
-                  {question.conceptName} <span className="text-muted-foreground">· {question.topicName}</span>
+                  {question.conceptName}{" "}
+                  <span className="text-muted-foreground">
+                    · {question.topicName}
+                  </span>
                 </h2>
               </div>
               <button
