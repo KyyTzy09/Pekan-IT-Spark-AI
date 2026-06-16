@@ -1,10 +1,8 @@
 import { ArrowLeft, BookOpen, Upload } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Upload materi — Spark Ai",
@@ -12,9 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default async function UploadPage() {
-  const session = await auth();
-
-
   return (
     <div className="space-y-5 sm:space-y-7">
       <Reveal>

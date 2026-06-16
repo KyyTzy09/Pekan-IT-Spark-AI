@@ -78,11 +78,8 @@ function LoginForm() {
     <div className="space-y-6">
       {/* ── Greeting with streak teaser ── */}
       <header className="space-y-2">
-        <h1
-          className="font-heading text-[28px] font-extrabold leading-[1.1] tracking-tight text-foreground anim-slide-up gpu"
-        >
-          Masuk ke{" "}
-          <span className="text-gradient-warm">Spark</span>
+        <h1 className="font-heading text-[28px] font-extrabold leading-[1.1] tracking-tight text-foreground anim-slide-up gpu">
+          Masuk ke <span className="text-gradient-warm">Spark</span>
         </h1>
         <p
           className="text-[13.5px] leading-relaxed text-muted-foreground anim-slide-up gpu"
@@ -105,10 +102,7 @@ function LoginForm() {
       )}
 
       {/* ── Google ── */}
-      <div
-        className="anim-slide-up gpu"
-        style={{ animationDelay: "140ms" }}
-      >
+      <div className="anim-slide-up gpu" style={{ animationDelay: "140ms" }}>
         <Button
           type="button"
           variant="outline"

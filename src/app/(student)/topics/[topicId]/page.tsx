@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { TopicDetailView } from "@/components/student/subjects-view";
 import { auth } from "@/lib/auth";
 import { getTopicDetail } from "@/server/actions/dashboard";
@@ -17,15 +17,8 @@ export default async function TopicDetailPage({
   params: Promise<{ topicId: string }>;
 }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
-  if (session.user.role !== "STUDENT") {
-    redirect("/");
-  }
-
   const { topicId } = await params;
-  const summary = await getTopicDetail(topicId, session.user.id);
+  const summary = await getTopicDetail(topicId, session!.user!.id);
   if (!summary) notFound();
 
   return (

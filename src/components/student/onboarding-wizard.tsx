@@ -18,6 +18,7 @@ import {
   Target,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import * as React from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
@@ -111,6 +112,7 @@ export function OnboardingWizard({
   correctAnswers: Record<string, string>;
 }) {
   const router = useRouter();
+  const { update } = useSession();
   const [step, setStep] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -185,8 +187,8 @@ export function OnboardingWizard({
       setSubmitting(false);
       return;
     }
+    await update();
     router.push("/dashboard");
-    router.refresh();
   };
 
   return (

@@ -1,7 +1,7 @@
-import { prisma } from "../src/lib/prisma";
-import bcrypt from "bcryptjs";
 import { embedMany } from "ai";
+import bcrypt from "bcryptjs";
 import { embeddingModel } from "../src/lib/ai";
+import { prisma } from "../src/lib/prisma";
 
 const CONCEPTS_BY_SUBJECT: Record<
   string,
@@ -318,6 +318,751 @@ const CONCEPTS_BY_SUBJECT: Record<
       description: "Teori evolusi Darwin",
       contentMd:
         "Seleksi alam: organisme dengan sifat adaptif lebih mungkin bertahan hidup dan bereproduksi.",
+    },
+  ],
+  SEJARAH: [
+    {
+      topicSlug: "indonesia-purba",
+      name: "Manusia Purba",
+      description: "Jenis-jenis manusia purba di Indonesia",
+      contentMd:
+        "Meganthropus paleojavanicus, Pithecanthropus erectus (Homo erectus), Homo sapiens. Ditemukan oleh Eugene Dubois di Trinil (1891).",
+    },
+    {
+      topicSlug: "indonesia-purba",
+      name: "Periode Neolithicum",
+      description: "Zaman batu baru",
+      contentMd:
+        "Masa bercocok tanam, tinggal di rumah sederhana, gerabah, kapak persegi (Sumatra) dan kapak lonjong (Sulawesi).",
+    },
+    {
+      topicSlug: "indonesia-purba",
+      name: "Peradaban Awal Nusantara",
+      description: "Kerajaan kuno sebelum Hindu-Buddha",
+      contentMd:
+        "Kerajaan Kutai (Tarumanagara, Kalimantan), Kerajaan Tarumanagara (Jawa Barat 4-5 M). Dipengaruhi India melalui perdagangan.",
+    },
+    {
+      topicSlug: "hindu-buddha-islam",
+      name: "Kerajaan Hindu-Buddha",
+      description: "Kutai, Tarumanagara, Sriwijaya, Majapahit",
+      contentMd:
+        "Sriwijaya (Palembang) pusat Buddha & perdagangan. Majapahit (1293-1527) puncak kejayaan Hindu di Jawa Timur.",
+    },
+    {
+      topicSlug: "hindu-buddha-islam",
+      name: "Masuknya Islam ke Indonesia",
+      description: "Perdagangan Gujarat & walisongo",
+      contentMd:
+        "Masuk abad 13 M melalui pedagang Gujarat & Persia. Disiarkan walisongo di Jawa. Kerajaan Islam: Demak, Mataram, Banten.",
+    },
+    {
+      topicSlug: "hindu-buddha-islam",
+      name: "Kerajaan Islam Nusantara",
+      description: "Demak, Mataram, Banten, Makassar",
+      contentMd:
+        "Demak (1478-1554) kerajaan Islam pertama di Jawa. Sultan Trenggana menyebarkan Islam ke Sumatra, Kalimantan, Sulawesi.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Kedatangan Portugis",
+      description: "Malaka 1511, Malaka jatuh",
+      contentMd:
+        "1511 Portugis menguasai Malaka, awal kolonialisme Eropa di Nusantara. Tujuan: rempah, kristenisasi, monopoli dagang.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "VOC dan Tanam Paksa",
+      description: "Verenigde Oostindische Compagnie",
+      contentMd:
+        "VOC berdiri 1602, bubar 1799. Cultuurstelsel (1830-1870) tanam paksa kopi, tebu, nila—mengeksploitasi petani Jawa.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Perlawanan Rakyat",
+      description: "Diponegoro, Imam Bonjol, Cut Nyak Dien",
+      contentMd:
+        "Perang Diponegoro (1825-1830), Perang Padri (1821-1837), Perang Aceh (1873-1914). Patriot melawan kolonialisme.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Kebangkitan Nasional",
+      description: "Budi Utomo, Sumpah Pemuda",
+      contentMd:
+        "Budi Utomo (1908) organisasi modern pertama. Sumpah Pemuda 28 Oktober 1928: satu nusa, satu bangsa, satu bahasa.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Proklamasi Kemerdekaan",
+      description: "17 Agustus 1945, pembacaan teks",
+      contentMd:
+        "Golongan muda (Sukarni, Chaerul Saleh) proklamasi 17 Agustus 1945 di Jalan Pegangsaan 56. Soekarno-Hatta atas nama bangsa.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Masa Revolusi",
+      description: "Agresi Militer Belanda I & II",
+      contentMd:
+        "1946-1949 Belanda coba kembali. Perjanjian Linggarjati 1947. Agresi Militer II 1948, Yogyakarta jatuh. Diplomatik & militer.",
+    },
+    {
+      topicSlug: "orde-baru-reformasi",
+      name: "Demokrasi Terpimpin",
+      description: "1959-1966, demokrasi parlementer berakhir",
+      contentMd:
+        "1959 Soekarno kembali ke UUD 1945, demokrasi liberal diganti demokrasi terpimpin. Konfrontasi dengan Malaysia, keluar dari PBB.",
+    },
+    {
+      topicSlug: "orde-baru-reformasi",
+      name: "Orde Baru",
+      description: "1966-1998, Soeharto",
+      contentMd:
+        "Soeharto naik 1966, Orde Baru fokus stabilitas politik & pertumbuhan ekonomi. Pembangunan jangka panjang (PELITA).",
+    },
+    {
+      topicSlug: "orde-baru-reformasi",
+      name: "Krisis 1998",
+      description: "Kerusuhan Mei, Reformasi",
+      contentMd:
+        "Krisis moneter 1997, IMF bailout. 12-15 Mei 1998 kerusuhan Jakarta, Soeharto mundur 21 Mei. Awal era Reformasi.",
+    },
+    {
+      topicSlug: "orde-baru-reformasi",
+      name: "Era Reformasi",
+      description: "Demokratisasi, otonomi daerah",
+      contentMd:
+        "Amandemen UUD 1945 (1999-2002). Pemilihan presiden langsung 2004. Otonomi daerah 2001. Kebebasan pers & multipartai.",
+    },
+    {
+      topicSlug: "indonesia-purba",
+      name: "Teori Masuknya Hindu",
+      description: "Teori Brahmana, Ksatria, Waisya, Arus Balik",
+      contentMd:
+        "Brahmana: pendeta India. Ksatria: kaum bangsawan/pejabat. Waisya: pedagang. Arus Balik: orang Indonesia yang belajar ke India lalu kembali.",
+    },
+    {
+      topicSlug: "hindu-buddha-islam",
+      name: "Pengaruh Hindu-Buddha",
+      description: "Warisan budaya",
+      contentMd:
+        "Pengaruh: candi (Borobudur, Prambanan), aksara Pallawa, sistem kasta, seni tari & wayang. Toleransi agama tetap dijaga.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Sumpah Pemuda",
+      description: "28 Oktober 1928",
+      contentMd:
+        "Sumpah Pemuda 28 Oktober 1928: satu nusa, satu bangsa, satu bahasa (Indonesia). Disusun dalam Kongres Pemuda II di Jakarta.",
+    },
+    {
+      topicSlug: "kolonialisme-kemerdekaan",
+      name: "Pendudukan Jepang",
+      description: "1942-1945, Jepang di Indonesia",
+      contentMd:
+        "Jepang menduduki Indonesia 1942-1945. Romusha (kerja paksa), BPUPKI/PPKI. Jepang kalah, Soekarno-Hatta proklamasi kemerdekaan.",
+    },
+    {
+      topicSlug: "orde-baru-reformasi",
+      name: "Tokoh Nasional",
+      description: "Soekarno, Hatta, dll",
+      contentMd:
+        "Soekarno: proklamator, presiden pertama. Hatta: wakil presiden, ekonom. Soeharto: presiden Orde Baru. BJ Habibie: reformasi awal.",
+    },
+  ],
+  GEOGRAFI: [
+    {
+      topicSlug: "geografi-fisik",
+      name: "Lempeng Tektonik",
+      description: "Lempeng bumi dan pergerakan",
+      contentMd:
+        "7 lempeng utama: Pasifik, Eurasia, Indo-Australia, Afrika, Amerika Selatan, Amerika Utara, Antartika. Batas: divergen, konvergen, transform.",
+    },
+    {
+      topicSlug: "geografi-fisik",
+      name: "Gempa Bumi",
+      description: "Penyebab, jenis, skala Richter",
+      contentMd:
+        "Disebabkan pelepasan energi tiba-tiba dari pergerakan lempeng. Skala Richter mengukur magnitudo. Indonesia di Cincin Api Pasifik.",
+    },
+    {
+      topicSlug: "geografi-fisik",
+      name: "Vulkanisme",
+      description: "Gunung api dan jenisnya",
+      contentMd:
+        "Gunung api terbentuk di zona subduksi. Tipe: strato (kerucut), perisai, maar. Indonesia: 130 gunung api aktif.",
+    },
+    {
+      topicSlug: "geografi-fisik",
+      name: "Iklim dan Cuaca",
+      description: "Unsur-unsur iklim",
+      contentMd:
+        "Suhu, tekanan, angin, kelembapan, curah hujan. Faktor: lintang, ketinggian, jarak dari laut, arus laut.",
+    },
+    {
+      topicSlug: "geografi-fisik",
+      name: "Angin Monsun",
+      description: "Monsun Asia & Australia",
+      contentMd:
+        "Monsun barat (Desember-Maret) membawa hujan. Monsun timur (Juni-September) kering. Sebab: perbedaan tekanan benua & lautan.",
+    },
+    {
+      topicSlug: "geografi-fisik",
+      name: "Hidrosfer",
+      description: "Siklus air dan distribusi",
+      contentMd:
+        "97% air asin (laut), 2% es, 0,6% air tawar. Siklus: evaporasi, transpirasi, kondensasi, presipitasi, run-off, infiltrasi.",
+    },
+    {
+      topicSlug: "geografi-manusia",
+      name: "Pertumbuhan Penduduk",
+      description: "Kelahiran, kematian, migrasi",
+      contentMd:
+        "Pertumbuhan alami = lahir - mati. Pertumbuhan total = alami + migrasi. Indonesia: TFR 2,18 (2020), pertumbuhan 1,1%/tahun.",
+    },
+    {
+      topicSlug: "geografi-manusia",
+      name: "Piramida Penduduk",
+      description: "Struktur umur penduduk",
+      contentMd:
+        "Tiga bentuk: expansive (muda, banyak anak), constrictive (menua), stationary (stabil). Indonesia: expansive, bonus demografi 2020-2035.",
+    },
+    {
+      topicSlug: "geografi-manusia",
+      name: "Urbanisasi",
+      description: "Pergerakan desa ke kota",
+      contentMd:
+        "Penarik: lapangan kerja, pendidikan, fasilitas. Pendorong: kemiskinan, lapangan kerja sempit. Masalah: slum, polusi, kriminalitas.",
+    },
+    {
+      topicSlug: "geografi-manusia",
+      name: "Pola Permukiman",
+      description: "Memanjang, memusat, tersebar",
+      contentMd:
+        "Memanjang (linier) di sungai/pesisir. Memusat di dataran. Tersebar di pedesaan. Cluster: mengelompok karena faktor alam/sosial.",
+    },
+    {
+      topicSlug: "geografi-regional",
+      name: "Kondisi Geografis Indonesia",
+      description: "Lokasi astronomis & geografis",
+      contentMd:
+        "95°BT-141°BT, 6°LU-11°LS. Diapit dua benua (Asia, Australia) dan dua samudra (Hindia, Pasifik). Iklim tropis.",
+    },
+    {
+      topicSlug: "geografi-regional",
+      name: "Karakteristik Pulau Besar",
+      description: "Sumatra, Jawa, Kalimantan, Sulawesi, Papua",
+      contentMd:
+        "Sumatra: pegunungan Bukit Barisan. Jawa: padat penduduk, vulkanik. Kalimantan: hutan tropis. Papua: pegunungan Jaya Wijaya.",
+    },
+    {
+      topicSlug: "geografi-regional",
+      name: "Iklim Indonesia",
+      description: "Tropical rainforest climate",
+      contentMd:
+        "Curah hujan 1500-3000 mm/tahun. Suhu rata-rata 26-28°C. Kelembapan tinggi 70-90%. Dua musim: hujan & kemarau.",
+    },
+    {
+      topicSlug: "lingkungan-sda",
+      name: "Sumber Daya Alam",
+      description: "Hayati & non-hayati",
+      contentMd:
+        "SDA hayati: hutan, ikan, pertanian. Non-hayati: minerba, minyak bumi, gas. SDA dapat diperbarui atau tidak dapat diperbarui.",
+    },
+    {
+      topicSlug: "lingkungan-sda",
+      name: "Pemanasan Global",
+      description: "Efek rumah kaca",
+      contentMd:
+        "CO₂, metana, N₂O menyerap radiasi inframerah → suhu naik. Indonesia: 1.5°C lebih panas dari 1900-an. Deforestasi kontribusi besar.",
+    },
+    {
+      topicSlug: "lingkungan-sda",
+      name: "Pencemaran Lingkungan",
+      description: "Air, udara, tanah",
+      contentMd:
+        "Pencemaran air: BOD, COD tinggi. Udara: PM2.5, emisi kendaraan. Tanah: pestisida, sampah plastik. Solusi: 3R (reduce, reuse, recycle).",
+    },
+    {
+      topicSlug: "lingkungan-sda",
+      name: "Pelestarian Lingkungan",
+      description: "Konservasi & pembangunan berkelanjutan",
+      contentMd:
+        "Taman nasional, cagar alam, suuka margasatwa. SDGs poin 13 & 14: aksi iklim & ekosistem. Pembangunan berkelanjutan (sustainability).",
+    },
+    {
+      topicSlug: "geografi-fisik",
+      name: "Tsunami",
+      description: "Gelombang laut dahsyat",
+      contentMd:
+        "Tsunami: gelombang besar akibat gempa bawah laut, letusan gunung api, atau longsoran. Aceh 2004: 230.000 korban jiwa.",
+    },
+    {
+      topicSlug: "geografi-manusia",
+      name: "Kualitas Penduduk",
+      description: "Indeks Pembangunan Manusia",
+      contentMd:
+        "IPM: angka harapan hidup, pendidikan (lama sekolah & harapan lama sekolah), pendapatan per kapita. Indonesia IPM sedang.",
+    },
+    {
+      topicSlug: "lingkungan-sda",
+      name: "Energi Terbarukan",
+      description: "Solar, angin, air",
+      contentMd:
+        "Energi terbarukan: matahari (PLTS), angin (PLTB), air (PLTA), panas bumi (geothermal). Indonesia potensi geothermal terbesar dunia.",
+    },
+    {
+      topicSlug: "lingkungan-sda",
+      name: "Bencana Alam Indonesia",
+      description: "Gempa, tsunami, banjir, gunung api",
+      contentMd:
+        "Indonesia rawan bencana: gempa (Lempeng Pasifik), tsunami, banjir (Jakarta), longsor, gunung meletus. Mitigasi & kesiapsiagaan penting.",
+    },
+    {
+      topicSlug: "geografi-regional",
+      name: "ASEAN",
+      description: "Kerjasama Asia Tenggara",
+      contentMd:
+        "ASEAN 1967, 10 negara anggota. Indonesia pendiri. Tujuan: stabilitas regional, pertumbuhan ekonomi. Markas: Jakarta.",
+    },
+  ],
+  EKONOMI: [
+    {
+      topicSlug: "konsep-dasar",
+      name: "Kebutuhan Manusia",
+      description: "Primer, sekunder, tersier",
+      contentMd:
+        "Kebutuhan primer: sandang, pangan, papan. Sekunder: pendidikan, kesehatan. Tersier: hiburan, kemewahan. Tidak terbatas vs alat pemuas terbatas.",
+    },
+    {
+      topicSlug: "konsep-dasar",
+      name: "Kelangkaan",
+      description: "Inti masalah ekonomi",
+      contentMd:
+        "Kelangkaan = alat pemuas kebutuhan terbatas vs kebutuhan tidak terbatas. Memicu pilihan & biaya peluang (opportunity cost).",
+    },
+    {
+      topicSlug: "konsep-dasar",
+      name: "Sistem Ekonomi",
+      description: "Tradisional, komando, pasar, campuran",
+      contentMd:
+        "Tradisional: kebiasaan, subsisten. Komando: negara pusat. Pasar: mekanisme harga. Campuran: kombinasi. Indonesia: campuran.",
+    },
+    {
+      topicSlug: "konsep-dasar",
+      name: "Pelaku Ekonomi",
+      description: "Rumah tangga, perusahaan, pemerintah, luar negeri",
+      contentMd:
+        "Rumah tangga: konsumen & pemilik faktor produksi. Perusahaan: produsen. Pemerintah: regulator. Luar negeri: ekspor-impor.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Permintaan",
+      description: "Hukum permintaan & kurva",
+      contentMd:
+        "Hukum permintaan: harga ↑ → jumlah diminta ↓ (ceteris paribus). Kurva permintaan slope negatif. Faktor: harga, pendapatan, selera.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Penawaran",
+      description: "Hukum penawaran & kurva",
+      contentMd:
+        "Hukum penawaran: harga ↑ → jumlah ditawarkan ↑. Kurva penawaran slope positif. Faktor: biaya produksi, teknologi, ekspektasi.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Keseimbangan Pasar",
+      description: "Titik equilibrium",
+      contentMd:
+        "Terjadi saat Qd = Qs. Harga keseimbangan: kurva permintaan & penawaran berpotongan. Excess demand saat harga di bawah.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Elastisitas",
+      description: "Sensitivitas permintaan",
+      contentMd:
+        "Elastisitas permintaan: %ΔQd / %ΔP. Inelastik: |E| < 1, elastis: |E| > 1, unitary: |E| = 1. Faktor: kebutuhan pokok/mewah.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Biaya Produksi",
+      description: "Tetap, variabel, total",
+      contentMd:
+        "Biaya tetap (FC): sewa, gaji. Variabel (VC): bahan baku. Total (TC) = FC + VC. Average: AFC, AVC, ATC. Marginal: MC.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Pasar Persaingan",
+      description: "Sempurna & tidak sempurna",
+      contentMd:
+        "Sempurna: banyak penjual, barang homogen, bebas keluar-masuk. Tidak sempurna: monopoli, oligopoli, monopolistik. Indonesia: monopolistik.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Produk Domestik Bruto",
+      description: "PDB & perhitungan",
+      contentMd:
+        "PDB = total nilai barang/jasa diproduksi dalam negeri dalam 1 tahun. Pendekatan: produksi, pengeluaran, pendapatan. PDB per kapita = PDB/penduduk.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Inflasi",
+      description: "Naiknya harga barang umum",
+      contentMd:
+        "Inflasi = kenaikan harga umum持续. IHK (Indeks Harga Konsumen) mengukur. Hiperinflasi >100%/tahun. Indonesia moderat 2-4%.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Pengangguran",
+      description: "Jenis pengangguran",
+      contentMd:
+        "Tertutup: tidak kerja tapi cari kerja. Terbuka: tidak kerja tidak cari. Friksional: transisi. Struktural: skill tidak sesuai. Siklikal: resesi.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Kebijakan Fiskal",
+      description: "APBN, pajak, belanja negara",
+      contentMd:
+        "Fiskal: pemerintah ubah pajak & belanja. Ekspansif: turun pajak, naik belanja. Kontraktif: sebaliknya. Defisit anggaran ditutup utang.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Kebijakan Moneter",
+      description: "BI rate, giro, ORI",
+      contentMd:
+        "Bank Indonesia atur uang beredar. Naikkan BI rate → uang ketat → inflasi turun. Turunkan → stimulus. OMO, GWM, Operasi Pasar Terbuka.",
+    },
+    {
+      topicSlug: "keuangan-pasar-modal",
+      name: "Bank & Lembaga Keuangan",
+      description: "Bank sentral, komersial, BPR",
+      contentMd:
+        "Bank Indonesia: bank sentral. Bank umum: komersial, BPR, syariah. Fungsi: penghimpun & penyalur dana. OJK: pengawas jasa keuangan.",
+    },
+    {
+      topicSlug: "keuangan-pasar-modal",
+      name: "Otoritas Jasa Keuangan",
+      description: "OJK & tugas",
+      contentMd:
+        "OJK berdiri 2011, tugas: pengaturan & pengawasan bank, pasar modal, IKNB. Lindungi konsumen, jaga stabilitas sistem keuangan.",
+    },
+    {
+      topicSlug: "keuangan-pasar-modal",
+      name: "Investasi & Saham",
+      description: "Instrumen pasar modal",
+      contentMd:
+        "Saham: bukti kepemilikan perusahaan. Obligasi: surat utang. Reksadana: kumpulan dana kelola manajer investasi. Risiko vs return berbanding lurus.",
+    },
+    {
+      topicSlug: "keuangan-pasar-modal",
+      name: "Perdagangan Internasional",
+      description: "Ekspor, impor, kurs",
+      contentMd:
+        "Ekspor: jual ke LN. Impor: beli dari LN. Neraca perdagangan: ekspor-impor. Surplus = untung, defisit = rugi. Kurs: harga valuta asing.",
+    },
+    {
+      topicSlug: "ekonomi-mikro",
+      name: "Struktur Pasar",
+      description: "Monopoli, oligopoli, dll",
+      contentMd:
+        "Monopoli: 1 penjual (contoh: PLN). Oligopoli: sedikit penjual (contoh: telko). Monopolistik: banyak penjual produk beda. Persaingan sempurna: banyak & homogen.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Kemiskinan",
+      description: "Indikator & solusi",
+      contentMd:
+        "Kemiskinan: ketidakmampuan penuhi kebutuhan dasar. Garis kemiskinan BPS. Solusi: pendidikan, lapangan kerja, bantuan sosial.",
+    },
+    {
+      topicSlug: "ekonomi-makro",
+      name: "Ketenagakerjaan",
+      description: "Upah, hubungan industrial",
+      contentMd:
+        "Upah minimum (UMR/UMK). Hubungan industrial: pekerja, pengusaha, pemerintah. Serikat pekerja lindungi hak buruh.",
+    },
+  ],
+  SOSIOLOGI: [
+    {
+      topicSlug: "individu-kelompok",
+      name: "Sosiologi sebagai Ilmu",
+      description: "Pengertian, objek, metode",
+      contentMd:
+        "Sosiologi = ilmu tentang masyarakat. Objek: gejala sosial, fakta sosial (Durkheim). Metode: kualitatif, kuantitatif, studi kasus.",
+    },
+    {
+      topicSlug: "individu-kelompok",
+      name: "Interaksi Sosial",
+      description: "Syarat & bentuk interaksi",
+      contentMd:
+        "Syarat: kontak sosial & komunikasi. Bentuk: individu-individu, individu-kelompok, kelompok-kelompok. Asosiatif & disasosiatif.",
+    },
+    {
+      topicSlug: "individu-kelompok",
+      name: "Proses Sosial Asosiatif",
+      description: "Kerja sama, akomodasi, asimilasi",
+      contentMd:
+        "Kerja sama: gotong royong, koalisi. Akomodasi: mediasi, arbitrasi, kompromi. Asimilasi: peleburan budaya. Akulturasi: pinjam unsur.",
+    },
+    {
+      topicSlug: "individu-kelompok",
+      name: "Proses Sosial Disasosiatif",
+      description: "Persaingan, kontravensi, konflik",
+      contentMd:
+        "Persaingan: berebut sesuatu. Kontravensi: hambatan, provokasi. Konflik: pertentangan terbuka. Bisa positif (membangun) atau negatif.",
+    },
+    {
+      topicSlug: "individu-kelompok",
+      name: "Lembaga Sosial",
+      description: "Fungsi, ciri, jenis",
+      contentMd:
+        "Lembaga sosial: norma & nilai untuk memenuhi kebutuhan. Ciri: simbol, tradisi, memiliki tujuan. Jenis: keluarga, pendidikan, agama, ekonomi.",
+    },
+    {
+      topicSlug: "stratifikasi-mobilitas",
+      name: "Stratifikasi Sosial",
+      description: "Penggolongan masyarakat",
+      contentMd:
+        "Stratifikasi: perbedaan kedudukan. Dasar: ekonomi, kekuasaan, kehormatan, pendidikan. Terbuka vs tertutup. Kelas vs kasta.",
+    },
+    {
+      topicSlug: "stratifikasi-mobilitas",
+      name: "Mobilitas Sosial",
+      description: "Pergerakan strata sosial",
+      contentMd:
+        "Vertikal: naik/turun kelas. Horizontal: pindah peran setara. Antar-generasi (orang tua-anak) atau intra-generasi (dalam satu hidup).",
+    },
+    {
+      topicSlug: "stratifikasi-mobilitas",
+      name: "Faktor Mobilitas",
+      description: "Pendidikan, ekonomi, dll",
+      contentMd:
+        "Faktor pendorong: pendidikan, keahlian, kerja keras. Penghambat: diskriminasi, kemiskinan, kurangnya akses. Saluran: sekolah, kerja, organisasi.",
+    },
+    {
+      topicSlug: "sosialisasi-kebudayaan",
+      name: "Sosialisasi",
+      description: "Proses belajar nilai & norma",
+      contentMd:
+        "Sosialisasi: proses individu belajar budaya masyarakat. Agen: keluarga, sekolah, teman, media, pekerjaan. Tahap: primary, secondary, anticipatory.",
+    },
+    {
+      topicSlug: "sosialisasi-kebudayaan",
+      name: "Kebudayaan",
+      description: "Wujud, unsur, sifat",
+      contentMd:
+        "Kebudayaan: hasil cipta-rasa-karsa. Wujud: ideas, activities, artifacts. 7 unsur: bahasa, pengetahuan, organisasi, mata pencaharian, dll.",
+    },
+    {
+      topicSlug: "sosialisasi-kebudayaan",
+      name: "Nilai dan Norma",
+      description: "Tata aturan masyarakat",
+      contentMd:
+        "Nilai: ukuran baik/buruk. Norma: aturan konkret. Norma: kebiasaan, kesusilaan, kesopanan, hukum (sanksi jelas).",
+    },
+    {
+      topicSlug: "sosialisasi-kebudayaan",
+      name: "Multikulturalisme",
+      description: "Keberagaman budaya",
+      contentMd:
+        "Multikultural: pengakuan & penghormatan pada keragaman. Indonesia: Bhinneka Tunggal Ika. Tantangan: primordialisme, etnosentrisme, stereotip.",
+    },
+    {
+      topicSlug: "perubahan-sosial",
+      name: "Perubahan Sosial",
+      description: "Bentuk & faktor pendorong",
+      contentMd:
+        "Perubahan sosial: perbedaan keadaan t0 dan t1. Bentuk: evolusi, revolusi, planned, unplanned. Faktor: teknologi, pendidikan, kontak budaya.",
+    },
+    {
+      topicSlug: "perubahan-sosial",
+      name: "Globalisasi",
+      description: "Keterkaitan dunia",
+      contentMd:
+        "Globalisasi: proses integrasi dunia. Aspek: ekonomi, budaya, teknologi, komunikasi. Dampak positif: pertukaran pengetahuan. Negatif: kesenjangan.",
+    },
+    {
+      topicSlug: "perubahan-sosial",
+      name: "Modernisasi",
+      description: "Transformasi ke arah modern",
+      contentMd:
+        "Modernisasi: perubahan tradisional → modern. Ciri: rasional, teknologis, urban, mobilitas tinggi. Berbeda westernisasi (peniruan Barat).",
+    },
+    {
+      topicSlug: "perubahan-sosial",
+      name: "Masalah Sosial",
+      description: "Kemiskinan, kriminalitas, dll",
+      contentMd:
+        "Masalah sosial: kondisi tak sesuai nilai/norma. Contoh: kemiskinan, pengangguran, kriminalitas, NAPZA, kenakalan remaja, diskriminasi.",
+    },
+    {
+      topicSlug: "perubahan-sosial",
+      name: "Penelitian Sosial",
+      description: "Metode, teknik, langkah",
+      contentMd:
+        "Metode: kuantitatif (angka), kualitatif (narasi). Teknik: wawancara, kuesioner, observasi, dokumentasi. Langkah: identifikasi masalah, tinjauan pustaka, dll.",
+    },
+    {
+      topicSlug: "individu-kelompok",
+      name: "Solidaritas Sosial",
+      description: "Mekanik & organik (Durkheim)",
+      contentMd:
+        "Solidaritas mekanik: masyarakat sederhana, kesamaan. Organik: masyarakat kompleks, saling ketergantungan (pembagian kerja). Durkheim.",
+    },
+    {
+      topicSlug: "sosialisasi-kebudayaan",
+      name: "Lembaga Pendidikan",
+      description: "Keluarga, sekolah, masyarakat",
+      contentMd:
+        "Lembaga pendidikan: keluarga (pertama), sekolah (formal), masyarakat (nonformal). Transmisi nilai & norma untuk generasi berikutnya.",
+    },
+    {
+      topicSlug: "perubahan-sosial",
+      name: "Dampak Sosial Media",
+      description: "Pengaruh medsos pada masyarakat",
+      contentMd:
+        "Positif: konektivitas, informasi cepat. Negatif: hoaks, cyberbullying, kecanduan, polarisasi. Literasi digital penting.",
+    },
+  ],
+  PPKN: [
+    {
+      topicSlug: "pancasila",
+      name: "Sejarah Pancasila",
+      description: "Perumusan Pancasila",
+      contentMd:
+        "BPUPKI (1 Maret 1945)→ Soepomo, Moh. Yamin, Soekarno usulkan dasar negara. PPKI 18 Agustus 1945 mengesahkan.",
+    },
+    {
+      topicSlug: "pancasila",
+      name: "Sila Pertama",
+      description: "Ketuhanan Yang Maha Esa",
+      contentMd:
+        "Negara berdasarkan Ketuhanan. Indonesia bukan negara agama, tapi negara ber-Tuhan. Bebas beragama, tidak memaksakan agama.",
+    },
+    {
+      topicSlug: "pancasila",
+      name: "Sila Kedua",
+      description: "Kemanusiaan yang Adil dan Beradab",
+      contentMd:
+        "Menghargai harkat martabat manusia. Anti diskriminasi, anti kekerasan, menjunjung HAM. Kemanusiaan universal, bukan primordial.",
+    },
+    {
+      topicSlug: "pancasila",
+      name: "Sila Ketiga",
+      description: "Persatuan Indonesia",
+      contentMd:
+        "Mengutamakan kepentingan bangsa di atas golongan. Bhinneka Tunggal Ika. Nasionalisme yang inklusif, bukan chauvinisme.",
+    },
+    {
+      topicSlug: "pancasila",
+      name: "Sila Keempat",
+      description: "Kerakyatan yang Dipimpin oleh Hikmat Kebijaksanaan",
+      contentMd:
+        "Demokrasi, musyawarah mufakat. Bukan liberalisme, bukan otoriter. Keputusan bersama melalui deliberation, bukan voting tajam.",
+    },
+    {
+      topicSlug: "pancasila",
+      name: "Sila Kelima",
+      description: "Keadilan Sosial bagi Seluruh Rakyat Indonesia",
+      contentMd:
+        "Pembangunan untuk semua, bukan segelintir. Keseimbangan hak & kewajiban. Tidak ada eksploitasi, kesetaraan ekonomi.",
+    },
+    {
+      topicSlug: "uud-1945",
+      name: "Struktur UUD 1945",
+      description: "Pembukaan & batang tubuh",
+      contentMd:
+        "UUD 1945: 16 bab, 37 pasal (sebelum amandemen). Pembukaan (4 alinea) & Batang Tubuh. Amandemen I-IV: 1999-2002.",
+    },
+    {
+      topicSlug: "uud-1945",
+      name: "Amandemen UUD 1945",
+      description: "Perubahan 1999-2002",
+      contentMd:
+        "Amandemen I (1999): kurangi kekuasaan presiden. II (2000): DPD. III (2001): MK, KY. IV (2002): pemilihan presiden langsung.",
+    },
+    {
+      topicSlug: "uud-1945",
+      name: "Lembaga Negara",
+      description: "MPR, DPR, DPD, Presiden, MA, MK, BPK",
+      contentMd:
+        "MPR: gabungan DPR+DPD, tetapkan GBHN. DPR: legislasi, anggaran, pengawasan. MA: pengadilan tertinggi. MK: uji UU. BPK: audit keuangan.",
+    },
+    {
+      topicSlug: "uud-1945",
+      name: "Hak dan Kewajiban Warga Negara",
+      description: "Pasal 27-34 UUD 1945",
+      contentMd:
+        "Hak: pendidikan, kerja, kesehatan, berserikat. Kewajiban: bela negara, bayar pajak, patuh hukum. Pasal 28: HAM, 31: pendidikan.",
+    },
+    {
+      topicSlug: "bhinneka-tunggal-ika",
+      name: "Makna Bhinneka Tunggal Ika",
+      description: "Bhinneka = berbeda, Tunggal = satu, Ika = itu",
+      contentMd:
+        "Berbeda-beda tetapi tetap satu. Semboyan Garuda Pancasila. Mengakui keragaman suku, agama, ras, budaya sebagai kekuatan.",
+    },
+    {
+      topicSlug: "bhinneka-tunggal-ika",
+      name: "Keberagaman Indonesia",
+      description: "Suku, agama, ras, bahasa",
+      contentMd:
+        "1.340 suku, 718 bahasa daerah, 6 agama resmi. Bhinneka Tunggal Ika diuji oleh primordialisme, separatisme. Solusi: NKRI + inklusi.",
+    },
+    {
+      topicSlug: "bhinneka-tunggal-ika",
+      name: "Ancaman terhadap Persatuan",
+      description: "Paham radikal, separatisme",
+      contentMd:
+        "Paham radikal: intoleransi, ekstrimisme. Separatisme: OPM, GAM (sudah damai). Solusi: pendidikan multikultural, deradikalisasi.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Hak Asasi Manusia",
+      description: "HAM dan instrumennya",
+      contentMd:
+        "HAM: hak inherent pada manusia. Deklarasi Universal HAM 1948. Indonesia: UU 39/1999. Kategori: sipil-politik, ekonomi-sosial-budaya.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Warga Negara Indonesia",
+      description: "Status, syarat, dual citizenship",
+      contentMd:
+        "WNI: keturunan Indonesia, naturalisasi, menikah WNI, ditambah UU. Boleh dual citizenship hingga 18 tahun, harus pilih.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Kedaulatan Negara",
+      description: "Kedaulatan rakyat",
+      contentMd:
+        "Kedaulatan: kekuasaan tertinggi negara. Indonesia: kedaulatan rakyat (demokrasi). UUD 1945 Pasal 1 Ayat 2: sovereignty is in the hands of the people.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Demokrasi Indonesia",
+      description: "Demokrasi Pancasila",
+      contentMd:
+        "Demokrasi Pancasila: musyawarah mufakat, kekeluargaan. Berbeda demokrasi liberal. Pemilu setiap 5 tahun, pilpres, pileg, pilkada.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Otonomi Daerah",
+      description: "Desentralisasi",
+      contentMd:
+        "Otonomi daerah (UU 23/2014): berikan kewenangan ke daerah. Tujuannya: pelayanan publik lebih cepat, inisiatif lokal, kurangi beban pusat.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Tata Urutan Peraturan",
+      description: "Hierarki hukum Indonesia",
+      contentMd:
+        "Hierarki: UUD 1945 → UU/Perpu → PP → Perpres → Perda Provinsi → Perda Kabupaten/Kota. Asas lex superior derogat legi inferiori.",
+    },
+    {
+      topicSlug: "negara-warga-negara",
+      name: "Hak & Kewajiban Pajak",
+      description: "Pajak dan APBN",
+      contentMd:
+        "Pajak: iuran wajib warga ke negara. Pasal 23A UUD 1945. Fungsi: anggaran (budgetair), mengatur (regulerend), stabilitas, redistribusi.",
     },
   ],
 };
@@ -764,6 +1509,1888 @@ const QUESTIONS_BY_SUBJECT: Record<
       difficulty: "EASY",
     },
   ],
+  SEJARAH: [
+    {
+      conceptName: "Manusia Purba",
+      question: "Manusia purba Pithecanthropus erectus ditemukan oleh...",
+      options: ["Eugene Dubois", "Ter Haar", "Van den Berg", "Teuku Jacob"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Peradaban Awal Nusantara",
+      question: "Kerajaan Hindu tertua di Indonesia adalah...",
+      options: ["Kutai", "Tarumanagara", "Sriwijaya", "Majapahit"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Kerajaan Hindu-Buddha",
+      question: "Kerajaan maritim Buddha terbesar di Nusantara adalah...",
+      options: ["Sriwijaya", "Majapahit", "Tarumanagara", "Kutai"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Masuknya Islam ke Indonesia",
+      question: "Walisongo menyebarkan Islam terutama di pulau...",
+      options: ["Jawa", "Sumatra", "Kalimantan", "Sulawesi"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kerajaan Islam Nusantara",
+      question: "Kerajaan Islam pertama di Jawa adalah...",
+      options: ["Demak", "Mataram", "Banten", "Ternate"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "VOC dan Tanam Paksa",
+      question: "Sistem tanam paksa (Cultuurstelsel) diperkenalkan oleh...",
+      options: ["Van den Bosch", "Daendels", "Jansen", "Raffles"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Perlawanan Rakyat",
+      question: "Perang Diponegoro terjadi pada tahun...",
+      options: ["1825-1830", "1821-1837", "1873-1914", "1945-1949"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Kebangkitan Nasional",
+      question: "Budi Utomo didirikan pada tanggal...",
+      options: [
+        "20 Mei 1908",
+        "28 Oktober 1928",
+        "17 Agustus 1945",
+        "10 November 1945",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Proklamasi Kemerdekaan",
+      question: "Teks proklamasi dibacakan di...",
+      options: [
+        "Jalan Pegangsaan 56, Jakarta",
+        "Istana Merdeka",
+        "Gedung Agung Yogyakarta",
+        "Istana Negara",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Masa Revolusi",
+      question: "Agresi Militer Belanda II terjadi pada tahun...",
+      options: ["1948", "1946", "1947", "1949"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Demokrasi Terpimpin",
+      question: "Demokrasi Terpimpin diterapkan oleh Presiden...",
+      options: ["Soekarno", "Soeharto", "B.J. Habibie", "Megawati"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Orde Baru",
+      question: "Orde Baru dimulai pada tahun...",
+      options: ["1966", "1959", "1998", "1945"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Krisis 1998",
+      question: "Soeharto mengundurkan diri pada...",
+      options: ["21 Mei 1998", "12 Mei 1998", "1 Juni 1999", "20 Oktober 1998"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Era Reformasi",
+      question: "Pemilihan presiden secara langsung pertama kali pada tahun...",
+      options: ["2004", "1999", "2001", "2002"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Teori Masuknya Hindu",
+      question:
+        "Teori yang menyatakan bahwa agama Hindu masuk ke Indonesia lewat pedagang adalah teori...",
+      options: ["Waisya", "Brahmana", "Ksatria", "Arus Balik"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Pengaruh Hindu-Buddha",
+      question: "Candi Borobudur merupakan peninggalan agama...",
+      options: ["Buddha", "Hindu", "Islam", "Animisme"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sumpah Pemuda",
+      question: "Sumpah Pemuda terjadi pada tanggal...",
+      options: [
+        "28 Oktober 1928",
+        "20 Mei 1908",
+        "17 Agustus 1945",
+        "10 November 1945",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pendudukan Jepang",
+      question: "Jepang menyerah tanpa syarat kepada Sekutu pada tahun...",
+      options: ["1945", "1942", "1944", "1946"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Tokoh Nasional",
+      question:
+        "Soekarno dan Hatta memproklamasikan kemerdekaan Indonesia pada...",
+      options: [
+        "17 Agustus 1945",
+        "18 Agustus 1945",
+        "1 Juni 1945",
+        "28 Oktober 1945",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Manusia Purba",
+      question: "Manusia purba tertua di Indonesia adalah...",
+      options: [
+        "Meganthropus paleojavanicus",
+        "Pithecanthropus erectus",
+        "Homo sapiens",
+        "Homo floresiensis",
+      ],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Peradaban Awal Nusantara",
+      question: "Kerajaan Hindu tertua di Indonesia adalah...",
+      options: ["Kutai", "Tarumanagara", "Sriwijaya", "Majapahit"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Kerajaan Hindu-Buddha",
+      question: "Kerajaan Majapahit mencapai puncak kejayaan pada masa raja...",
+      options: [
+        "Hayam Wuruk",
+        "Raden Wijaya",
+        "Hayam Wuruk dan Gajah Mada",
+        "Kertanegara",
+      ],
+      correctIndex: 2,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Masuknya Islam ke Indonesia",
+      question:
+        "Walisongo yang terkenal dengan metode dakwah melalui budaya adalah...",
+      options: ["Sunan Kalijaga", "Sunan Ampel", "Sunan Bonang", "Sunan Giri"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "VOC dan Tanam Paksa",
+      question: "Tanam paksa (cultuurstelsel) diperkenalkan oleh...",
+      options: [
+        "Johannes van den Bosch",
+        "Jan Pieterszoon Coen",
+        "Cornelis de Houtman",
+        "Herman Willem Daendels",
+      ],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Perlawanan Rakyat",
+      question: "Perang Aceh melawan Belanda berlangsung selama...",
+      options: ["1873-1914", "1825-1830", "1821-1837", "1945-1949"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Kebangkitan Nasional",
+      question: "Budi Utomo didirikan pada tanggal...",
+      options: [
+        "20 Mei 1908",
+        "28 Oktober 1928",
+        "17 Agustus 1945",
+        "1 Juni 1945",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Proklamasi Kemerdekaan",
+      question: "Teks proklamasi dibacakan di jalan...",
+      options: [
+        "Pegangsaan 56, Jakarta",
+        "Merdeka Barat, Jakarta",
+        "Asia Afrika, Bandung",
+        "Sudirman, Jakarta",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Masa Revolusi",
+      question: "Perjanjian yang mengakui kedaulatan Indonesia adalah...",
+      options: [
+        "Konferensi Meja Bundar (1949)",
+        "Linggarjati (1947)",
+        "Renville (1948)",
+        "Roem-Royen (1949)",
+      ],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Demokrasi Terpimpin",
+      question: "Demokrasi Terpimpin berlangsung pada masa presiden...",
+      options: ["Soekarno", "Soeharto", "Habibie", "Sukarno-Hatta"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Orde Baru",
+      question: "Pembangunan jangka panjang di Orde Baru disebut...",
+      options: ["PELITA", "Repelita", "Inpres", "Pembangunan Nasional"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Manusia Purba",
+      question: "Manusia purba tertua di Indonesia adalah...",
+      options: [
+        "Meganthropus paleojavanicus",
+        "Pithecanthropus erectus",
+        "Homo sapiens",
+        "Homo floresiensis",
+      ],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Periode Neolithicum",
+      question: "Ciri utama zaman Neolithicum adalah...",
+      options: [
+        "Masa bercocok tanam",
+        " Berburu & meramu",
+        "Penggunaan logam",
+        "Hidup nomaden",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kedatangan Portugis",
+      question: "Portugis berhasil menguasai Malaka pada tahun...",
+      options: ["1511", "1500", "1602", "1596"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+  ],
+  GEOGRAFI: [
+    {
+      conceptName: "Lempeng Tektonik",
+      question: "Indonesia terletak di antara lempeng...",
+      options: [
+        "Eurasia, Indo-Australia, Pasifik",
+        "Pasifik, Amerika, Eurasia",
+        "Afrika, Eurasia, Indo-Australia",
+        "Antartika, Pasifik, Eurasia",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Gempa Bumi",
+      question: "Indonesia rawan gempa karena berada di...",
+      options: [
+        "Cincin Api Pasifik",
+        "Sabuk Mediterania",
+        "Mid-Atlantic Ridge",
+        "Sirkum Pasifik Selatan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Vulkanisme",
+      question: "Indonesia memiliki gunung api aktif sekitar...",
+      options: ["130", "80", "200", "50"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Angin Monsun",
+      question: "Monsun barat membawa hujan di Indonesia pada bulan...",
+      options: [
+        "Desember-Maret",
+        "Juni-September",
+        "September-November",
+        "April-Juni",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Pertumbuhan Penduduk",
+      question: "Pertumbuhan alami penduduk dihitung dari...",
+      options: [
+        "Lahir - Mati",
+        "Lahir + Migrasi",
+        "Mati - Migrasi",
+        "Lahir - Mati + Migrasi",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Piramida Penduduk",
+      question: "Piramida expansive menggambarkan penduduk dengan...",
+      options: [
+        "Proporsi anak besar",
+        "Proporsi lansia besar",
+        "Distribusi merata",
+        "Penurunan angka kelahiran",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Urbanisasi",
+      question: "Faktor penarik urbanisasi ke kota adalah...",
+      options: [
+        "Lapangan kerja",
+        "Lahan pertanian luas",
+        "Biaya hidup murah",
+        "Udara bersih",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kondisi Geografis Indonesia",
+      question: "Lokasi astronomis Indonesia adalah...",
+      options: [
+        "95°BT-141°BT dan 6°LU-11°LS",
+        "100°BT-150°BT dan 0°-10°LS",
+        "90°BT-130°BT dan 5°LU-5°LS",
+        "95°BB-141°BB dan 6°LU-11°LS",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Karakteristik Pulau Besar",
+      question: "Pegunungan Bukit Barisan terdapat di pulau...",
+      options: ["Sumatra", "Jawa", "Kalimantan", "Papua"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Iklim Indonesia",
+      question: "Curah hujan rata-rata Indonesia per tahun adalah...",
+      options: ["1500-3000 mm", "500-1000 mm", "4000-5000 mm", "100-500 mm"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Pemanasan Global",
+      question: "Gas rumah kaca utama penyebab pemanasan global adalah...",
+      options: ["CO2", "O2", "N2", "H2"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pencemaran Lingkungan",
+      question: "Indeks yang mengukur pencemaran air adalah...",
+      options: ["BOD dan COD", "pH dan DO", "TDS dan TSS", "Semua benar"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Pelestarian Lingkungan",
+      question: "Kawasan konservasi untuk melindungi satwa langka disebut...",
+      options: [
+        "Suaka Margasatwa",
+        "Taman Nasional",
+        "Taman Wisata Alam",
+        "Cagar Alam",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Tsunami",
+      question: "Tsunami Aceh 2004 disebabkan oleh gempa berkekuatan...",
+      options: ["9,1 SR", "8,6 SR", "7,5 SR", "8,0 SR"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Kualitas Penduduk",
+      question: "IPM adalah singkatan dari...",
+      options: [
+        "Indeks Pembangunan Manusia",
+        "Indeks Pertumbuhan Manusia",
+        "Indeks Pendapatan Masyarakat",
+        "Indeks Pemberdayaan Masyarakat",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Energi Terbarukan",
+      question:
+        "Indonesia merupakan negara dengan potensi energi panas bumi terbesar di...",
+      options: ["Dunia", "Asia Tenggara", "Asia", "Pasifik"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Bencana Alam Indonesia",
+      question: "BNPB adalah lembaga yang menangani...",
+      options: [
+        "Penanganan bencana",
+        "Penelitian bencana",
+        "Pencegahan penyakit",
+        "Pembangunan nasional",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "ASEAN",
+      question: "ASEAN berdiri pada tahun...",
+      options: ["1967", "1955", "1975", "1990"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Lempeng Tektonik",
+      question: "Batas lempeng yang menjauh satu sama lain disebut...",
+      options: ["Divergen", "Konvergen", "Transform", "Subduksi"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Vulkanisme",
+      question: "Gunung api berbentuk strato terbentuk karena...",
+      options: [
+        "Letusan eksplosif berlapis",
+        "Lava encer mengalir",
+        "Letusan freatik",
+        "Longsoran kawah",
+      ],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Angin Monsun",
+      question: "Monsun timur menyebabkan Indonesia mengalami musim...",
+      options: ["Kemarau", "Hujan", "Pancaroba", "Salju"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Hidrosfer",
+      question: "Siklus air dimulai dari proses...",
+      options: ["Evaporasi", "Kondensasi", "Presipitasi", "Infiltrasi"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Urbanisasi",
+      question: "Faktor penarik urbanisasi adalah...",
+      options: [
+        "Lapangan kerja di kota",
+        "Kemiskinan di desa",
+        "Tanah sempit",
+        "Kurangnya fasilitas desa",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Karakteristik Pulau Besar",
+      question: "Pulau dengan populasi terbesar di Indonesia adalah...",
+      options: ["Jawa", "Sumatra", "Kalimantan", "Sulawesi"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Iklim Indonesia",
+      question: "Indonesia beriklim tropis dengan curah hujan rata-rata...",
+      options: [
+        "1500-3000 mm/tahun",
+        "500-1000 mm/tahun",
+        "3000-5000 mm/tahun",
+        "100-500 mm/tahun",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Sumber Daya Alam",
+      question: "Hutan dan ikan termasuk SDA...",
+      options: [
+        "Hayati (dapat diperbarui)",
+        "Non-hayati (tidak dapat diperbarui)",
+        "Minerba",
+        "Energi",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pemanasan Global",
+      question: "Gas rumah kaca utama penyebab pemanasan global adalah...",
+      options: ["CO₂", "O₂", "N₂", "H₂"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Tsunami",
+      question: "Tsunami Aceh 2004 disebabkan oleh gempa berkekuatan...",
+      options: ["9,1 SR", "8,6 SR", "7,5 SR", "8,0 SR"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Iklim dan Cuaca",
+      question: "Unsur-unsur iklim di antaranya...",
+      options: [
+        "Suhu, tekanan, angin, curah hujan",
+        "Hanya suhu",
+        "Hanya curah hujan",
+        "Hanya angin",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pola Permukiman",
+      question: "Pola permukiman memanjang biasanya mengikuti...",
+      options: ["Sungai atau pesisir", "Dataran tinggi", "Hutan", "Gunung"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+  ],
+  EKONOMI: [
+    {
+      conceptName: "Kebutuhan Manusia",
+      question: "Makanan, minuman, dan tempat tinggal termasuk kebutuhan...",
+      options: ["Primer", "Sekunder", "Tersier", "Mewah"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kelangkaan",
+      question: "Inti masalah ekonomi adalah...",
+      options: ["Kelangkaan", "Inflasi", "Pengangguran", "Kemiskinan"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sistem Ekonomi",
+      question:
+        "Sistem ekonomi yang memberikan kebebasan penuh pada pasar adalah...",
+      options: ["Pasar", "Komando", "Tradisional", "Campuran"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Pelaku Ekonomi",
+      question: "Rumah tangga konsumsi berperan sebagai...",
+      options: [
+        "Pemilik faktor produksi",
+        "Produsen barang",
+        "Regulator",
+        "Distributor",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Permintaan",
+      question: "Hukum permintaan menyatakan bahwa...",
+      options: [
+        "Harga naik → permintaan turun",
+        "Harga naik → permintaan naik",
+        "Harga turun → permintaan turun",
+        "Tidak ada hubungan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Penawaran",
+      question: "Kurva penawaran memiliki kemiringan...",
+      options: ["Positif (naik)", "Negatif (turun)", "Datar", "Tidak tentu"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Keseimbangan Pasar",
+      question: "Keseimbangan pasar terjadi saat...",
+      options: ["Qd = Qs", "Qd > Qs", "Qd < Qs", "Pd = Ps"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Elastisitas",
+      question: "Permintaan inelastis jika koefisien elastisitasnya...",
+      options: [
+        "Kurang dari 1",
+        "Lebih dari 1",
+        "Sama dengan 1",
+        "Lebih dari 2",
+      ],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Biaya Produksi",
+      question: "Sewa pabrik termasuk biaya...",
+      options: ["Tetap (FC)", "Variabel (VC)", "Total (TC)", "Marginal (MC)"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pasar Persaingan",
+      question: "Pasar dengan satu penjual disebut...",
+      options: ["Monopoli", "Oligopoli", "Monopolistik", "Persaingan sempurna"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Produk Domestik Bruto",
+      question: "PDB per kapita Indonesia tahun 2023 sekitar...",
+      options: ["USD 4.900", "USD 1.000", "USD 10.000", "USD 100.000"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Inflasi",
+      question: "Indeks yang biasa dipakai untuk mengukur inflasi adalah...",
+      options: ["IHK", "IPM", "Gini Ratio", "TFR"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Pengangguran",
+      question:
+        "Pengangguran yang terjadi karena skill tidak sesuai lapangan kerja disebut...",
+      options: ["Struktural", "Friksional", "Siklikal", "Musiman"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Kebijakan Fiskal",
+      question:
+        "Tindakan pemerintah menaikkan belanja untuk menstimulus ekonomi adalah kebijakan fiskal...",
+      options: ["Ekspansif", "Kontraktif", "Moneter", "Neto"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Kebijakan Moneter",
+      question: "Bank Indonesia menaikkan BI rate bertujuan untuk...",
+      options: [
+        "Mengurangi uang beredar",
+        "Menambah uang beredar",
+        "Menaikkan inflasi",
+        "Menurunkan suku bunga",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Bank & Lembaga Keuangan",
+      question: "Bank yang berfungsi sebagai bank sentral Indonesia adalah...",
+      options: ["Bank Indonesia", "Bank Mandiri", "BCA", "BRI"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Investasi & Saham",
+      question:
+        "Instrumen yang menunjukkan kepemilikan atas perusahaan adalah...",
+      options: ["Saham", "Obligasi", "Reksadana", "Deposito"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Perdagangan Internasional",
+      question: "Surplus neraca perdagangan terjadi saat...",
+      options: [
+        "Ekspor > Impor",
+        "Impor > Ekspor",
+        "Ekspor = Impor",
+        "Tidak ada perdagangan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Struktur Pasar",
+      question: "Pasar di mana hanya ada satu penjual dikategorikan sebagai...",
+      options: ["Monopoli", "Oligopoli", "Monopolistik", "Persaingan sempurna"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kemiskinan",
+      question: "Garis kemiskinan di Indonesia ditetapkan oleh...",
+      options: ["BPS", "Bank Indonesia", "Kemenkes", "Bappenas"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Ketenagakerjaan",
+      question: "Upah Minimum Provinsi/UMR ditetapkan oleh...",
+      options: ["Gubernur", "Menteri", "Buruh", "Pengusaha"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kebutuhan Manusia",
+      question:
+        "Kebutuhan yang tidak terbatas sedangkan alat pemuas terbatas disebut...",
+      options: ["Kelangkaan", "Kebutuhan primer", "Pilihan", "Biaya peluang"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kelangkaan",
+      question: "Biaya peluang adalah...",
+      options: [
+        "Nilai alternatif yang dikorbankan",
+        "Harga barang",
+        "Total produksi",
+        "Selisih ekspor-impor",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Sistem Ekonomi",
+      question: "Indonesia menggunakan sistem ekonomi...",
+      options: ["Campuran", "Komando", "Pasar bebas", "Tradisional"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pelaku Ekonomi",
+      question: "Rumah tangga dalam circular flow berperan sebagai...",
+      options: [
+        "Konsumen & pemilik faktor produksi",
+        "Produsen",
+        "Regulator",
+        "Eksportir",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Permintaan",
+      question: "Hukum permintaan menyatakan bahwa...",
+      options: [
+        "Harga naik → permintaan turun",
+        "Harga naik → permintaan naik",
+        "Harga tetap → permintaan berubah",
+        "Permintaan tidak dipengaruhi harga",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Penawaran",
+      question: "Kurva penawaran memiliki slope...",
+      options: [
+        "Positif (menaik)",
+        "Negatif (menurun)",
+        "Horizontal",
+        "Vertikal",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Keseimbangan Pasar",
+      question: "Harga keseimbangan terjadi saat...",
+      options: ["Qd = Qs", "Qd > Qs", "Qd < Qs", "Permintaan nol"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Elastisitas",
+      question: "Permintaan inelastis ditunjukkan oleh...",
+      options: ["|E| < 1", "|E| > 1", "|E| = 1", "|E| = 0"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Biaya Produksi",
+      question: "TC = FC + VC berarti biaya total adalah...",
+      options: [
+        "Biaya tetap + biaya variabel",
+        "Biaya tetap saja",
+        "Biaya variabel saja",
+        "Biaya marginal",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Pasar Persaingan",
+      question: "Ciri pasar persaingan sempurna adalah...",
+      options: [
+        "Banyak penjual & barang homogen",
+        "Satu penjual",
+        "Beberapa penjual",
+        "Barang berbeda",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Produk Domestik Bruto",
+      question: "PDB dihitung dengan pendekatan...",
+      options: [
+        "Produksi, pengeluaran, pendapatan",
+        "Impor-ekspor saja",
+        "Inflasi",
+        "Pajak",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Inflasi",
+      question: "IHK digunakan untuk mengukur...",
+      options: ["Inflasi", "PDB", "Pengangguran", "Kemiskinan"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Bank & Lembaga Keuangan",
+      question: "Bank sentral di Indonesia adalah...",
+      options: ["Bank Indonesia (BI)", "Bank Mandiri", "BCA", "BRI"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Otoritas Jasa Keuangan",
+      question: "OJK berdiri pada tahun...",
+      options: ["2011", "1997", "2008", "2015"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Masalah Sosial",
+      question: "Masalah sosial yang berkaitan dengan NAPZA adalah...",
+      options: [
+        "Penyalahgunaan zat adiktif",
+        "Pengangguran",
+        "Kemiskinan",
+        "Kriminalitas",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Penelitian Sosial",
+      question: "Langkah pertama dalam penelitian sosial adalah...",
+      options: [
+        "Identifikasi masalah",
+        "Pengumpulan data",
+        "Analisis data",
+        "Kesimpulan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+  ],
+  SOSIOLOGI: [
+    {
+      conceptName: "Sosiologi sebagai Ilmu",
+      question: "Istilah sosiologi pertama kali dikemukakan oleh...",
+      options: ["Auguste Comte", "Emile Durkheim", "Max Weber", "Karl Marx"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Interaksi Sosial",
+      question: "Syarat terjadinya interaksi sosial adalah...",
+      options: [
+        "Kontak sosial & komunikasi",
+        "Status & peran",
+        "Norma & nilai",
+        "Kelompok & individu",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Proses Sosial Asosiatif",
+      question: "Gotong royong termasuk proses sosial...",
+      options: [
+        "Asosiatif (kerja sama)",
+        "Disasosiatif",
+        "Disintegrasi",
+        "Konflik",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Proses Sosial Disasosiatif",
+      question: "Tawuran antar warga termasuk proses sosial...",
+      options: [
+        "Disasosiatif (konflik)",
+        "Asosiatif",
+        "Asimilasi",
+        "Akulturasi",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Lembaga Sosial",
+      question: "Lembaga yang berfungsi mengembangkan iptek adalah...",
+      options: ["Pendidikan", "Keluarga", "Agama", "Ekonomi"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Stratifikasi Sosial",
+      question: "Sistem stratifikasi tertutup yang paling ketat adalah...",
+      options: ["Kasta", "Kelas", "Golongan", "Pangkat"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Mobilitas Sosial",
+      question:
+        "Seorang guru diangkat menjadi kepala sekolah adalah mobilitas...",
+      options: [
+        "Vertikal naik",
+        "Vertikal turun",
+        "Horizontal",
+        "Antar generasi",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Faktor Mobilitas",
+      question: "Pendidikan yang tinggi merupakan faktor...",
+      options: [
+        "Pendorong mobilitas sosial",
+        "Penghambat mobilitas",
+        "Tidak berpengaruh",
+        "Memperlambat mobilitas",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sosialisasi",
+      question: "Agen sosialisasi pertama bagi anak adalah...",
+      options: ["Keluarga", "Sekolah", "Media massa", "Teman sebaya"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Kebudayaan",
+      question: "Kebudayaan immaterial berupa...",
+      options: [
+        "Ide dan nilai",
+        "Rumah adat",
+        "Senjata tradisional",
+        "Pakaian",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Nilai dan Norma",
+      question: "Norma yang sanksinya tegas dan tegas dari negara adalah...",
+      options: [
+        "Norma hukum",
+        "Norma kesusilaan",
+        "Norma kesopanan",
+        "Norma kebiasaan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Multikulturalisme",
+      question: "Sikap yang mengagung-agungkan budaya sendiri disebut...",
+      options: ["Etnosentrisme", "Primordialisme", "Stereotip", "Diskriminasi"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Perubahan Sosial",
+      question: "Perubahan sosial yang direncanakan disebut...",
+      options: ["Planned change", "Unplanned change", "Evolusi", "Revolusi"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Globalisasi",
+      question: "Dampak positif globalisasi di bidang ekonomi adalah...",
+      options: [
+        "Pertukaran teknologi",
+        "Hilangnya budaya lokal",
+        "Kesenjangan digital",
+        "Kerja paksa",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Modernisasi",
+      question: "Ciri utama modernisasi adalah...",
+      options: [
+        "Penggunaan teknologi rasional",
+        "Pertanian subsisten",
+        "Gotong royong",
+        "Tradisi lisan",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Masalah Sosial",
+      question: "Masalah sosial yang berkaitan dengan NAPZA adalah...",
+      options: [
+        "Penyalahgunaan zat adiktif",
+        "Pengangguran",
+        "Kemiskinan",
+        "Kriminalitas",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Solidaritas Sosial",
+      question:
+        "Menurut Durkheim, solidaritas pada masyarakat sederhana disebut...",
+      options: ["Mekanik", "Organik", "Vertikal", "Horizontal"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Lembaga Pendidikan",
+      question: "Lembaga pendidikan nonformal contohnya...",
+      options: [
+        "Pusat kegiatan belajar masyarakat",
+        "Sekolah dasar",
+        "Universitas",
+        "Madrasah",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Dampak Sosial Media",
+      question: "Dampak negatif sosial media di antaranya...",
+      options: [
+        "Hoaks & cyberbullying",
+        "Mempercepat komunikasi",
+        "Memperluas jaringan",
+        "Sumber informasi",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sosiologi sebagai Ilmu",
+      question: "Sosiologi mempelajari...",
+      options: [
+        "Gejala sosial & interaksi manusia",
+        "Tumbuhan & hewan",
+        "Benda mati",
+        "Benda langit",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Interaksi Sosial",
+      question: "Syarat terjadinya interaksi sosial adalah...",
+      options: [
+        "Kontak sosial & komunikasi",
+        "Hanya kontak",
+        "Hanya komunikasi",
+        "Tidak ada syarat",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Proses Sosial Asosiatif",
+      question: "Contoh gotong royong adalah bentuk proses sosial...",
+      options: [
+        "Asosiatif (kerja sama)",
+        "Disasosiatif (konflik)",
+        "Vertikal",
+        "Horizontal",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Proses Sosial Disasosiatif",
+      question: "Kompetisi dalam pasar termasuk proses sosial...",
+      options: [
+        "Disasosiatif (persaingan)",
+        "Asosiatif",
+        "Akulturasi",
+        "Akomodasi",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Faktor Mobilitas",
+      question: "Faktor penghambat mobilitas sosial adalah...",
+      options: [
+        "Diskriminasi & kemiskinan",
+        "Pendidikan tinggi",
+        "Keahliaan",
+        "Keinginan keras",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Globalisasi",
+      question: "Globalisasi di bidang komunikasi ditandai dengan...",
+      options: [
+        "Internet & media sosial",
+        "Surat menyurat",
+        "Telepon rumah",
+        "Koran lokal",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Modernisasi",
+      question: "Modernisasi berbeda dengan westernisasi karena...",
+      options: [
+        "Tidak selalu meniru Barat",
+        "Selalu meniru Barat",
+        "Anti teknologi",
+        "Anti perubahan",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Perubahan Sosial",
+      question: "Revolusi adalah perubahan sosial yang...",
+      options: [
+        "Cepat & mendasar",
+        "Lambat & gradual",
+        "Tidak direncanakan",
+        "Berulang",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+  ],
+  PPKN: [
+    {
+      conceptName: "Sejarah Pancasila",
+      question: "Tanggal disahkannya Pancasila sebagai dasar negara adalah...",
+      options: [
+        "18 Agustus 1945",
+        "17 Agustus 1945",
+        "1 Juni 1945",
+        "28 Oktober 1928",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Pertama",
+      question: "Sila pertama Pancasila adalah...",
+      options: [
+        "Ketuhanan Yang Maha Esa",
+        "Kemanusiaan yang Adil dan Beradab",
+        "Persatuan Indonesia",
+        "Kerakyatan yang Dipimpin oleh Hikmat Kebijaksanaan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Kedua",
+      question: "Sila kedua menjunjung tinggi...",
+      options: [
+        "HAM & martabat manusia",
+        "Kepentingan bersama",
+        "Musyawarah mufakat",
+        "Keadilan ekonomi",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Ketiga",
+      question: "Sila ketiga mencerminkan semangat...",
+      options: [
+        "Nasionalisme & kesatuan bangsa",
+        "Demokrasi",
+        "Ketuhanan",
+        "Keadilan sosial",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Keempat",
+      question: "Musyawarah mufakat adalah pengamalan sila...",
+      options: ["Keempat", "Pertama", "Kedua", "Kelima"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Kelima",
+      question: "Sila kelima terkait dengan keadilan...",
+      options: ["Sosial & ekonomi", "Hukum", "Politik", "Budaya"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Struktur UUD 1945",
+      question: "UUD 1945 memiliki pembukaan dan...",
+      options: [
+        "Batang tubuh (pasal-pasal)",
+        "Penutup",
+        "Lampiran",
+        "Aturan tambahan",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Amandemen UUD 1945",
+      question: "Amandemen keempat UUD 1945 dilakukan pada tahun...",
+      options: ["2002", "1999", "2000", "2001"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Lembaga Negara",
+      question: "Lembaga yang berwenang menguji undang-undang adalah...",
+      options: [
+        "Mahkamah Konstitusi (MK)",
+        "Mahkamah Agung (MA)",
+        "DPR",
+        "BPK",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Hak dan Kewajiban Warga Negara",
+      question: "Hak warga negara dalam pendidikan diatur di UUD 1945 pasal...",
+      options: ["31", "27", "28", "34"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Makna Bhinneka Tunggal Ika",
+      question: "Bhinneka Tunggal Ika tertulis pada...",
+      options: [
+        "Pita pada lambang Garuda Pancasila",
+        "Batang tubuh UUD 1945",
+        "Pembukaan UUD 1945",
+        "Lambang negara",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Keberagaman Indonesia",
+      question: "Jumlah bahasa daerah di Indonesia sekitar...",
+      options: ["718", "100", "1000", "50"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Hak Asasi Manusia",
+      question: "Deklarasi Universal HAM disahkan PBB pada tahun...",
+      options: ["1948", "1945", "1950", "1966"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Demokrasi Indonesia",
+      question: "Pemilu di Indonesia dilakukan setiap...",
+      options: [
+        "5 tahun sekali",
+        "4 tahun sekali",
+        "3 tahun sekali",
+        "6 tahun sekali",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Hak & Kewajiban Pajak",
+      question: "Pajak diatur dalam UUD 1945 Pasal...",
+      options: ["23A", "27", "31", "33"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Sila Kedua",
+      question: "Pengamalan sila kedua di sekolah contohnya...",
+      options: [
+        "Tidak membully teman",
+        "Berdoa sebelum belajar",
+        "Musyawarah kelas",
+        "Gotong royong",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Ketiga",
+      question: "Bhinneka Tunggal Ika artinya...",
+      options: [
+        "Berbeda-beda tetap satu",
+        "Satu bangsa satu bahasa",
+        "Bersatu dalam perbedaan",
+        "Persatuan Indonesia",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Keempat",
+      question: "Musyawarah untuk mufakat mencerminkan pengamalan sila ke...",
+      options: ["Empat", "Satu", "Dua", "Lima"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Sila Kelima",
+      question: "Pembangunan yang merata adalah pengamalan sila...",
+      options: ["Kelima", "Pertama", "Kedua", "Ketiga"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Amandemen UUD 1945",
+      question: "Amandemen pertama UUD 1945 terjadi pada tahun...",
+      options: ["1999", "2000", "2001", "2002"],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Lembaga Negara",
+      question: "Lembaga yang berwenang membentuk undang-undang adalah...",
+      options: ["DPR", "MA", "MK", "BPK"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Makna Bhinneka Tunggal Ika",
+      question: "Semboyan Bhinneka Tunggal Ika tertulis pada lambang...",
+      options: [
+        "Garuda Pancasila",
+        "Bendera Merah Putih",
+        "UUD 1945",
+        "Burung Cendrawasih",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Ancaman terhadap Persatuan",
+      question: "Contoh paham radikal di Indonesia adalah...",
+      options: [
+        "Intoleransi terhadap perbedaan agama",
+        "Menghormati budaya daerah",
+        "Gotong royong",
+        "Musyawarah",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Hak Asasi Manusia",
+      question: "Hak untuk hidup aman dan tenteram adalah...",
+      options: ["Hak asasi manusia", "Hak cipta", "Hak paten", "Hak milik"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Warga Negara Indonesia",
+      question: "Warga negara Indonesia meliputi...",
+      options: [
+        "Keturunan Indonesia & yang dinaturalisasi",
+        "Orang asing yang tinggal",
+        "Wisatawan",
+        "Diplomat",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+    {
+      conceptName: "Kedaulatan Negara",
+      question:
+        "Kedaulatan Indonesia berdasarkan UUD 1945 adalah kedaulatan...",
+      options: ["Rakyat", "Presiden", "Tuhan", "Militer"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Demokrasi Indonesia",
+      question: "Pemilu di Indonesia dilaksanakan setiap...",
+      options: [
+        "5 tahun sekali",
+        "4 tahun sekali",
+        "3 tahun sekali",
+        "6 tahun sekali",
+      ],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Otonomi Daerah",
+      question: "UU yang mengatur otonomi daerah terbaru adalah...",
+      options: ["UU 23/2014", "UU 22/1999", "UU 32/2004", "UU 5/1974"],
+      correctIndex: 0,
+      difficulty: "HARD",
+    },
+    {
+      conceptName: "Keberagaman Indonesia",
+      question: "Contoh kerja bakti membersihkan lingkungan mencerminkan...",
+      options: ["Gotong royong", "Individualisme", "Kompetisi", "Diskriminasi"],
+      correctIndex: 0,
+      difficulty: "EASY",
+    },
+    {
+      conceptName: "Hak dan Kewajiban Warga Negara",
+      question: "Kewajiban warga negara dalam bidang pendidikan adalah...",
+      options: [
+        "Mengikuti wajib belajar 12 tahun",
+        "Menerima beasiswa",
+        "Mendirikan sekolah",
+        "Memilih sekolah",
+      ],
+      correctIndex: 0,
+      difficulty: "MEDIUM",
+    },
+  ],
+};
+
+const PREREQUISITES_BY_SUBJECT: Record<
+  string,
+  { dependent: string; prerequisite: string; minMasteryScore?: number }[]
+> = {
+  SEJARAH: [
+    {
+      dependent: "Periode Neolithicum",
+      prerequisite: "Manusia Purba",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Peradaban Awal Nusantara",
+      prerequisite: "Periode Neolithicum",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Kerajaan Hindu-Buddha",
+      prerequisite: "Peradaban Awal Nusantara",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Masuknya Islam ke Indonesia",
+      prerequisite: "Kerajaan Hindu-Buddha",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Kerajaan Islam Nusantara",
+      prerequisite: "Masuknya Islam ke Indonesia",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Kedatangan Portugis",
+      prerequisite: "Kerajaan Islam Nusantara",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "VOC dan Tanam Paksa",
+      prerequisite: "Kedatangan Portugis",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Perlawanan Rakyat",
+      prerequisite: "VOC dan Tanam Paksa",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Kebangkitan Nasional",
+      prerequisite: "Perlawanan Rakyat",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Proklamasi Kemerdekaan",
+      prerequisite: "Kebangkitan Nasional",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Masa Revolusi",
+      prerequisite: "Proklamasi Kemerdekaan",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Demokrasi Terpimpin",
+      prerequisite: "Masa Revolusi",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Orde Baru",
+      prerequisite: "Demokrasi Terpimpin",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Krisis 1998",
+      prerequisite: "Orde Baru",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Era Reformasi",
+      prerequisite: "Krisis 1998",
+      minMasteryScore: 0.7,
+    },
+  ],
+  GEOGRAFI: [
+    {
+      dependent: "Gempa Bumi",
+      prerequisite: "Lempeng Tektonik",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Vulkanisme",
+      prerequisite: "Lempeng Tektonik",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Iklim dan Cuaca",
+      prerequisite: "Angin Monsun",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Angin Monsun",
+      prerequisite: "Hidrosfer",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Hidrosfer",
+      prerequisite: "Iklim dan Cuaca",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Piramida Penduduk",
+      prerequisite: "Pertumbuhan Penduduk",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Urbanisasi",
+      prerequisite: "Pertumbuhan Penduduk",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Pola Permukiman",
+      prerequisite: "Urbanisasi",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Karakteristik Pulau Besar",
+      prerequisite: "Kondisi Geografis Indonesia",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Iklim Indonesia",
+      prerequisite: "Kondisi Geografis Indonesia",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Pemanasan Global",
+      prerequisite: "Sumber Daya Alam",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Pencemaran Lingkungan",
+      prerequisite: "Sumber Daya Alam",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Pelestarian Lingkungan",
+      prerequisite: "Pencemaran Lingkungan",
+      minMasteryScore: 0.7,
+    },
+  ],
+  EKONOMI: [
+    {
+      dependent: "Kelangkaan",
+      prerequisite: "Kebutuhan Manusia",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Sistem Ekonomi",
+      prerequisite: "Kelangkaan",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Pelaku Ekonomi",
+      prerequisite: "Sistem Ekonomi",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Penawaran",
+      prerequisite: "Permintaan",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Keseimbangan Pasar",
+      prerequisite: "Permintaan",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Keseimbangan Pasar",
+      prerequisite: "Penawaran",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Elastisitas",
+      prerequisite: "Permintaan",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Biaya Produksi",
+      prerequisite: "Pasar Persaingan",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Pasar Persaingan",
+      prerequisite: "Keseimbangan Pasar",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Inflasi",
+      prerequisite: "Produk Domestik Bruto",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Pengangguran",
+      prerequisite: "Produk Domestik Bruto",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Kebijakan Fiskal",
+      prerequisite: "Inflasi",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Kebijakan Moneter",
+      prerequisite: "Inflasi",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Otoritas Jasa Keuangan",
+      prerequisite: "Bank & Lembaga Keuangan",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Investasi & Saham",
+      prerequisite: "Otoritas Jasa Keuangan",
+      minMasteryScore: 0.7,
+    },
+  ],
+  SOSIOLOGI: [
+    {
+      dependent: "Interaksi Sosial",
+      prerequisite: "Sosiologi sebagai Ilmu",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Proses Sosial Asosiatif",
+      prerequisite: "Interaksi Sosial",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Proses Sosial Disasosiatif",
+      prerequisite: "Interaksi Sosial",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Lembaga Sosial",
+      prerequisite: "Proses Sosial Asosiatif",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Stratifikasi Sosial",
+      prerequisite: "Lembaga Sosial",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Mobilitas Sosial",
+      prerequisite: "Stratifikasi Sosial",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Faktor Mobilitas",
+      prerequisite: "Mobilitas Sosial",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Sosialisasi",
+      prerequisite: "Lembaga Sosial",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Kebudayaan",
+      prerequisite: "Sosialisasi",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Nilai dan Norma",
+      prerequisite: "Kebudayaan",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Multikulturalisme",
+      prerequisite: "Nilai dan Norma",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Perubahan Sosial",
+      prerequisite: "Multikulturalisme",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Globalisasi",
+      prerequisite: "Perubahan Sosial",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Modernisasi",
+      prerequisite: "Globalisasi",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Masalah Sosial",
+      prerequisite: "Perubahan Sosial",
+      minMasteryScore: 0.7,
+    },
+  ],
+  PPKN: [
+    {
+      dependent: "Sila Kedua",
+      prerequisite: "Sila Pertama",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Sila Ketiga",
+      prerequisite: "Sila Kedua",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Sila Keempat",
+      prerequisite: "Sila Ketiga",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Sila Kelima",
+      prerequisite: "Sila Keempat",
+      minMasteryScore: 0.6,
+    },
+    {
+      dependent: "Struktur UUD 1945",
+      prerequisite: "Sila Kelima",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Amandemen UUD 1945",
+      prerequisite: "Struktur UUD 1945",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Lembaga Negara",
+      prerequisite: "Amandemen UUD 1945",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Hak dan Kewajiban Warga Negara",
+      prerequisite: "Lembaga Negara",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Keberagaman Indonesia",
+      prerequisite: "Makna Bhinneka Tunggal Ika",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Ancaman terhadap Persatuan",
+      prerequisite: "Keberagaman Indonesia",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Hak Asasi Manusia",
+      prerequisite: "Hak dan Kewajiban Warga Negara",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Warga Negara Indonesia",
+      prerequisite: "Hak Asasi Manusia",
+      minMasteryScore: 0.65,
+    },
+    {
+      dependent: "Kedaulatan Negara",
+      prerequisite: "Warga Negara Indonesia",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Demokrasi Indonesia",
+      prerequisite: "Kedaulatan Negara",
+      minMasteryScore: 0.7,
+    },
+    {
+      dependent: "Otonomi Daerah",
+      prerequisite: "Demokrasi Indonesia",
+      minMasteryScore: 0.7,
+    },
+  ],
 };
 
 async function ensureTopics(subjects: Record<string, { id: string }>) {
@@ -855,6 +3482,126 @@ async function ensureTopics(subjects: Record<string, { id: string }>) {
       { subjectSlug: "IPA", name: "Kimia", slug: "kimia", order: 2 },
       { subjectSlug: "IPA", name: "Biologi", slug: "biologi", order: 3 },
     ],
+    SEJARAH: [
+      {
+        subjectSlug: "SEJARAH",
+        name: "Indonesia Purba & Awal Peradaban",
+        slug: "indonesia-purba",
+        order: 1,
+      },
+      {
+        subjectSlug: "SEJARAH",
+        name: "Masa Hindu-Buddha & Islam",
+        slug: "hindu-buddha-islam",
+        order: 2,
+      },
+      {
+        subjectSlug: "SEJARAH",
+        name: "Kolonialisme & Kemerdekaan",
+        slug: "kolonialisme-kemerdekaan",
+        order: 3,
+      },
+      {
+        subjectSlug: "SEJARAH",
+        name: "Orde Baru & Reformasi",
+        slug: "orde-baru-reformasi",
+        order: 4,
+      },
+    ],
+    GEOGRAFI: [
+      {
+        subjectSlug: "GEOGRAFI",
+        name: "Geografi Fisik",
+        slug: "geografi-fisik",
+        order: 1,
+      },
+      {
+        subjectSlug: "GEOGRAFI",
+        name: "Geografi Manusia",
+        slug: "geografi-manusia",
+        order: 2,
+      },
+      {
+        subjectSlug: "GEOGRAFI",
+        name: "Geografi Regional Indonesia",
+        slug: "geografi-regional",
+        order: 3,
+      },
+      {
+        subjectSlug: "GEOGRAFI",
+        name: "Lingkungan & Sumber Daya",
+        slug: "lingkungan-sda",
+        order: 4,
+      },
+    ],
+    EKONOMI: [
+      {
+        subjectSlug: "EKONOMI",
+        name: "Konsep Dasar Ekonomi",
+        slug: "konsep-dasar",
+        order: 1,
+      },
+      {
+        subjectSlug: "EKONOMI",
+        name: "Ekonomi Mikro",
+        slug: "ekonomi-mikro",
+        order: 2,
+      },
+      {
+        subjectSlug: "EKONOMI",
+        name: "Ekonomi Makro",
+        slug: "ekonomi-makro",
+        order: 3,
+      },
+      {
+        subjectSlug: "EKONOMI",
+        name: "Keuangan & Pasar Modal",
+        slug: "keuangan-pasar-modal",
+        order: 4,
+      },
+    ],
+    SOSIOLOGI: [
+      {
+        subjectSlug: "SOSIOLOGI",
+        name: "Individu, Kelompok & Interaksi",
+        slug: "individu-kelompok",
+        order: 1,
+      },
+      {
+        subjectSlug: "SOSIOLOGI",
+        name: "Stratifikasi & Mobilitas Sosial",
+        slug: "stratifikasi-mobilitas",
+        order: 2,
+      },
+      {
+        subjectSlug: "SOSIOLOGI",
+        name: "Sosialisasi & Kebudayaan",
+        slug: "sosialisasi-kebudayaan",
+        order: 3,
+      },
+      {
+        subjectSlug: "SOSIOLOGI",
+        name: "Perubahan Sosial & Masyarakat",
+        slug: "perubahan-sosial",
+        order: 4,
+      },
+    ],
+    PPKN: [
+      { subjectSlug: "PPKN", name: "Pancasila", slug: "pancasila", order: 1 },
+      { subjectSlug: "PPKN", name: "UUD 1945", slug: "uud-1945", order: 2 },
+      {
+        subjectSlug: "PPKN",
+        name: "Bhinneka Tunggal Ika",
+        slug: "bhinneka-tunggal-ika",
+        order: 3,
+      },
+      {
+        subjectSlug: "PPKN",
+        name: "Negara & Warga Negara",
+        slug: "negara-warga-negara",
+        order: 4,
+      },
+    ],
   };
 
   const topicMap: Record<string, Record<string, { id: string }>> = {};
@@ -906,6 +3653,53 @@ async function seedConcepts(
     }
     console.log(`Concepts created for ${subjectSlug}: ${concepts.length}`);
   }
+}
+
+async function seedPrerequisites() {
+  const allConcepts = await prisma.concept.findMany({
+    select: {
+      id: true,
+      name: true,
+      topic: { select: { subject: { select: { slug: true } } } },
+    },
+  });
+  const conceptKey = new Map<string, string>();
+  for (const c of allConcepts) {
+    conceptKey.set(`${c.topic.subject.slug}::${c.name}`, c.id);
+  }
+
+  let total = 0;
+  for (const [subjectSlug, edges] of Object.entries(PREREQUISITES_BY_SUBJECT)) {
+    for (const edge of edges) {
+      const dependentId = conceptKey.get(`${subjectSlug}::${edge.dependent}`);
+      const prerequisiteId = conceptKey.get(
+        `${subjectSlug}::${edge.prerequisite}`,
+      );
+      if (!dependentId || !prerequisiteId) {
+        console.warn(
+          `[prereq] ${subjectSlug}: missing "${edge.dependent}" or "${edge.prerequisite}"`,
+        );
+        continue;
+      }
+      if (dependentId === prerequisiteId) continue;
+      await prisma.conceptPrerequisite.upsert({
+        where: {
+          prerequisiteId_conceptId: {
+            prerequisiteId,
+            conceptId: dependentId,
+          },
+        },
+        update: { minMasteryScore: edge.minMasteryScore ?? 0.7 },
+        create: {
+          prerequisiteId,
+          conceptId: dependentId,
+          minMasteryScore: edge.minMasteryScore ?? 0.7,
+        },
+      });
+      total++;
+    }
+  }
+  console.log(`Prerequisites seeded: ${total}`);
 }
 
 async function generateAndSeedEmbeddings() {
@@ -1037,6 +3831,49 @@ async function main() {
         icon: "🔬",
         color: "#10B981",
         order: 4,
+      },
+      {
+        slug: "SEJARAH" as const,
+        name: "Sejarah",
+        description: "Sejarah Indonesia dari masa purba hingga reformasi",
+        icon: "📜",
+        color: "#92400E",
+        order: 5,
+      },
+      {
+        slug: "GEOGRAFI" as const,
+        name: "Geografi",
+        description:
+          "Geografi fisik, manusia, regional Indonesia, dan lingkungan",
+        icon: "🌏",
+        color: "#0EA5E9",
+        order: 6,
+      },
+      {
+        slug: "EKONOMI" as const,
+        name: "Ekonomi",
+        description: "Konsep dasar, ekonomi mikro, makro, dan pasar modal",
+        icon: "💰",
+        color: "#16A34A",
+        order: 7,
+      },
+      {
+        slug: "SOSIOLOGI" as const,
+        name: "Sosiologi",
+        description:
+          "Interaksi sosial, stratifikasi, budaya, dan perubahan sosial",
+        icon: "👥",
+        color: "#DB2777",
+        order: 8,
+      },
+      {
+        slug: "PPKN" as const,
+        name: "PPKN",
+        description:
+          "Pancasila, UUD 1945, Bhinneka Tunggal Ika, dan warga negara",
+        icon: "🇮🇩",
+        color: "#DC2626",
+        order: 9,
       },
     ].map((s) =>
       prisma.subject.upsert({ where: { slug: s.slug }, update: {}, create: s }),
@@ -1190,6 +4027,36 @@ async function main() {
         category: "KEBIASAAN" as const,
         xpReward: 250,
       },
+      {
+        name: "Penjelajah Sejarah",
+        description: "Kuasai semua konsep Sejarah Indonesia",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Kartograf Cilik",
+        description: "Kuasai semua konsep Geografi",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Ahli Ekonomi Muda",
+        description: "Kuasai semua konsep Ekonomi",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Pengamat Sosial",
+        description: "Kuasai semua konsep Sosiologi",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
+      {
+        name: "Pelindung Pancasila",
+        description: "Kuasai semua konsep PPKN",
+        category: "AKADEMIK" as const,
+        xpReward: 200,
+      },
     ].map((b) =>
       prisma.badge.upsert({ where: { name: b.name }, update: {}, create: b }),
     ),
@@ -1197,6 +4064,7 @@ async function main() {
   console.log("Badges created:", badges.length);
 
   await seedConcepts(subjects, topicMap);
+  await seedPrerequisites();
   await generateAndSeedEmbeddings();
   await seedQuestions(subjects, topicMap);
 

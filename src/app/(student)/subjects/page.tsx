@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
 import {
   type SubjectListItem,
@@ -16,14 +15,7 @@ export const metadata: Metadata = {
 
 export default async function SubjectsPage() {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
-  if (session.user.role !== "STUDENT") {
-    redirect("/");
-  }
-
-  const userId = session.user.id;
+  const userId = session!.user!.id;
 
   const [profile, subjects, conceptsInSubjects, profiles] = await Promise.all([
     prisma.studentProfile.findUnique({

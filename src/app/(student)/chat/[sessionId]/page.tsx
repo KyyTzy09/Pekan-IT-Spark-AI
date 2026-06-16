@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ChatConversationView } from "@/components/student/chat-conversation-view";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -26,19 +26,9 @@ export default async function ChatSessionPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
-  if (session.user.role !== "STUDENT") {
-    redirect("/");
-  }
-  if (!session.user.isOnboarded) {
-    redirect("/onboarding");
-  }
-
   const { sessionId } = await params;
   const chatSession = await getChatSession(sessionId);
-  if (!chatSession || chatSession.userId !== session.user.id) {
+  if (!chatSession || chatSession.userId !== session?.user?.id) {
     notFound();
   }
 

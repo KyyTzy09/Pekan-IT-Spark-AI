@@ -2,6 +2,8 @@
 > **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; ready for Phase 5 (Document Upload)
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
+> **⚠️ WAJIB pakai `rtk` prefix:** Setiap command `bun` / `bunx` WAJIB ditulis `rtk bun` / `rtk bunx` (cth: `rtk bunx prisma migrate dev`, bukan `bunx prisma migrate dev`). Ini untuk konsistensi tooling environment.
+
 
 ---
 
@@ -76,8 +78,8 @@
 - [x] 🔴 Setup environment variables template (`.env.example`)
 
 ### 0.2 Backend Infrastructure (Prisma + PostgreSQL)
-- [x] 🔴 Install Prisma: `bun add prisma @prisma/client`
-- [x] 🔴 `bunx prisma init` → generate `prisma/schema.prisma` & `.env`
+- [x] 🔴 Install Prisma: `rtk bun add prisma @prisma/client`
+- [x] 🔴 `rtk bunx prisma init` → generate `prisma/schema.prisma` & `.env`
 - [x] 🔴 Set `DATABASE_URL` di `.env`
 - [x] 🔴 Define initial schema di `prisma/schema.prisma`:
   - User, Account, Session (Auth.js standard)
@@ -91,9 +93,9 @@
   - LearningPlan, LearningActivity
   - Document (user uploaded PDF/DOCX as Markdown)
   - ParentStudentLink (untuk invite code orang tua)
-- [x] 🔴 First migration: `bunx prisma migrate dev --name init`
+- [x] 🔴 First migration: `rtk bunx prisma migrate dev --name init`
 - [x] 🔴 Add Prisma client singleton di `src/lib/prisma.ts` (hot-reload safe, adapter-pg)
-- [x] 🔴 Add seed script: `prisma/seed.ts` + `bunx prisma db seed`
+- [x] 🔴 Add seed script: `prisma/seed.ts` + `rtk bunx prisma db seed`
 - [x] 🔴 Seed data: 1 admin, sample subjects (Matematika, B.Indo, B.Inggris, IPA), topics, levels, badges
 - [x] 🟢 ~~Install dan enable pgvector untuk embeddings (RAG AI)~~ — **Aktif di Neon**, tapi implementasi RAG ditunda
 - [x] 🟠 Setup Prisma Studio script
@@ -141,13 +143,13 @@
   - `"dev": "next dev"`
   - `"build": "next build"`
   - `"start": "next start"`
-  - `"db:studio": "bunx prisma studio"`
-  - `"db:migrate": "bunx prisma migrate dev"`
-  - `"db:seed": "bunx prisma db seed"`
-  - `"db:generate": "bunx prisma generate"`
-  - `"db:push": "bunx prisma db push"`
+  - `"db:studio": "rtk bunx prisma studio"`
+  - `"db:migrate": "rtk bunx prisma migrate dev"`
+  - `"db:seed": "rtk bunx prisma db seed"`
+  - `"db:generate": "rtk bunx prisma generate"`
+  - `"db:push": "rtk bunx prisma db push"`
   - `"lint": "biome check"`
-  - `"typecheck": "bunx tsc --noEmit"`
+  - `"typecheck": "rtk bunx tsc --noEmit"`
 - [x] 🔴 Setup Prisma config `prisma.config.ts` dengan seed command
 - [ ] 🔴 Setup Prisma binary target untuk Bun: `binaryTargets = ["native", "debian-openssl-3.0.x"]` (jika deploy ke Linux)
 - [x] 🟠 Pastikan Prisma generate compatible dengan Bun runtime
@@ -290,7 +292,7 @@
 - [x] 🔴 `Topic` & `Concept`: +`isCustom` (bool) untuk track AI-generated content
 - [x] 🔴 `User`: +`customSubjects` reverse relation
 - [x] 🔴 Indexes: `isCustom`, `source`, `createdById` untuk query performant
-- [x] 🔴 Push schema via `bunx prisma db push --accept-data-loss` + regenerate client
+- [x] 🔴 Push schema via `rtk bunx prisma db push --accept-data-loss` + regenerate client
 
 #### 4.6.2 Lapis 2 — Adaptive Difficulty Engine (DONE — siap dipakai Phase 6)
 - [x] 🔴 `src/server/learning/adaptive.ts` — pure functions, 0 side effect
@@ -327,31 +329,37 @@
 - [x] 🔴 Subject card: badge "AI" (Wand2 icon) untuk custom subjects, badge "Fokus" untuk mapel di `focusedSubjects`
 - [x] 🔴 Dashboard "Progress per mapel" section: tombol "Tambah mapel" (Wand2) di header + tile "Mau belajar mapel lain?" dengan blob gradient coral/purple di grid
 
-#### 4.6.6 Seed Tambahan (PENDING — effort curation bukan AI)
-- [ ] 🟠 Seed 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi): masing-masing ~30 konsep, ~40 soal, prerequisite chains — butuh effort kurasi manual, ~2-3 hari kerja
-- [ ] 🟠 Seed PPKN: ~25 konsep, ~35 soal
-- [ ] 🟠 Update `prisma/seed.ts` untuk include mapel-mapel baru
-- [ ] 🟠 Generate embeddings (pgvector) untuk concept baru (incremental)
+#### 4.6.6 Seed Tambahan (PARTIAL DONE — concept/soal ~75% target, prereq chains seeded)
+- [x] 🟠 Seed 4 mapel IPS (Sejarah, Geografi, Ekonomi, Sosiologi): 21/22/22/20 konsep & 33/30/37/27 soal (target ~30/~40) — cukup untuk launching, tambah nanti incremental
+- [x] 🟠 Seed PPKN: 20 konsep & 30 soal (target ~25/~35) — cukup, tambah nanti incremental
+- [x] 🟠 Update `prisma/seed.ts` untuk include mapel-mapel baru — semua subject/topic/concept/question ada
+- [x] 🟠 Prerequisite chains: 73 edges seeded via `PREREQUISITES_BY_SUBJECT` + `seedPrerequisites()` (topik → topik, min mastery 0.6–0.7)
+- [x] 🟢 Generate embeddings (pgvector) untuk concept baru — `generateAndSeedEmbeddings()` sudah panggil `embedMany`; skip gracefully kalau provider ga support
 
-#### 4.6.7 Integrasi Adaptive Engine ke Practice (Phase 6)
-- [ ] 🟠 Practice page: query `selectNextQuestionDifficulty()` saat load
-- [ ] 🟠 Practice page: select question by concept mastery + prereq satisfied
-- [ ] 🟠 Submit answer → panggil `recordQuestionAttempt()` → display new mastery + status
-- [ ] 🟠 UI: tampilkan "Difficulty: MEDIUM (akurasimu 75%)" feedback ke siswa (transparansi)
-- [ ] 🟠 Trigger: kalau status berubah ke MASTERED → unlock concept dependent + celebrate
+#### 4.6.7 Integrasi Adaptive Engine ke Practice (DONE)
+- [x] 🟠 Server action `getNextPracticeQuestion()`: filter konsep by prereq satisfied → call `selectNextQuestionDifficulty()` → pick un-attempted question by difficulty
+- [x] 🟠 Server action `submitPracticeAnswer()`: validate answer server-side → panggil `recordQuestionAttempt()` → return newMastery + newStatus + unlocked concepts
+- [x] 🟠 `<PracticePlayer />` client component: pilih opsi → submit → tampilkan feedback (benar/salah, correct answer, mastery %, status badge)
+- [x] 🟠 UI: header cards "Difficulty: MEDIUM (akurasi X%)" + "Akurasi kamu X%" + "Streak & konsep" — transparansi penuh
+- [x] 🟠 Trigger MASTERED: `<MasteredCelebration />` modal (party popper, spring animation) + list "Konsep dependen baru terbuka"
+- [x] 🟠 Update `src/app/(student)/practice/page.tsx`: dari stub "segera hadir" jadi fully wired ke pipeline
 
 #### 4.6.8 Admin Review untuk Custom Subjects (Phase 10)
+> Catatan: sesuai 4.6.9.2 (anti-pattern), mapel custom **TIDAK** dipromosikan ke kurikulum global. Admin cuma verify — `isCustom: true` tetap.
 - [ ] 🟢 Admin page: list custom subjects dengan `isVerified: false`
-- [ ] 🟢 Approve → set `isVerified: true` + `isCustom: false` (promote ke kurikulum global)
+- [ ] 🟢 Approve → set `isVerified: true` saja (TETAP `isCustom: true`, JANGAN promote ke global) — mapel jadi bisa dishare ke siswa lain, badge jadi "Verified", tapi tetap di section "Custom + AI"
 - [ ] 🟢 Reject → soft delete (atau set `isActive: false`) + kasih feedback ke siswa
 - [ ] 🟢 Audit log: siapa yang approve/reject kapan
 
 #### 4.6.9 Anti-Pattern (Sama seperti 7.10)
-- [ ] 🔴 Tidak boleh auto-generate soal pretest untuk mapel nasional (kualitas terlalu kritis)
-- [ ] 🔴 Tidak boleh biarkan mapel custom masuk kurikulum global
-- [ ] 🔴 Tidak boleh pakai ML/RL untuk difficulty selection (aturan deterministik lebih transparan)
-- [ ] 🔴 Tidak boleh skip prerequisite check
-- [ ] 🔴 Mapel custom harus tetap ditampilkan dengan disclaimer "AI-generated"
+- [x] 🔴 Tidak boleh auto-generate soal pretest untuk mapel nasional (kualitas terlalu kritis) — **PASS**: onboarding pretest (`src/app/onboarding/page.tsx`) pakai `prisma.question.findMany` dari seed; AI generate cuma di `addCustomSubject` (`isCustom: true`)
+- [x] 🔴 Tidak boleh biarkan mapel custom masuk kurikulum global — **PASS + spec sync**: 4.6.8 diupdate (admin approve cuma verify, TETAP `isCustom: true`, JANGAN promote)
+- [x] 🔴 Tidak boleh pakai ML/RL untuk difficulty selection (aturan deterministik lebih transparan) — **PASS**: `src/server/learning/adaptive.ts` `selectNextDifficulty` pakai rolling accuracy + wrong-streak + promote/demote thresholds, fully deterministic
+- [x] 🔴 Tidak boleh skip prerequisite check — **FIXED**: `src/server/actions/practice.ts` `getNextPracticeQuestion()` line ~196 fallback ke root prereq concept (yg punya dependents) instead of all concepts; root concepts by definition always eligible (no prereqs), blocked concepts never picked
+- [x] 🔴 Mapel custom harus tetap ditampilkan dengan disclaimer "AI-generated" — **FIXED**: 
+  - `src/components/student/subjects-view.tsx` Section header "Custom + AI" dapat inline disclaimer
+  - SubjectCard badge berubah dari "AI" → "AI-generated" (visible, bukan cuma tooltip)
+  - `SubjectDetailView` header dapat prominent purple box disclaimer "Mapel ini AI-generated oleh Spark — bukan kurikulum nasional. Selalu konfirmasi materi ke guru untuk hal-hal penting."
 
 ---
 
@@ -624,7 +632,6 @@
 - [ ] 🟢 Leaderboard kelas (non-toxic, opt-in)
 - [ ] 🟢 Support bahasa daerah (Jawa, Sunda, dll)
 - [ ] 🟢 iOS app (React Native / Capacitor)
-- [ ] 🟢 Offline mode (cache materi dan soal)
 - [ ] 🟢 AI-generated practice questions from uploaded material
 - [ ] 🟢 Video penjelasan AI / avatar berbicara
 

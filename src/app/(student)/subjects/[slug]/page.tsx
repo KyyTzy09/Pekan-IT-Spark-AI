@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { SubjectDetailView } from "@/components/student/subjects-view";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -40,16 +40,6 @@ export default async function SubjectDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
-  if (session.user.role !== "STUDENT") {
-    redirect("/");
-  }
-  if (!session.user.isOnboarded) {
-    redirect("/onboarding");
-  }
-
   const { slug } = await params;
   const normalized = normalizeSlug(slug);
   const subject = await prisma.subject.findUnique({
@@ -59,7 +49,7 @@ export default async function SubjectDetailPage({
 
   const summary = await getSubjectDetail(
     subject.slug.toLowerCase(),
-    session.user.id,
+    session!.user!.id,
   );
   if (!summary) notFound();
   return <SubjectDetailView summary={summary} />;
