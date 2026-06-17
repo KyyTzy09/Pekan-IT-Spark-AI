@@ -12,14 +12,14 @@ const summarySchema = z.object({
   summary: z
     .string()
     .min(150)
-    .max(6000)
+    .max(12000)
     .describe(
       "Ringkasan lengkap, mendalam, dan komprehensif untuk siswa SMA/SMK",
     ),
   keyPoints: z
     .array(z.string().min(8).max(280))
     .min(3)
-    .max(7)
+    .max(15)
     .describe("Poin-poin kunci yang harus diingat"),
   hasHomework: z
     .boolean()
@@ -60,11 +60,11 @@ Tugas kamu: baca materi yang diberikan, lalu hasilkan ringkasan yang SANGAT DETA
 
 Format output harus JSON valid dengan struktur:
 {
-  "title": "Judul singkat materi",
-  "summary": "Ringkasan lengkap dan detail",
-  "keyPoints": ["Poin 1", "Poin 2", "Poin 3"],
+  "title": "Judul singkat materi (maksimal 120 karakter)",
+  "summary": "Ringkasan lengkap dan detail (antara 150 sampai 12000 karakter)",
+  "keyPoints": ["Poin 1", "Poin 2", "Poin 3"], // Hasilkan antara 3 sampai 15 poin penting (maksimal 15)
   "hasHomework": true | false,
-  "homeworkTopic": "Topik PR jika hasHomework=true, kosongkan jika false"
+  "homeworkTopic": "Topik PR jika hasHomework=true, kosongkan jika false (maksimal 140 karakter)"
 }`;
 
 const SYSTEM_QUIZ = `Kamu adalah Spark, asisten belajar.

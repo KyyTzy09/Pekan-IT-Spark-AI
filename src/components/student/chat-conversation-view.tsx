@@ -50,6 +50,14 @@ export function ChatConversationView({
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   const processedMsgId = React.useRef<string | null>(null);
+  const isMounted = React.useRef(true);
+
+  React.useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     setMessages(initialMessages);
@@ -84,7 +92,7 @@ export function ChatConversationView({
           }
         })
         .finally(() => {
-          if (active) {
+          if (isMounted.current) {
             setPending(false);
           }
         });
@@ -121,6 +129,7 @@ export function ChatConversationView({
         sessionId,
         content: trimmed,
       });
+      processedMsgId.current = userMsg.id;
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal kirim pesan.");

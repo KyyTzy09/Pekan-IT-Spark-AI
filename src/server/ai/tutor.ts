@@ -6,6 +6,7 @@ import type {
   LearningStyle,
   ResponseDepth,
 } from "../../../generated/prisma/client";
+import { retrieveContext } from "./rag";
 
 interface ConceptMastery {
   id: string;
@@ -235,6 +236,32 @@ export async function generateTutorStream(input: {
   );
 
   const contextSnippets: string[] = [];
+  const query =
+    input.lastUserMessage ||
+    input.messages.filter((m) => m.role === "user").pop()?.content ||
+    "";
+
+  if (query.trim()) {
+    try {
+      const retrieved = await retrieveContext({
+        userId: input.userId,
+        query: query,
+        subjectId: ctx.subject?.id,
+        topicId: ctx.topic?.id,
+        limit: 3,
+      });
+      for (const item of retrieved) {
+        contextSnippets.push(
+          `[${item.type.toUpperCase()}: ${item.title}]\n${item.content}`,
+        );
+      }
+    } catch (err) {
+      console.warn(
+        "Failed to retrieve RAG context in generateTutorStream:",
+        err,
+      );
+    }
+  }
 
   const systemPrompt = buildSystemPrompt(
     {
