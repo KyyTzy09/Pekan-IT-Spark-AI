@@ -130,7 +130,7 @@ export async function addCustomSubject(
   for (const item of generatedContents) {
     if (item.ok && item.data && Array.isArray(item.data.concepts)) {
       for (const c of item.data.concepts) {
-        if (c && c.conceptName) {
+        if (c?.conceptName) {
           conceptDetailsMap.set(c.conceptName.toLowerCase().trim(), {
             contentMd: c.contentMd,
             questions: Array.isArray(c.questions) ? c.questions : [],
@@ -392,6 +392,56 @@ export async function selectNextQuestionDifficulty(
 
   const { selectNextDifficulty } = await import("@/server/learning/adaptive");
   return selectNextDifficulty(records, baseline);
+}
+
+export async function getConceptDetail(conceptId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const concept = await prisma.concept.findUnique({
+    where: { id: conceptId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      contentMd: true,
+      topic: {
+        select: {
+          id: true,
+          name: true,
+          subject: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!concept) return null;
+
+  const profile = await prisma.studentKnowledgeProfile.findUnique({
+    where: {
+      userId_conceptId: {
+        userId: session.user.id,
+        conceptId,
+      },
+    },
+    select: {
+      masteryScore: true,
+      status: true,
+    },
+  });
+
+  return {
+    ...concept,
+    masteryScore: profile?.masteryScore ?? 0,
+    status: profile?.status ?? "NOT_STARTED",
+  };
 }
 
 function slugify(s: string): string {

@@ -1,5 +1,4 @@
 import {
-  ArrowUpRight,
   BookOpen,
   CheckCircle2,
   ChevronRight,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
+import { Constellation } from "@/components/student/constellation-view";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -283,14 +283,45 @@ export function SubjectDetailView({
                 </p>
               )}
               {subject.isCustom && (
-                <p className="mt-2 flex items-start gap-1.5 rounded-xl border border-[var(--purple)]/20 bg-[var(--purple)]/5 px-3 py-2 text-[11.5px] leading-relaxed text-[var(--purple)] dark:text-[var(--purple)]">
-                  <Sparkles size={12} className="mt-0.5 shrink-0" />
-                  <span>
-                    Mapel ini AI-generated oleh Spark — bukan kurikulum
-                    nasional. Selalu konfirmasi materi ke guru untuk hal-hal
-                    penting.
-                  </span>
-                </p>
+                <>
+                  <p className="mt-2 flex items-start gap-1.5 rounded-xl border border-[var(--purple)]/20 bg-[var(--purple)]/5 px-3 py-2 text-[11.5px] leading-relaxed text-[var(--purple)] dark:text-[var(--purple)]">
+                    <Sparkles size={12} className="mt-0.5 shrink-0" />
+                    <span>
+                      Mapel ini AI-generated oleh Spark — bukan kurikulum
+                      nasional. Selalu konfirmasi materi ke guru untuk hal-hal
+                      penting.
+                    </span>
+                  </p>
+                  <div className="mt-3 overflow-hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 shadow-sm">
+                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-2">
+                        <Star
+                          size={16}
+                          className="mt-0.5 shrink-0 text-amber-500"
+                          fill="currentColor"
+                        />
+                        <div>
+                          <p className="text-[12px] font-bold text-amber-600 dark:text-amber-500">
+                            Uji Kemampuan Awal
+                          </p>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                            Ambil pretest untuk mengukur tingkat pemahaman awal
+                            kamu pada mata pelajaran kustom ini.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="rounded-full bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.25)] shrink-0 self-start sm:self-center"
+                      >
+                        <Link href={`/practice/pretest/${subject.id}`}>
+                          Mulai Pretest
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
             <div className="flex flex-col items-stretch gap-2 sm:items-end">
@@ -577,136 +608,6 @@ export function TopicDetailView({
           <Constellation concepts={topic.concepts} />
         </section>
       </Reveal>
-    </div>
-  );
-}
-
-function Constellation({
-  concepts,
-}: {
-  concepts: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    description: string | null;
-    status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
-    masteryScore: number;
-    isLocked: boolean;
-    unmetPrerequisites: Array<{ id: string; name: string }>;
-  }>;
-}) {
-  return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-[oklch(0.16_0.04_260)] via-[oklch(0.18_0.04_280)] to-[oklch(0.2_0.05_300)] p-5 shadow-[0_12px_36px_rgba(20,10,50,0.18)] sm:p-7">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-      <div className="relative grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-        {concepts.map((c, i) => {
-          const mastered = c.status === "MASTERED" && !c.isLocked;
-          const learning = c.status === "LEARNING" && !c.isLocked;
-          const struggling = c.status === "STRUGGLING" && !c.isLocked;
-          const masteryPct = Math.round(c.masteryScore * 100);
-
-          // If locked, redirect practice to the first unmet prerequisite
-          const practiceUrl = c.isLocked
-            ? `/practice?concept=${c.unmetPrerequisites[0]?.id}`
-            : `/practice?concept=${c.id}`;
-
-          return (
-            <Link
-              key={c.id}
-              href={practiceUrl}
-              className={cn(
-                "group/cs relative overflow-hidden rounded-2xl border p-3 backdrop-blur-md transition-all hover:-translate-y-0.5",
-                c.isLocked
-                  ? "border-white/5 bg-white/5 opacity-60 hover:opacity-95"
-                  : mastered
-                    ? "border-[var(--yellow)]/40 bg-[color-mix(in_oklch,var(--yellow)_10%,transparent)] shadow-[0_0_24px_rgba(245,158,11,0.18)]"
-                    : learning
-                      ? "border-[var(--teal)]/40 bg-[color-mix(in_oklch,var(--teal)_10%,transparent)]"
-                      : struggling
-                        ? "border-[var(--coral)]/40 bg-[color-mix(in_oklch,var(--coral)_10%,transparent)]"
-                        : "border-white/10 bg-white/5",
-              )}
-              style={{
-                animation: mastered
-                  ? `pulse-soft 4s ease-in-out ${(i % 6) * 0.4}s infinite`
-                  : undefined,
-              }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span
-                  className={cn(
-                    "grid size-7 place-items-center rounded-full text-white shadow-[0_0_12px_rgba(255,255,255,0.18)]",
-                    c.isLocked
-                      ? "bg-muted text-muted-foreground border border-border/30"
-                      : mastered
-                        ? "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]"
-                        : learning
-                          ? "bg-gradient-to-br from-[var(--teal)] to-[var(--blue)]"
-                          : struggling
-                            ? "bg-gradient-to-br from-[var(--coral)] to-[var(--pink)]"
-                            : "bg-white/15",
-                  )}
-                >
-                  {c.isLocked ? (
-                    <Lock size={11} className="text-muted-foreground/85" />
-                  ) : (
-                    <Star
-                      size={12}
-                      fill={mastered ? "currentColor" : "none"}
-                      className={cn(mastered ? "text-white" : "text-white/70")}
-                      strokeWidth={2.5}
-                    />
-                  )}
-                </span>
-                <span className="font-heading text-[11px] font-bold tabular-nums text-white/90">
-                  {c.isLocked ? "🔒" : `${masteryPct}%`}
-                </span>
-              </div>
-              <p className="mt-2 line-clamp-2 text-[12px] font-bold leading-snug text-white">
-                {c.name}
-              </p>
-              <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/60">
-                {c.isLocked
-                  ? "Terkunci"
-                  : c.status === "MASTERED"
-                    ? "Dikuasai"
-                    : c.status === "LEARNING"
-                      ? "Lagi dipelajari"
-                      : c.status === "STRUGGLING"
-                        ? "Butuh bantuan"
-                        : "Belum mulai"}
-              </p>
-              {c.isLocked && c.unmetPrerequisites.length > 0 && (
-                <div className="mt-2 border-t border-white/5 pt-1.5">
-                  <p className="text-[8.5px] font-semibold text-amber-400 leading-tight">
-                    Butuh: {c.unmetPrerequisites[0].name}
-                  </p>
-                  <p className="text-[7.5px] text-white/40 leading-none mt-0.5">
-                    (Klik untuk latihan)
-                  </p>
-                </div>
-              )}
-              <ArrowUpRight
-                size={12}
-                className="absolute right-2 bottom-2 text-white/40 transition-transform group-hover/cs:translate-x-0.5 group-hover/cs:-translate-y-0.5 group-hover/cs:text-white/80"
-              />
-            </Link>
-          );
-        })}
-      </div>
-      {concepts.length === 0 && (
-        <p className="relative text-center text-[12.5px] text-white/70">
-          Belum ada konsep di topik ini.
-        </p>
-      )}
     </div>
   );
 }

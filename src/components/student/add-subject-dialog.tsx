@@ -63,7 +63,7 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
     });
     setTimeout(() => {
       setOpen(false);
-      router.push(`/subjects/${res.slug.toLowerCase()}`);
+      router.push(`/practice/pretest/${res.subjectId}`);
       router.refresh();
     }, 1200);
   }, [name, context, router]);

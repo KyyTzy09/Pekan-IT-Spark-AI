@@ -564,6 +564,126 @@ export async function startQuizSession(input: {
   };
 }
 
+export async function startPretestSession(input: {
+  subjectId: string;
+}): Promise<{ ok: true; session: QuizSession } | { ok: false; error: string }> {
+  let userId: string;
+  try {
+    userId = await requireStudent();
+  } catch {
+    return { ok: false, error: "Login dulu ya" };
+  }
+
+  const subject = await prisma.subject.findUnique({
+    where: { id: input.subjectId },
+    include: {
+      topics: {
+        orderBy: { order: "asc" },
+        take: 1,
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  if (!subject) return { ok: false, error: "Mata pelajaran tidak ditemukan" };
+  if (subject.topics.length === 0) {
+    return { ok: false, error: "Mata pelajaran ini belum memiliki topik" };
+  }
+
+  const firstTopic = subject.topics[0];
+
+  const pretestQuestions = await prisma.question.findMany({
+    where: {
+      isActive: true,
+      tags: { has: "pretest" },
+      concept: { topic: { subjectId: subject.id } },
+    },
+    select: {
+      id: true,
+      difficulty: true,
+      questionText: true,
+      options: true,
+      concept: {
+        select: {
+          id: true,
+          name: true,
+          topic: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  let picked = pretestQuestions;
+
+  if (picked.length === 0) {
+    const allQuestions = await prisma.question.findMany({
+      where: {
+        isActive: true,
+        concept: { topic: { subjectId: subject.id } },
+      },
+      select: {
+        id: true,
+        difficulty: true,
+        questionText: true,
+        options: true,
+        concept: {
+          select: {
+            id: true,
+            name: true,
+            topic: { select: { name: true } },
+          },
+        },
+      },
+    });
+    if (allQuestions.length === 0) {
+      return { ok: false, error: "Belum ada soal untuk mata pelajaran ini" };
+    }
+    const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+    picked = shuffled.slice(0, Math.min(5, shuffled.length));
+  }
+
+  const numQ = picked.length;
+  const timeLimitSec = Math.max(120, numQ * 60);
+
+  const quizSessionId = newQuizId();
+  QUIZ_BATCH_STORE.set(quizSessionId, {
+    userId,
+    topicId: firstTopic.id,
+    questionIds: picked.map((q) => q.id),
+    answers: new Map(),
+    startedAt: Date.now(),
+    timeLimitSec,
+  });
+
+  const questions: QuizQuestion[] = picked.map((q) => ({
+    id: q.id,
+    conceptId: q.concept.id,
+    conceptName: q.concept.name,
+    topicName: q.concept.topic.name,
+    questionText: q.questionText,
+    options: Array.isArray(q.options)
+      ? (q.options as unknown as string[])
+      : typeof q.options === "string"
+        ? (JSON.parse(q.options) as string[])
+        : [],
+    difficulty: q.difficulty,
+    hint: null,
+  }));
+
+  const session: QuizSession = {
+    sessionId: quizSessionId,
+    topicId: firstTopic.id,
+    topicName: `Pretest: ${subject.name}`,
+    subjectName: subject.name,
+    totalQuestions: numQ,
+    timeLimitSec,
+    questions,
+    startedAt: new Date().toISOString(),
+  };
+
+  return { ok: true, session };
+}
+
 export async function submitQuizAnswer(input: {
   sessionId: string;
   questionId: string;
