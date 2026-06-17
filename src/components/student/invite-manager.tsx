@@ -1,5 +1,6 @@
 "use client";
 
+import { gooeyToast } from "goey-toast";
 import {
   Check,
   Copy,
@@ -11,7 +12,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { generateInvite, revokeInvite } from "@/server/actions/invite";
@@ -55,9 +55,12 @@ export function InviteManager({
     const result = await generateInvite();
     setWorking(null);
     if (!result.ok) {
-      setError("Gagal membuat kode. Coba lagi, ya.");
+      const errMsg = "Gagal membuat kode. Coba lagi, ya.";
+      setError(errMsg);
+      gooeyToast.error(errMsg);
       return;
     }
+    gooeyToast.success("Kode undangan baru berhasil dibuat!");
     router.refresh();
   };
 
@@ -72,9 +75,12 @@ export function InviteManager({
     const result = await revokeInvite();
     setWorking(null);
     if (!result.ok) {
-      setError("Gagal membatalkan kode. Coba lagi, ya.");
+      const errMsg = "Gagal membatalkan kode. Coba lagi, ya.";
+      setError(errMsg);
+      gooeyToast.error(errMsg);
       return;
     }
+    gooeyToast.success("Kode undangan dibatalkan!");
     router.refresh();
   };
 
@@ -83,9 +89,12 @@ export function InviteManager({
     try {
       await navigator.clipboard.writeText(activeInvite.inviteCode);
       setCopied(true);
+      gooeyToast.success("Kode undangan disalin ke clipboard!");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError("Gagal menyalin. Coba salin manual, ya.");
+      const errMsg = "Gagal menyalin. Coba salin manual, ya.";
+      setError(errMsg);
+      gooeyToast.error(errMsg);
     }
   };
 

@@ -9,6 +9,7 @@ import { addXp, checkAndUnlockBadges } from "@/server/actions/gamification";
 import {
   type CurriculumOutline,
   generateCurriculumOutline,
+  generateTopicConceptsContent,
 } from "@/server/ai/curriculum";
 import {
   type AttemptRecord,
@@ -103,6 +104,42 @@ export async function addCustomSubject(
   const baseSlug = slugify(parsed.data.name);
   const uniqueSlug = await generateUniqueSlug(baseSlug);
 
+  // Generate detailed concept contents in parallel
+  console.log("[addCustomSubject] Generating concepts details in parallel...");
+  const contentPromises = outline.topics.map(async (t) => {
+    try {
+      const result = await generateTopicConceptsContent({
+        topicName: t.name,
+        topicDescription: t.description,
+        concepts: t.concepts,
+      });
+      return { topicName: t.name, ok: true, data: result };
+    } catch (err) {
+      console.error(`Failed to generate details for topic: ${t.name}`, err);
+      return { topicName: t.name, ok: false, data: null };
+    }
+  });
+
+  const generatedContents = await Promise.all(contentPromises);
+
+  // Map to hold concept details by concept name
+  const conceptDetailsMap = new Map<
+    string,
+    { contentMd: string; questions: any[] }
+  >();
+  for (const item of generatedContents) {
+    if (item.ok && item.data && Array.isArray(item.data.concepts)) {
+      for (const c of item.data.concepts) {
+        if (c && c.conceptName) {
+          conceptDetailsMap.set(c.conceptName.toLowerCase().trim(), {
+            contentMd: c.contentMd,
+            questions: Array.isArray(c.questions) ? c.questions : [],
+          });
+        }
+      }
+    }
+  }
+
   const subject = await prisma.$transaction(async (tx) => {
     const subjectRecord = await tx.subject.create({
       data: {
@@ -121,7 +158,7 @@ export async function addCustomSubject(
 
     for (let tIdx = 0; tIdx < outline.topics.length; tIdx++) {
       const t = outline.topics[tIdx];
-      const topicSlug = slugify(t.name);
+      const topicSlug = `${slugify(t.name)}-${tIdx}`;
       const topicRecord = await tx.topic.create({
         data: {
           subjectId: subjectRecord.id,
@@ -135,17 +172,44 @@ export async function addCustomSubject(
 
       for (let cIdx = 0; cIdx < t.concepts.length; cIdx++) {
         const c = t.concepts[cIdx];
-        const conceptSlug = slugify(c.name);
-        await tx.concept.create({
+        const details = conceptDetailsMap.get(c.name.toLowerCase().trim());
+        const contentMd =
+          details?.contentMd || `${c.description}. Selamat belajar!`;
+        const conceptSlug = `${slugify(c.name)}-${cIdx}`;
+
+        const conceptRecord = await tx.concept.create({
           data: {
             topicId: topicRecord.id,
             name: c.name,
             description: c.description,
             slug: conceptSlug,
             order: cIdx,
+            contentMd,
             isCustom: true,
           },
         });
+
+        // Insert practice questions for this concept
+        if (details && details.questions.length > 0) {
+          for (const q of details.questions) {
+            await tx.question.create({
+              data: {
+                conceptId: conceptRecord.id,
+                type: "MULTIPLE_CHOICE" as QuestionType,
+                difficulty: q.difficulty as Difficulty,
+                bloomTaxonomy: "UNDERSTAND" as BloomTaxonomy,
+                questionText: q.questionText,
+                options: q.options,
+                correctAnswer: q.correctAnswer,
+                explanation: q.explanation,
+                hint: q.hint || null,
+                commonMisconceptions: null,
+                tags: ["practice", "ai-generated"],
+                isActive: true,
+              },
+            });
+          }
+        }
       }
     }
 

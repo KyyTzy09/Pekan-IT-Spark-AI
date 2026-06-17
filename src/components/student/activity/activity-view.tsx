@@ -1,11 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { ActivityHeatmap } from "@/components/student/activity/activity-heatmap";
-import { ActivityLineChart } from "@/components/student/activity/activity-line-chart";
 import { ActivityList } from "@/components/student/activity/activity-list";
 import { ActivityStats } from "@/components/student/activity/activity-stats";
+
+const ActivityLineChart = dynamic(
+  () =>
+    import("@/components/student/activity/activity-line-chart").then(
+      (m) => m.ActivityLineChart,
+    ),
+  { ssr: false },
+);
+
 import type { StudentActivity } from "@/server/actions/activity";
 
 type Props = {

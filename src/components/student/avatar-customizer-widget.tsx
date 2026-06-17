@@ -1,5 +1,6 @@
 "use client";
 
+import { gooeyToast } from "goey-toast";
 import { Loader2, Lock, Sparkles, Wand2 } from "lucide-react";
 import * as React from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
@@ -96,11 +97,15 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
       if (res.ok) {
         setCurrent(preview);
         setDialogOpen(false);
+        gooeyToast.success("Karakter berhasil diubah!");
       } else {
-        setError(res.error || "Gagal menyimpan kustomisasi.");
+        const errMsg = res.error || "Gagal menyimpan kustomisasi.";
+        setError(errMsg);
+        gooeyToast.error(errMsg);
       }
     } catch {
       setError("Gagal menghubungi server.");
+      gooeyToast.error("Gagal menghubungi server.");
     } finally {
       setSaving(false);
     }

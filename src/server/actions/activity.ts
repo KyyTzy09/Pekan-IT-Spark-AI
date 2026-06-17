@@ -163,6 +163,13 @@ export async function getStudentActivity(
       where: { userId, createdAt: { gte: windowStart, lte: now } },
       orderBy: { createdAt: "desc" },
       take: 300,
+      select: {
+        id: true,
+        source: true,
+        amount: true,
+        metadata: true,
+        createdAt: true,
+      },
     }),
     prisma.challengeItem.findMany({
       where: {

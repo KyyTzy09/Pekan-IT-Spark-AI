@@ -25,7 +25,12 @@ export default async function ParentLayout({
       />
       <ParentSidebar />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64 lg:pl-72">
-        <main className="flex-1">
+        <main
+          role="main"
+          aria-label="Konten orang tua"
+          id="main-content"
+          className="flex-1"
+        >
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </div>

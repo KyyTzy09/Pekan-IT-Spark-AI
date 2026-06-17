@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { chatModel, generateText } from "@/lib/ai";
+import type { SubjectSlug } from "../../../generated/prisma/client";
 
 export const CHALLENGE_MIX_DEFAULT = {
   questions: 2,
@@ -115,11 +116,11 @@ export const dailyMixPlanSchema = z.object({
   items: z
     .array(challengeItemPlanSchema)
     .min(2)
-    .max(8)
+    .max(12)
     .describe("Daftar item tantangan (2-8 item)"),
   reasoning: z
     .string()
-    .max(600)
+    .max(3000)
     .describe("Alasan komposisi item untuk siswa ini"),
 });
 
@@ -446,21 +447,25 @@ async function tryMapAndRecoverMixPlan(
   }
 
   const title =
-    typeof root.title === "string" ? root.title : "Tantangan Harian";
+    typeof root.title === "string"
+      ? root.title.slice(0, 80)
+      : "Tantangan Harian";
   const description =
     typeof root.description === "string"
-      ? root.description
+      ? root.description.slice(0, 300)
       : "Mari selesaikan tantangan hari ini.";
   const reasoning =
     typeof root.reasoning === "string"
-      ? root.reasoning
+      ? root.reasoning.slice(0, 2500)
       : "Disesuaikan dengan profil belajar siswa.";
 
   if (!Array.isArray(root.items)) {
     return null;
   }
 
-  const items: DailyMixPlan["items"] = [];
+  const parsedQuestions: DailyMixPlan["items"] = [];
+  const parsedMaterials: DailyMixPlan["items"] = [];
+  const parsedReflections: DailyMixPlan["items"] = [];
 
   for (const rawItem of root.items) {
     if (!rawItem || typeof rawItem !== "object") continue;
@@ -576,7 +581,126 @@ async function tryMapAndRecoverMixPlan(
       }
     }
 
-    items.push(mappedItem);
+    if (kind === "QUESTION") parsedQuestions.push(mappedItem);
+    else if (kind === "MATERIAL") parsedMaterials.push(mappedItem);
+    else if (kind === "REFLECTION") parsedReflections.push(mappedItem);
+  }
+
+  // Enforce exact composition matching requested mixConfig
+  const items: DailyMixPlan["items"] = [];
+  const mix = input.mix ?? CHALLENGE_MIX_DEFAULT;
+
+  // 1. Fulfill QUESTION items
+  for (let i = 0; i < mix.questions; i++) {
+    if (i < parsedQuestions.length) {
+      items.push(parsedQuestions[i]);
+    } else if (input.availableQuestions.length > 0) {
+      // Pick an unused question from bank
+      const usedIds = new Set(
+        items.map((fi) => fi.conceptHint).filter(Boolean),
+      );
+      const unusedQ = input.availableQuestions.find(
+        (q) => !usedIds.has(q.conceptName),
+      );
+      const fallbackQ = unusedQ || input.availableQuestions[0];
+      items.push({
+        kind: "QUESTION",
+        subjectSlug: fallbackQ
+          ? (fallbackQ.subjectSlug as SubjectSlug)
+          : "MATEMATIKA",
+        conceptHint: fallbackQ ? fallbackQ.conceptName : "Konsep Umum",
+        difficultyHint:
+          fallbackQ &&
+          (fallbackQ.difficulty === "EASY" ||
+            fallbackQ.difficulty === "MEDIUM" ||
+            fallbackQ.difficulty === "HARD")
+            ? fallbackQ.difficulty
+            : "EASY",
+        rationale: "Latihan harian berdasarkan bank soal.",
+      });
+    }
+  }
+
+  // 2. Fulfill MATERIAL items
+  for (let i = 0; i < mix.materials; i++) {
+    if (i < parsedMaterials.length) {
+      items.push(parsedMaterials[i]);
+    } else {
+      // Generate fallback material
+      const subjectSlug = input.focusedSubjects[0]
+        ? (input.focusedSubjects[0] as SubjectSlug)
+        : "MATEMATIKA";
+      const subjectName = getSubjectNameFromSlug(subjectSlug);
+      const conceptName = input.weakConcepts[i]?.name || "Materi Belajar";
+
+      const fallbackItem: DailyMixPlan["items"][number] = {
+        kind: "MATERIAL",
+        subjectSlug,
+        conceptHint: conceptName,
+        difficultyHint: "EASY",
+        rationale: "Materi belajar adaptif tambahan.",
+      };
+
+      try {
+        const generatedMaterial = await generateMaterialMarkdown({
+          userName: input.userName,
+          subjectName,
+          topicName: conceptName,
+          conceptName,
+          masteryScore: 0.3,
+          learningStyle: input.learningStyle || undefined,
+        });
+        fallbackItem.material = generatedMaterial;
+      } catch (genErr) {
+        console.error("Failed to generate fallback material:", genErr);
+        fallbackItem.material = {
+          title: `${conceptName} — Panduan Singkat`,
+          content: `## ${conceptName}\n\nMari pelajari konsep ${conceptName} ini. Konsep ini sangat penting untuk memahami dasar subjek ${subjectName}.\n\n### Pengantar\nPenjelasan singkat materi.\n\n💭 Coba pikirkan: Bagaimana menerapkan konsep ini dalam kehidupan sehari-hari?`,
+          keyPoints: ["Memahami definisi dasar", "Menerapkan contoh soal"],
+          estimatedMinutes: 5,
+          difficulty: "EASY",
+        };
+      }
+      items.push(fallbackItem);
+    }
+  }
+
+  // 3. Fulfill REFLECTION items
+  for (let i = 0; i < mix.reflections; i++) {
+    if (i < parsedReflections.length) {
+      items.push(parsedReflections[i]);
+    } else {
+      // Generate fallback reflection
+      const subjectSlug = input.focusedSubjects[0]
+        ? (input.focusedSubjects[0] as SubjectSlug)
+        : "MATEMATIKA";
+      const subjectName = getSubjectNameFromSlug(subjectSlug);
+      const conceptName = input.weakConcepts[i]?.name || "Refleksi Diri";
+
+      const fallbackItem: DailyMixPlan["items"][number] = {
+        kind: "REFLECTION",
+        subjectSlug,
+        conceptHint: conceptName,
+        difficultyHint: "EASY",
+        rationale: "Refleksi harian adaptif.",
+      };
+
+      try {
+        const generatedReflection = await generateReflectionPrompt({
+          userName: input.userName,
+          subjectName,
+          topicName: conceptName,
+        });
+        fallbackItem.reflection = generatedReflection;
+      } catch (genErr) {
+        console.error("Failed to generate fallback reflection:", genErr);
+        fallbackItem.reflection = {
+          prompt: `Bagaimana pemahamanmu tentang konsep ${conceptName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
+          context: `Refleksi tentang konsep ${conceptName}`,
+        };
+      }
+      items.push(fallbackItem);
+    }
   }
 
   return {
@@ -906,3 +1030,63 @@ async function extractKeyPoints(content: string): Promise<string[]> {
     ? keyPoints
     : ["Poin utama konsep ini", "Aplikasi dalam kehidupan sehari-hari"];
 }
+
+export interface WeeklyChallengeInput {
+  userName?: string;
+  grade?: number | null;
+  focusedSubjects: string[];
+}
+
+export const weeklyChallengeSchema = z.object({
+  title: z.string().max(80).describe("Judul tantangan mingguan, asyik & memotivasi"),
+  description: z.string().max(200).describe("Deskripsi singkat tantangan mingguan"),
+  goal: z.number().int().min(5).max(12).describe("Jumlah item tantangan harian yang harus diselesaikan (5-12)"),
+});
+
+export type WeeklyChallengePlan = z.infer<typeof weeklyChallengeSchema>;
+
+export async function generateWeeklyChallengeAI(
+  input: WeeklyChallengeInput,
+): Promise<WeeklyChallengePlan> {
+  console.log("[AI_SERVICE] generateWeeklyChallengeAI start");
+
+  const systemPrompt = `Kamu adalah Spark — tutor AI personal untuk siswa SMA/SMK Indonesia.
+Tugasmu adalah merancang TANTANGAN MINGGUAN (Weekly Challenge) untuk memotivasi siswa menyelesaikan tugas belajarnya minggu ini.
+Kembalikan output JSON valid sesuai format schema berikut:
+{
+  "title": "Judul tantangan mingguan",
+  "description": "Deskripsi motivatif singkat",
+  "goal": 8 // Jumlah item tantangan yang harus diselesaikan minggu ini (antara 5 sampai 12)
+}`;
+
+  const userPrompt = `Rancang tantangan mingguan untuk siswa:
+- Nama: ${input.userName ?? "Siswa"}
+- Kelas: ${input.grade ?? "belum diisi"}
+- Mata pelajaran fokus: ${input.focusedSubjects.join(", ") || "Semua Mapel"}
+  
+Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
+
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.7,
+    });
+
+    const rawJson = safeParseJson(text) as Record<string, unknown>;
+    const title = typeof rawJson.title === "string" ? rawJson.title.slice(0, 80) : "Misi Mingguan: Pemburu Ilmu";
+    const description = typeof rawJson.description === "string" ? rawJson.description.slice(0, 200) : "Selesaikan tantangan belajar minggu ini untuk klaim bonus XP!";
+    const goal = typeof rawJson.goal === "number" ? Math.max(5, Math.min(12, rawJson.goal)) : 8;
+
+    return { title, description, goal };
+  } catch (err) {
+    console.warn("generateWeeklyChallengeAI failed, using fallback:", err);
+    return {
+      title: "Misi Mingguan: Konsistensi Belajar",
+      description: "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
+      goal: 8,
+    };
+  }
+}
+

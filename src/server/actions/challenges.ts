@@ -16,6 +16,7 @@ import {
   type ChallengeMix,
   generateDailyMix,
   generateOnDemandChallenge,
+  generateWeeklyChallengeAI,
 } from "@/server/ai/challenge";
 import type {
   ChallengeItemKind,
@@ -189,7 +190,9 @@ async function fetchChallengesForDate(
     scheduledFor: c.scheduledFor.toISOString(),
     generatedAt: c.generatedAt.toISOString(),
     completedAt: c.completedAt?.toISOString() ?? null,
-    subject: c.subject,
+    subject: c.subject
+      ? { ...c.subject, slug: c.subject.slug as SubjectSlug }
+      : null,
     itemCount: c.items.length,
     completedItemCount: c.items.filter((i) => i.status === "COMPLETED").length,
     totalPoints: c.items.reduce((acc, i) => acc + i.points, 0),
@@ -386,177 +389,114 @@ async function generateAndStoreDailyChallenges(
       );
       const subjects = await tx.subject.findMany({
         where: { slug: { in: uniqueSlugs as never[] } },
-        select: { id: true, slug: true },
+        select: { id: true, slug: true, name: true },
       });
       const subjectIdBySlug = new Map(subjects.map((s) => [s.slug, s.id]));
+      const subjectNameBySlug = new Map(subjects.map((s) => [s.slug, s.name]));
 
-      for (let i = 0; i < plan.items.length; i++) {
-        const item = plan.items[i];
-        const subjectId = subjectIdBySlug.get(item.subjectSlug) ?? null;
+      // Group items by subjectSlug
+      const itemsBySubject = new Map<string, typeof plan.items>();
+      for (const item of plan.items) {
+        const list = itemsBySubject.get(item.subjectSlug) || [];
+        list.push(item);
+        itemsBySubject.set(item.subjectSlug, list);
+      }
 
-        const baseData = {
-          userId,
-          subjectId,
-          title:
-            item.kind === "MATERIAL" && item.material
-              ? item.material.title
-              : item.kind === "REFLECTION" && item.reflection
-                ? `Refleksi: ${item.reflection.context.slice(0, 60)}`
-                : `${item.subjectSlug}: ${item.conceptHint ?? "Latihan"}`,
-          description: item.rationale,
-          status: "ACTIVE" as const,
-          source: "AUTO_DAILY" as const,
-          scheduledFor: toDateOnly(date),
-          mixConfig: mixConfig,
+      for (const [subjectSlug, subjectItems] of itemsBySubject.entries()) {
+        const subjectId =
+          subjectIdBySlug.get(subjectSlug as SubjectSlug) ?? null;
+        const subjectName =
+          subjectNameBySlug.get(subjectSlug as SubjectSlug) ||
+          subjectSlug
+            .replace(/_/g, " ")
+            .toLowerCase()
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+
+        const firstConcept =
+          subjectItems.find((i) => i.conceptHint)?.conceptHint ||
+          "Pembelajaran Adaptif";
+        const title = `Tantangan ${subjectName}: ${firstConcept}`;
+        const description = `Paket belajar harian: baca materi, selesaikan latihan soal, dan tulis refleksi untuk meningkatkan penguasaan konsep.`;
+
+        const challengeMix = {
+          questions: subjectItems.filter((i) => i.kind === "QUESTION").length,
+          materials: subjectItems.filter((i) => i.kind === "MATERIAL").length,
+          reflections: subjectItems.filter((i) => i.kind === "REFLECTION")
+            .length,
         };
 
-        if (item.kind === "QUESTION") {
-          const candidates = availableQuestions.filter(
-            (q) => q.concept.topic.subject.slug === item.subjectSlug,
-          );
-          if (candidates.length === 0) {
-            const fallback = availableQuestions[i % availableQuestions.length];
-            if (!fallback) continue;
-            await createQuestionChallenge(tx, userId, baseData, fallback.id, i);
-            continue;
+        const challenge = await tx.challenge.create({
+          data: {
+            userId,
+            subjectId,
+            title,
+            description,
+            status: "ACTIVE",
+            source: "AUTO_DAILY",
+            scheduledFor: toDateOnly(date),
+            mixConfig: challengeMix,
+          },
+        });
+
+        for (let idx = 0; idx < subjectItems.length; idx++) {
+          const item = subjectItems[idx];
+          if (item.kind === "QUESTION") {
+            const candidates = availableQuestions.filter(
+              (q) => q.concept.topic.subject.slug === item.subjectSlug,
+            );
+            const picked =
+              candidates[idx % candidates.length] ||
+              availableQuestions[idx % availableQuestions.length];
+            if (picked) {
+              await tx.challengeItem.create({
+                data: {
+                  challengeId: challenge.id,
+                  order: idx,
+                  kind: "QUESTION",
+                  questionId: picked.id,
+                  points: 10,
+                },
+              });
+            }
+          } else if (item.kind === "MATERIAL" && item.material) {
+            const mat = await tx.material.create({
+              data: {
+                userId,
+                subjectId: subjectId,
+                title: item.material.title,
+                content: item.material.content,
+                keyPoints: item.material.keyPoints,
+                estimatedMinutes: item.material.estimatedMinutes,
+                difficulty: item.material.difficulty,
+                source: "CHALLENGE",
+              },
+            });
+            await tx.challengeItem.create({
+              data: {
+                challengeId: challenge.id,
+                order: idx,
+                kind: "MATERIAL",
+                materialId: mat.id,
+                points: 5,
+              },
+            });
+          } else if (item.kind === "REFLECTION" && item.reflection) {
+            await tx.challengeItem.create({
+              data: {
+                challengeId: challenge.id,
+                order: idx,
+                kind: "REFLECTION",
+                prompt: `${item.reflection.prompt}\n\nKonteks: ${item.reflection.context}`,
+                points: 15,
+              },
+            });
           }
-          const picked = candidates[i % candidates.length];
-          if (!picked) continue;
-          await createQuestionChallenge(tx, userId, baseData, picked.id, i);
-        } else if (item.kind === "MATERIAL" && item.material) {
-          await createMaterialChallenge(
-            tx,
-            userId,
-            baseData,
-            item.material,
-            i,
-            subjectId,
-          );
-        } else if (item.kind === "REFLECTION" && item.reflection) {
-          await createReflectionChallenge(
-            tx,
-            userId,
-            baseData,
-            item.reflection,
-            i,
-            subjectId,
-          );
         }
       }
     });
   } catch (err) {
     console.error("generateAndStoreDailyChallenges failed:", err);
   }
-}
-
-async function createQuestionChallenge(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
-  _userId: string,
-  baseData: {
-    userId: string;
-    subjectId: string | null;
-    title: string;
-    description: string;
-    status: "ACTIVE";
-    source: "AUTO_DAILY";
-    scheduledFor: Date;
-    mixConfig: ChallengeMix;
-  },
-  questionId: string,
-  order: number,
-) {
-  const challenge = await tx.challenge.create({
-    data: { ...baseData, userId: baseData.userId },
-  });
-  await tx.challengeItem.create({
-    data: {
-      challengeId: challenge.id,
-      order,
-      kind: "QUESTION",
-      questionId,
-      points: 10,
-    },
-  });
-}
-
-async function createMaterialChallenge(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
-  userId: string,
-  baseData: {
-    userId: string;
-    subjectId: string | null;
-    title: string;
-    description: string;
-    status: "ACTIVE";
-    source: "AUTO_DAILY";
-    scheduledFor: Date;
-    mixConfig: ChallengeMix;
-  },
-  material: {
-    title: string;
-    content: string;
-    keyPoints: string[];
-    estimatedMinutes: number;
-    difficulty: "EASY" | "MEDIUM" | "HARD";
-  },
-  order: number,
-  subjectId: string | null,
-) {
-  const challenge = await tx.challenge.create({
-    data: { ...baseData, userId },
-  });
-  const mat = await tx.material.create({
-    data: {
-      userId,
-      subjectId,
-      title: material.title,
-      content: material.content,
-      keyPoints: material.keyPoints,
-      estimatedMinutes: material.estimatedMinutes,
-      difficulty: material.difficulty,
-      source: "CHALLENGE",
-    },
-  });
-  await tx.challengeItem.create({
-    data: {
-      challengeId: challenge.id,
-      order,
-      kind: "MATERIAL",
-      materialId: mat.id,
-      points: 5,
-    },
-  });
-}
-
-async function createReflectionChallenge(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
-  userId: string,
-  baseData: {
-    userId: string;
-    subjectId: string | null;
-    title: string;
-    description: string;
-    status: "ACTIVE";
-    source: "AUTO_DAILY";
-    scheduledFor: Date;
-    mixConfig: ChallengeMix;
-  },
-  reflection: { prompt: string; context: string },
-  order: number,
-  _subjectId: string | null,
-) {
-  const challenge = await tx.challenge.create({
-    data: { ...baseData, userId },
-  });
-  await tx.challengeItem.create({
-    data: {
-      challengeId: challenge.id,
-      order,
-      kind: "REFLECTION",
-      prompt: `${reflection.prompt}\n\nKonteks: ${reflection.context}`,
-      points: 15,
-    },
-  });
 }
 
 export async function getChallengeDetail(
@@ -619,7 +559,9 @@ export async function getChallengeDetail(
     scheduledFor: challenge.scheduledFor.toISOString(),
     generatedAt: challenge.generatedAt.toISOString(),
     completedAt: challenge.completedAt?.toISOString() ?? null,
-    subject: challenge.subject,
+    subject: challenge.subject
+      ? { ...challenge.subject, slug: challenge.subject.slug as SubjectSlug }
+      : null,
     mixConfig: challenge.mixConfig as ChallengeMix,
     items: challenge.items.map((item) => ({
       id: item.id,
@@ -752,6 +694,7 @@ export async function completeChallengeItem(input: {
       item.challengeId,
     );
     await aggregateDailyProgress(userId, item.challenge.scheduledFor);
+    await updateWeeklyChallengeProgress(userId).catch(console.error);
     await recordActivity(userId);
     const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
     revalidatePath("/challenge", "layout");
@@ -783,6 +726,7 @@ export async function completeChallengeItem(input: {
       item.challengeId,
     );
     await aggregateDailyProgress(userId, item.challenge.scheduledFor);
+    await updateWeeklyChallengeProgress(userId).catch(console.error);
     await recordActivity(userId);
     const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
     revalidatePath("/challenge", "layout");
@@ -878,8 +822,9 @@ export async function submitReflection(input: {
     kind: "REFLECTION",
   });
 
-  const completedAfter = await checkAndCompleteChallenge(challenge.id);
+  const _completedAfter = await checkAndCompleteChallenge(challenge.id);
   await aggregateDailyProgress(userId, challenge.scheduledFor);
+  await updateWeeklyChallengeProgress(userId).catch(console.error);
   await recordActivity(userId);
   const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
   revalidatePath("/challenge", "layout");
@@ -1083,90 +1028,108 @@ export async function generateOnDemand(input: {
       })),
     });
 
-    const item = plan.items[0];
-    if (!item) return { ok: false, error: "AI gagal generate tantangan" };
+    if (plan.items.length === 0)
+      return { ok: false, error: "AI gagal generate tantangan" };
 
-    const slugToLookup = parsed.data.subjectSlug ?? item.subjectSlug;
+    const firstItem = plan.items[0];
+    const slugToLookup = parsed.data.subjectSlug ?? firstItem.subjectSlug;
     const subject = slugToLookup
       ? await prisma.subject.findUnique({
           where: { slug: slugToLookup as SubjectSlug },
-          select: { id: true },
+          select: { id: true, name: true },
         })
       : null;
+
+    const challengeMix = {
+      questions: plan.items.filter((i) => i.kind === "QUESTION").length,
+      materials: plan.items.filter((i) => i.kind === "MATERIAL").length,
+      reflections: plan.items.filter((i) => i.kind === "REFLECTION").length,
+    };
+
+    const firstConcept =
+      plan.items.find((i) => i.conceptHint)?.conceptHint ||
+      "Pembelajaran Adaptif";
+    const _subjectName =
+      subject?.name ??
+      (slugToLookup
+        ? slugToLookup
+            .replace(/_/g, " ")
+            .toLowerCase()
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Adaptif");
 
     const baseData = {
       userId,
       subjectId: subject?.id ?? null,
-      title:
-        item.kind === "MATERIAL" && item.material
-          ? item.material.title
-          : item.kind === "REFLECTION" && item.reflection
-            ? `Refleksi: ${item.reflection.context.slice(0, 60)}`
-            : `${item.subjectSlug}: ${item.conceptHint ?? "Latihan"}`,
-      description: item.rationale,
+      title: `Tantangan Tambahan: ${firstConcept}`,
+      description:
+        plan.description || "Latihan adaptif tambahan atas permintaan siswa.",
       status: "ACTIVE" as const,
       source: "ON_DEMAND" as const,
       scheduledFor: toDateOnly(today),
-      mixConfig: { questions: 0, materials: 0, reflections: 0 },
+      mixConfig: challengeMix,
     };
 
-    let challengeId = "";
-    if (item.kind === "QUESTION") {
-      const candidates = availableQuestions.filter(
-        (q) =>
-          (q.concept.topic.subject as { slug: SubjectSlug }).slug ===
-          item.subjectSlug,
-      );
-      const fallback = candidates[0] ?? availableQuestions[0];
-      if (!fallback) return { ok: false, error: "Tidak ada soal di bank" };
-      const c = await prisma.challenge.create({ data: baseData });
-      await prisma.challengeItem.create({
-        data: {
-          challengeId: c.id,
-          order: 0,
-          kind: "QUESTION",
-          questionId: fallback.id,
-          points: 10,
-        },
-      });
-      challengeId = c.id;
-    } else if (item.kind === "MATERIAL" && item.material) {
-      const c = await prisma.challenge.create({ data: baseData });
-      const m = await prisma.material.create({
-        data: {
-          userId,
-          subjectId: subject?.id ?? null,
-          title: item.material.title,
-          content: item.material.content,
-          keyPoints: item.material.keyPoints,
-          estimatedMinutes: item.material.estimatedMinutes,
-          difficulty: item.material.difficulty,
-          source: "ON_DEMAND",
-        },
-      });
-      await prisma.challengeItem.create({
-        data: {
-          challengeId: c.id,
-          order: 0,
-          kind: "MATERIAL",
-          materialId: m.id,
-          points: 5,
-        },
-      });
-      challengeId = c.id;
-    } else if (item.kind === "REFLECTION" && item.reflection) {
-      const c = await prisma.challenge.create({ data: baseData });
-      await prisma.challengeItem.create({
-        data: {
-          challengeId: c.id,
-          order: 0,
-          kind: "REFLECTION",
-          prompt: `${item.reflection.prompt}\n\nKonteks: ${item.reflection.context}`,
-          points: 15,
-        },
-      });
-      challengeId = c.id;
+    const challenge = await prisma.challenge.create({ data: baseData });
+
+    for (let idx = 0; idx < plan.items.length; idx++) {
+      const item = plan.items[idx];
+      if (item.kind === "QUESTION") {
+        const candidates = availableQuestions.filter(
+          (q) =>
+            (q.concept.topic.subject as { slug: SubjectSlug }).slug ===
+            item.subjectSlug,
+        );
+        const fallback =
+          candidates[idx % candidates.length] ||
+          availableQuestions[idx % availableQuestions.length];
+        if (fallback) {
+          await prisma.challengeItem.create({
+            data: {
+              challengeId: challenge.id,
+              order: idx,
+              kind: "QUESTION",
+              questionId: fallback.id,
+              points: 10,
+            },
+          });
+        }
+      } else if (item.kind === "MATERIAL" && item.material) {
+        const m = await prisma.material.create({
+          data: {
+            userId,
+            subjectId: subject?.id ?? null,
+            title: item.material.title,
+            content: item.material.content,
+            keyPoints: item.material.keyPoints,
+            estimatedMinutes: item.material.estimatedMinutes,
+            difficulty: item.material.difficulty,
+            source: "ON_DEMAND",
+          },
+        });
+        await prisma.challengeItem.create({
+          data: {
+            challengeId: challenge.id,
+            order: idx,
+            kind: "MATERIAL",
+            materialId: m.id,
+            points: 5,
+          },
+        });
+      } else if (item.kind === "REFLECTION" && item.reflection) {
+        await prisma.challengeItem.create({
+          data: {
+            challengeId: challenge.id,
+            order: idx,
+            kind: "REFLECTION",
+            prompt: `${item.reflection.prompt}\n\nKonteks: ${item.reflection.context}`,
+            points: 15,
+          },
+        });
+      }
     }
+
+    const challengeId = challenge.id;
 
     revalidatePath("/challenge", "layout");
     return { ok: true, challengeId };
@@ -1214,7 +1177,9 @@ export async function getChallengeHistory(input: {
       scheduledFor: c.scheduledFor.toISOString(),
       generatedAt: c.generatedAt.toISOString(),
       completedAt: c.completedAt?.toISOString() ?? null,
-      subject: c.subject,
+      subject: c.subject
+        ? { ...c.subject, slug: c.subject.slug as SubjectSlug }
+        : null,
       itemCount: c.items.length,
       completedItemCount: c.items.filter((i) => i.status === "COMPLETED")
         .length,
@@ -1287,7 +1252,9 @@ export async function getMaterialLibrary(input: {
             readSeconds: m.reads[0].readSeconds,
           }
         : null,
-      subject: m.subject,
+      subject: m.subject
+        ? { ...m.subject, slug: m.subject.slug as SubjectSlug }
+        : null,
     })),
   };
 }
@@ -1354,7 +1321,9 @@ export async function getMaterialDetail(
           readSeconds: material.reads[0].readSeconds,
         }
       : null,
-    subject: material.subject,
+    subject: material.subject
+      ? { ...material.subject, slug: material.subject.slug as SubjectSlug }
+      : null,
     relatedChallenges: material.challengeItems.map((ci) => ({
       id: ci.challenge.id,
       title: ci.challenge.title,
@@ -1461,7 +1430,10 @@ async function aggregateDailyProgress(
   const [challenges, items] = await Promise.all([
     prisma.challenge.findMany({
       where: { userId, scheduledFor: { gte: dayStart, lt: dayEnd } },
-      include: { items: true },
+      select: {
+        id: true,
+        status: true,
+      },
     }),
     prisma.challengeItem.findMany({
       where: {
@@ -1624,8 +1596,23 @@ export async function aggregateStudentProgress(
 
   const profiles = await prisma.studentKnowledgeProfile.findMany({
     where: { userId },
-    include: {
-      concept: { include: { topic: { include: { subject: true } } } },
+    select: {
+      masteryScore: true,
+      concept: {
+        select: {
+          topic: {
+            select: {
+              subject: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -1642,7 +1629,7 @@ export async function aggregateStudentProgress(
       entry.masteryScores.push(p.masteryScore);
     } else {
       subjectMap.set(s.id, {
-        subject: { id: s.id, name: s.name, slug: s.slug },
+        subject: { id: s.id, name: s.name, slug: s.slug as SubjectSlug },
         masteryScores: [p.masteryScore],
       });
     }
@@ -1658,7 +1645,11 @@ export async function aggregateStudentProgress(
   for (const c of recentChallengeSubjects) {
     if (c.subject && !subjectMap.has(c.subject.id)) {
       subjectMap.set(c.subject.id, {
-        subject: c.subject,
+        subject: {
+          id: c.subject.id,
+          name: c.subject.name,
+          slug: c.subject.slug as SubjectSlug,
+        },
         masteryScores: [],
       });
     }
@@ -1987,4 +1978,153 @@ async function computeActivityStreak(userId: string): Promise<number> {
     }
   }
   return streak;
+}
+
+function startOfWeek(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(date.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+export async function getOrCreateWeeklyChallenge(): Promise<any> {
+  const userId = await requireStudent();
+  const monday = startOfWeek(new Date());
+
+  let weekly = await prisma.weeklyChallenge.findUnique({
+    where: { userId_weekStart: { userId, weekStart: monday } },
+  });
+
+  if (!weekly) {
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        grade: true,
+        focusedSubjects: true,
+        user: { select: { name: true } },
+      },
+    });
+
+    const focusedSubjectIds = profile?.focusedSubjects ?? [];
+    const focusedSubjectModels =
+      focusedSubjectIds.length > 0
+        ? await prisma.subject.findMany({
+            where: { id: { in: focusedSubjectIds } },
+            select: { name: true },
+          })
+        : [];
+    const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+
+    const aiPlan = await generateWeeklyChallengeAI({
+      userName: profile?.user.name ?? undefined,
+      grade: profile?.grade,
+      focusedSubjects: focusedSubjectNames,
+    }).catch((err) => {
+      console.error("AI weekly challenge generation failed:", err);
+      return {
+        title: "Misi Mingguan: Pemburu Ilmu",
+        description: "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
+        goal: 8,
+      };
+    });
+
+    weekly = await prisma.weeklyChallenge.create({
+      data: {
+        userId,
+        weekStart: monday,
+        title: aiPlan.title,
+        description: aiPlan.description,
+        goal: aiPlan.goal,
+        progress: 0,
+        completed: false,
+        xpRewarded: false,
+      },
+    });
+  }
+
+  const sunday = new Date(monday.getTime() + 7 * 86_400_000);
+  const completedCount = await prisma.challengeItem.count({
+    where: {
+      challenge: {
+        userId,
+        scheduledFor: { gte: monday, lt: sunday },
+      },
+      status: "COMPLETED",
+    },
+  });
+
+  if (completedCount !== weekly.progress) {
+    weekly = await prisma.weeklyChallenge.update({
+      where: { id: weekly.id },
+      data: {
+        progress: Math.min(completedCount, weekly.goal),
+        completed: completedCount >= weekly.goal,
+      },
+    });
+  }
+
+  return {
+    ...weekly,
+    weekStart: weekly.weekStart.toISOString(),
+    createdAt: weekly.createdAt.toISOString(),
+  };
+}
+
+export async function updateWeeklyChallengeProgress(userId: string) {
+  const monday = startOfWeek(new Date());
+  const weekly = await prisma.weeklyChallenge.findUnique({
+    where: { userId_weekStart: { userId, weekStart: monday } },
+  });
+  if (!weekly || weekly.xpRewarded) return;
+
+  const sunday = new Date(monday.getTime() + 7 * 86_400_000);
+  const completedCount = await prisma.challengeItem.count({
+    where: {
+      challenge: {
+        userId,
+        scheduledFor: { gte: monday, lt: sunday },
+      },
+      status: "COMPLETED",
+    },
+  });
+
+  await prisma.weeklyChallenge.update({
+    where: { id: weekly.id },
+    data: {
+      progress: Math.min(completedCount, weekly.goal),
+      completed: completedCount >= weekly.goal,
+    },
+  });
+}
+
+export async function claimWeeklyChallengeReward(): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const userId = await requireStudent();
+  const monday = startOfWeek(new Date());
+
+  const weekly = await prisma.weeklyChallenge.findUnique({
+    where: { userId_weekStart: { userId, weekStart: monday } },
+  });
+
+  if (!weekly) return { ok: false, error: "Tantangan tidak ditemukan" };
+  if (!weekly.completed) return { ok: false, error: "Tantangan belum selesai" };
+  if (weekly.xpRewarded) return { ok: false, error: "Hadiah sudah diklaim" };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.weeklyChallenge.update({
+      where: { id: weekly.id },
+      data: { xpRewarded: true },
+    });
+    await addXp(userId, 100, "WEEKLY_CHALLENGE", {
+      weeklyChallengeId: weekly.id,
+    });
+  });
+
+  revalidatePath("/challenge", "layout");
+  revalidatePath("/dashboard", "layout");
+  return { ok: true };
 }

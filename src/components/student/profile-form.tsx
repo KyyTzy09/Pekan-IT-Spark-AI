@@ -1,5 +1,6 @@
 "use client";
 
+import { gooeyToast } from "goey-toast";
 import { Loader2, Save } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -43,9 +44,12 @@ export function ProfileForm({
 
     setSaving(false);
     if (!res.ok) {
-      setError(res.error || "Gagal menyimpan profil.");
+      const errMsg = res.error || "Gagal menyimpan profil.";
+      setError(errMsg);
+      gooeyToast.error(errMsg);
     } else {
       setSuccess(true);
+      gooeyToast.success("Profil berhasil diperbarui!");
       setTimeout(() => setSuccess(false), 3000);
     }
   };

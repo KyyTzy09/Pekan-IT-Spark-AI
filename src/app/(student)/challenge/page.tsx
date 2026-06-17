@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   getDailyProgress,
+  getOrCreateWeeklyChallenge,
   getTodayChallenges,
 } from "@/server/actions/challenges";
 
@@ -32,31 +33,33 @@ export default async function ChallengePage() {
     },
   });
 
-  const [result, progress, focusedSubjectsRaw] = await Promise.all([
-    existingCount > 0
-      ? getTodayChallenges()
-      : Promise.resolve({
-          challenges: [],
-          progress: { total: 0, completed: 0, points: 0 },
-        }),
-    existingCount > 0
-      ? getDailyProgress()
-      : Promise.resolve({
-          date: dayStart.toISOString(),
-          totalActive: 0,
-          totalCompleted: 0,
-          totalPoints: 0,
-          overallScore: 0,
-          masteryScore: 0,
-          challengeScore: 0,
-          materialsScore: 0,
-          reflectionsScore: 0,
-        }),
-    prisma.studentProfile.findUnique({
-      where: { userId },
-      select: { focusedSubjects: true },
-    }),
-  ]);
+  const [result, progress, focusedSubjectsRaw, weeklyChallenge] =
+    await Promise.all([
+      existingCount > 0
+        ? getTodayChallenges()
+        : Promise.resolve({
+            challenges: [],
+            progress: { total: 0, completed: 0, points: 0 },
+          }),
+      existingCount > 0
+        ? getDailyProgress()
+        : Promise.resolve({
+            date: dayStart.toISOString(),
+            totalActive: 0,
+            totalCompleted: 0,
+            totalPoints: 0,
+            overallScore: 0,
+            masteryScore: 0,
+            challengeScore: 0,
+            materialsScore: 0,
+            reflectionsScore: 0,
+          }),
+      prisma.studentProfile.findUnique({
+        where: { userId },
+        select: { focusedSubjects: true },
+      }),
+      getOrCreateWeeklyChallenge(),
+    ]);
 
   const subjects = await prisma.subject.findMany({
     where: focusedSubjectsRaw?.focusedSubjects.length
@@ -73,6 +76,7 @@ export default async function ChallengePage() {
       dailyProgress={progress}
       subjectOptions={subjects}
       initiallyEmpty={existingCount === 0}
+      weeklyChallenge={weeklyChallenge}
     />
   );
 }

@@ -18,14 +18,29 @@ import {
   Wand2,
   Zap,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
 import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
 import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 import { SparkCharacter } from "@/components/student/spark-character";
-import { SubjectMasteryChart } from "@/components/student/student-charts";
 import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
-import { WeeklyActivityChart } from "@/components/student/weekly-activity-chart";
+
+const SubjectMasteryChart = dynamic(
+  () =>
+    import("@/components/student/student-charts").then(
+      (m) => m.SubjectMasteryChart,
+    ),
+  { ssr: false },
+);
+const WeeklyActivityChart = dynamic(
+  () =>
+    import("@/components/student/weekly-activity-chart").then(
+      (m) => m.WeeklyActivityChart,
+    ),
+  { ssr: false },
+);
+
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";

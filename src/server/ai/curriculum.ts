@@ -186,3 +186,64 @@ function validateOutline(outline: CurriculumOutline): void {
     }
   }
 }
+
+export interface TopicConceptsInput {
+  topicName: string;
+  topicDescription: string;
+  concepts: Array<{ name: string; description: string }>;
+}
+
+const CONCEPTS_SYSTEM_PROMPT = `Kamu adalah pakar edukasi dan pembuat konten pembelajaran untuk platform tutor AI Spark Ai.
+Tugasmu adalah membuat materi belajar Markdown mendalam dan soal latihan pilihan ganda untuk konsep-konsep di bawah suatu topik.
+
+ATURAN WAJIB:
+1. Materi belajar (contentMd) harus mendalam, komprehensif, memiliki 2-3 paragraf format Markdown yang bersih, menyertakan contoh konkret/analogi sehari-hari, dan bahasa yang asyik bagi siswa SMA/SMK Indonesia.
+2. Setiap konsep HARUS dibuatkan tepat 3 soal latihan pilihan ganda (1 EASY, 1 MEDIUM, 1 HARD).
+3. Soal harus memiliki 4 opsi jawaban, dan correctAnswer HARUS persis sama dengan salah satu opsi (case-sensitive).
+4. Berikan explanation (penjelasan jawaban) yang jelas dan edukatif.
+5. Berikan hint (petunjuk) berupa pertanyaan panduan/Sokratik singkat yang memicu pemikiran siswa (bukan langsung membocorkan jawaban).
+6. Format output HARUS selalu JSON valid sesuai dengan struktur yang diminta.`;
+
+export async function generateTopicConceptsContent(
+  input: TopicConceptsInput,
+): Promise<any> {
+  console.log("[AI_SERVICE] generateTopicConceptsContent start", {
+    topicName: input.topicName,
+  });
+
+  const userPrompt = `Buat materi belajar dan soal latihan untuk konsep-konsep di dalam topik berikut:
+Topik: ${input.topicName}
+Deskripsi Topik: ${input.topicDescription}
+
+Konsep yang harus dibuatkan kontennya:
+${input.concepts.map((c, i) => `${i + 1}. ${c.name} (${c.description})`).join("\n")}
+
+Format output JSON harus persis seperti ini:
+{
+  "concepts": [
+    {
+      "conceptName": "Nama Konsep",
+      "contentMd": "Materi belajar lengkap Markdown...",
+      "questions": [
+        {
+          "questionText": "Soal...",
+          "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+          "correctAnswer": "Opsi yang benar",
+          "explanation": "Penjelasan...",
+          "hint": "Petunjuk...",
+          "difficulty": "EASY" | "MEDIUM" | "HARD"
+        }
+      ]
+    }
+  ]
+}`;
+
+  const { text } = await generateText({
+    model: chatModel,
+    system: CONCEPTS_SYSTEM_PROMPT,
+    prompt: userPrompt,
+    temperature: 0.5,
+  });
+
+  return safeParseJson(text);
+}

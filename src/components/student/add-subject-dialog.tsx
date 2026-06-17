@@ -1,5 +1,6 @@
 "use client";
 
+import { gooeyToast } from "goey-toast";
 import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -53,9 +54,13 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
     if (!res.ok) {
       setStatus("error");
       setError(res.error);
+      gooeyToast.error("Gagal menambahkan mapel", { description: res.error });
       return;
     }
     setStatus("success");
+    gooeyToast.success("Mata pelajaran baru berhasil ditambahkan!", {
+      description: `Spark telah membuat pretest & materi untuk ${name.trim()}.`,
+    });
     setTimeout(() => {
       setOpen(false);
       router.push(`/subjects/${res.slug.toLowerCase()}`);

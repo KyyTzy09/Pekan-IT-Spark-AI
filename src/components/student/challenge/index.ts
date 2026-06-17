@@ -6,3 +6,5 @@ export { ChallengeQuestionForm } from "./challenge-question-form";
 export { ChallengeReflectionForm } from "./challenge-reflection-form";
 export { DailyChallengeSummary } from "./daily-challenge-summary";
 export { OnDemandGenerator } from "./on-demand-generator";
+export { WeeklyChallengeCard } from "./WeeklyChallengeCard";
+

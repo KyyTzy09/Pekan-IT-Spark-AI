@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { gooeyToast } from "goey-toast";
 import {
   ArrowLeft,
   BookOpen,
@@ -162,6 +163,9 @@ export function UploadView({
           fileName: file.name,
           message: `File ${formatBytes(file.size)} kebesaran. Maksimal 10 MB.`,
         });
+        gooeyToast.error("File terlalu besar", {
+          description: "Maksimal ukuran file adalah 10 MB.",
+        });
         return;
       }
       if (file.size === 0) {
@@ -170,6 +174,7 @@ export function UploadView({
           fileName: file.name,
           message: "File kosong.",
         });
+        gooeyToast.error("File kosong");
         return;
       }
 
@@ -182,9 +187,15 @@ export function UploadView({
           fileName: file.name,
           message: result.error,
         });
+        gooeyToast.error("Gagal mengupload materi", {
+          description: result.error,
+        });
         return;
       }
       setStatus({ kind: "success", fileName: file.name });
+      gooeyToast.success("Materi berhasil diupload!", {
+        description: `${file.name} sekarang siap digunakan.`,
+      });
       await refresh();
       window.setTimeout(() => {
         setStatus((prev) =>
@@ -218,7 +229,9 @@ export function UploadView({
     setPendingDelete(null);
     if (res.ok) {
       setDocuments((prev) => prev.filter((d) => d.id !== id));
+      gooeyToast.success("Dokumen berhasil dihapus");
     } else {
+      gooeyToast.error(res.error || "Gagal menghapus dokumen");
       setStatus({
         kind: "error",
         fileName: "dokumen",

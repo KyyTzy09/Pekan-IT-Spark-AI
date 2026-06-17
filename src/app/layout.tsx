@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fredoka, Geist, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -42,10 +42,36 @@ const geistMono = Geist_Mono({
   fallback: ["ui-monospace", "monospace"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf5f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#141726" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: "Spark Ai — Tutor Pintar yang Ngertiin Kamu",
   description:
     "Asisten tutor AI adaptif untuk siswa SMA/SMK. Penjelasan yang pas di level kamu, latihan adaptif, dan upload materi dari guru.",
+  icons: {
+    icon: "/favicon.ico",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Spark AI",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -66,6 +92,12 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[9999] focus:rounded-lg focus:bg-[var(--coral)] focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white focus:shadow-lg"
+        >
+          Langsung ke konten
+        </a>
         <Providers>{children}</Providers>
       </body>
     </html>

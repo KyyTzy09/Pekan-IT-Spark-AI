@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ChevronDown, Sparkles, Target, Trophy } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -8,9 +9,19 @@ import { Reveal } from "@/components/shared/reveal";
 import {
   ChallengeCard,
   OnDemandGenerator,
+  WeeklyChallengeCard,
 } from "@/components/student/challenge";
-import { DailyScoreGauge } from "@/components/student/student-charts";
 import { Button } from "@/components/ui/button";
+import { claimWeeklyChallengeReward } from "@/server/actions/challenges";
+
+const DailyScoreGauge = dynamic(
+  () =>
+    import("@/components/student/student-charts").then(
+      (m) => m.DailyScoreGauge,
+    ),
+  { ssr: false },
+);
+
 import { cn } from "@/lib/utils";
 
 type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
@@ -55,6 +66,7 @@ interface ChallengeListViewProps {
   dailyProgress: DailyProgress;
   subjectOptions: Array<{ slug: string; name: string }>;
   initiallyEmpty?: boolean;
+  weeklyChallenge?: any;
 }
 
 type Filter = "all" | "active" | "completed";
@@ -65,6 +77,7 @@ export function ChallengeListView({
   dailyProgress: propDailyProgress,
   subjectOptions,
   initiallyEmpty,
+  weeklyChallenge,
 }: ChallengeListViewProps) {
   const router = useRouter();
   const [challenges, setChallenges] =
@@ -227,6 +240,16 @@ export function ChallengeListView({
           </div>
         </header>
       </Reveal>
+
+      {/* Weekly Challenge Card */}
+      {!loading && weeklyChallenge && (
+        <Reveal delay={40}>
+          <WeeklyChallengeCard
+            weeklyChallenge={weeklyChallenge}
+            onClaimReward={claimWeeklyChallengeReward}
+          />
+        </Reveal>
+      )}
 
       {/* Daily Score Gauge */}
       {!loading && dailyProgress.overallScore > 0 && (

@@ -160,12 +160,13 @@ export async function getDashboardSummary(
       prisma.subject.findMany({
         where: focusedIds.length > 0 ? { id: { in: focusedIds } } : undefined,
         orderBy: { order: "asc" },
-        include: {
-          topics: {
-            include: {
-              _count: { select: { concepts: true } },
-            },
-          },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          icon: true,
+          color: true,
+          order: true,
         },
       }),
       prisma.studentKnowledgeProfile.findMany({
@@ -276,7 +277,7 @@ export async function getDashboardSummary(
         conceptSlug: concept.slug,
         topicId: concept.topic.id,
         subjectName: concept.topic.subject.name,
-        subjectSlug: concept.topic.subject.slug,
+        subjectSlug: concept.topic.subject.slug as SubjectSlug,
         subjectColor: concept.topic.subject.color,
         subjectIcon: concept.topic.subject.icon,
         masteryScore: profile.masteryScore,
@@ -307,7 +308,7 @@ export async function getDashboardSummary(
         conceptSlug: concept.slug,
         topicId: concept.topicId,
         subjectName: firstSubject.name,
-        subjectSlug: firstSubject.slug,
+        subjectSlug: firstSubject.slug as SubjectSlug,
         subjectColor: firstSubject.color,
         subjectIcon: firstSubject.icon,
         masteryScore: 0,
@@ -567,7 +568,7 @@ export async function getTopicDetail(
       slug: topic.slug,
       description: topic.description,
       subjectName: topic.subject.name,
-      subjectSlug: topic.subject.slug,
+      subjectSlug: topic.subject.slug as SubjectSlug,
       subjectColor: topic.subject.color,
       subjectIcon: topic.subject.icon,
     },
