@@ -14,6 +14,8 @@ import {
   AuthField,
   GoogleIcon,
 } from "@/components/auth/auth-form";
+import { AuthStreakTeaser } from "@/components/auth/auth-streak-teaser";
+import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { Button } from "@/components/ui/button";
 
 const loginSchema = z.object({
@@ -78,6 +80,7 @@ function LoginForm() {
       setServerError("Email atau password salah. Coba dicek kembali ya.");
       return;
     }
+
     router.push(callbackUrl);
     router.refresh();
   });
@@ -90,7 +93,7 @@ function LoginForm() {
 
   return (
     <div className="space-y-6">
-      {/* ── Greeting with streak teaser ── */}
+      {/* ── Header ── */}
       <header className="space-y-2">
         <h1 className="font-heading text-[28px] font-extrabold leading-[1.1] tracking-tight text-foreground anim-slide-up gpu">
           Masuk ke <span className="text-gradient-warm">Spark</span>
@@ -103,7 +106,7 @@ function LoginForm() {
         </p>
       </header>
 
-      {/* ── Success banner ── */}
+      {/* ── Success banner (post-register) ── */}
       {justRegistered && (
         <div className="flex items-center gap-3 rounded-2xl border border-[var(--teal)]/20 bg-[color-mix(in_oklch,var(--teal)_6%,transparent)] px-4 py-3 animate-fade-in">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--teal)]/12">
@@ -114,6 +117,11 @@ function LoginForm() {
           </span>
         </div>
       )}
+
+      {/* ── Streak teaser (dismissable) ── */}
+      <div className="anim-slide-up gpu" style={{ animationDelay: "110ms" }}>
+        <AuthStreakTeaser />
+      </div>
 
       {/* ── Google ── */}
       <div className="anim-slide-up gpu" style={{ animationDelay: "140ms" }}>
@@ -168,7 +176,9 @@ function LoginForm() {
           {...register("password")}
         />
 
-        <AuthError message={serverError ?? undefined} />
+        <div role="alert" aria-live="polite">
+          <AuthError message={serverError ?? undefined} />
+        </div>
 
         {authError === "OAuthAccountNotLinked" && (
           <div
@@ -190,7 +200,8 @@ function LoginForm() {
           type="submit"
           size="xl"
           disabled={isSubmitting || googleLoading}
-          className="group w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[var(--coral)] to-[color-mix(in_oklch,var(--coral)_80%,var(--orange))] text-[14px] font-extrabold text-white shadow-[0_4px_16px_rgba(225,29,72,0.25)] hover:shadow-[0_8px_24px_rgba(225,29,72,0.35)] hover:brightness-105 transition-all duration-300 cursor-pointer active:scale-[0.97]"
+          aria-busy={isSubmitting}
+          className="group w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[var(--coral)] to-[color-mix(in_oklch,var(--coral)_80%,var(--orange))] text-[14px] font-extrabold text-white shadow-[0_4px_16px_rgba(225,29,72,0.25)] hover:shadow-[0_8px_24px_rgba(225,29,72,0.35)] hover:brightness-105 transition-all duration-300 cursor-pointer active:scale-[0.97] focus-visible:ring-4 focus-visible:ring-[var(--coral)]/20"
         >
           {isSubmitting ? (
             <Loader2 size={16} className="animate-spin" />
@@ -205,7 +216,7 @@ function LoginForm() {
         </Button>
       </form>
 
-      {/* ── Bottom ── */}
+      {/* ── Bottom link ── */}
       <p
         className="text-center text-[13px] text-muted-foreground anim-slide-up gpu"
         style={{ animationDelay: "280ms" }}
@@ -218,6 +229,9 @@ function LoginForm() {
           Daftar gratis
         </Link>
       </p>
+
+      {/* ── Trust badges (desktop only) ── */}
+      <AuthTrustBadges />
     </div>
   );
 }
