@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleDashed,
+  Heart,
   Layers,
   Lock,
   Sparkles,
@@ -40,8 +41,13 @@ export function SubjectsListView({
   focusedIds: string[];
   addAction?: React.ReactNode;
 }) {
-  const official = subjects.filter((s) => !s.isCustom);
-  const custom = subjects.filter((s) => s.isCustom);
+  const focused = subjects.filter((s) => focusedIds.includes(s.id));
+  const otherOfficial = subjects.filter(
+    (s) => !s.isCustom && !focusedIds.includes(s.id),
+  );
+  const custom = subjects.filter(
+    (s) => s.isCustom && !focusedIds.includes(s.id),
+  );
   return (
     <div className="space-y-5 sm:space-y-7">
       <Reveal>
@@ -74,30 +80,91 @@ export function SubjectsListView({
         </header>
       </Reveal>
 
-      {official.length > 0 && (
-        <Reveal delay={80}>
-          <div className="grid gap-3.5 sm:grid-cols-2">
-            {official.map((s) => (
-              <SubjectCard
-                key={s.id}
-                subject={s}
-                isFocused={focusedIds.includes(s.id)}
-              />
-            ))}
-          </div>
+      {focused.length > 0 && (
+        <Reveal delay={60}>
+          <section>
+            <header className="mb-3 flex items-center justify-between gap-2 px-1">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--coral)]">
+                  Favorit kamu
+                </p>
+                <h2 className="mt-0.5 flex items-center gap-1.5 font-heading text-[16px] font-bold leading-tight">
+                  <Heart
+                    size={14}
+                    className="fill-[var(--coral)] text-[var(--coral)]"
+                  />
+                  Mata pelajaran yang kamu minati
+                </h2>
+                <p className="mt-1 text-[10.5px] leading-relaxed text-muted-foreground">
+                  Mapel yang kamu pilih pas onboarding — Spark prioritasin ini
+                  buat rekomendasi, tantangan, dan latihan.
+                </p>
+              </div>
+              <span className="rounded-full bg-[var(--coral)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
+                {focused.length} mapel
+              </span>
+            </header>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              {focused.map((s) => (
+                <SubjectCard
+                  key={s.id}
+                  subject={s}
+                  isFocused={focusedIds.includes(s.id)}
+                />
+              ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
+
+      {otherOfficial.length > 0 && (
+        <Reveal delay={100}>
+          <section>
+            <header className="mb-3 flex items-center justify-between gap-2 px-1">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--blue)]">
+                  Kurikulum nasional
+                </p>
+                <h2 className="mt-0.5 font-heading text-[16px] font-bold leading-tight">
+                  Mata pelajaran lainnya
+                </h2>
+                <p className="mt-1 text-[10.5px] leading-relaxed text-muted-foreground">
+                  Tap buat tambahin ke favorit, dan Spark bakal mulai susun
+                  skill tree + soal pretest.
+                </p>
+              </div>
+              <span className="rounded-full bg-[var(--blue)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--blue)] shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]">
+                {otherOfficial.length} mapel
+              </span>
+            </header>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              {otherOfficial.map((s) => (
+                <SubjectCard
+                  key={s.id}
+                  subject={s}
+                  isFocused={focusedIds.includes(s.id)}
+                />
+              ))}
+            </div>
+          </section>
         </Reveal>
       )}
 
       {custom.length > 0 && (
-        <Reveal delay={120}>
+        <Reveal delay={140}>
           <section>
             <header className="mb-3 flex items-center justify-between gap-2 px-1">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
                   Mapel kamu
                 </p>
-                <h2 className="mt-0.5 font-heading text-[16px] font-bold leading-tight">
-                  Custom + AI
+                <h2 className="mt-0.5 flex items-center gap-1.5 font-heading text-[16px] font-bold leading-tight">
+                  <Wand2
+                    size={13}
+                    strokeWidth={2.5}
+                    className="text-[var(--purple)]"
+                  />
+                  AI Custom
                 </h2>
                 <p className="mt-1 flex items-center gap-1 text-[10.5px] leading-relaxed text-muted-foreground">
                   <Sparkles size={10} className="text-[var(--purple)]" />
