@@ -5,6 +5,12 @@ import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { addCustomSubject } from "@/server/actions/subjects";
@@ -105,111 +111,109 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
         </Button>
       )}
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="add-subject-title"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          if (!v) handleClose();
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          onInteractOutside={(e) => {
+            if (status === "loading") e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (status === "loading") e.preventDefault();
+          }}
+          className="max-w-lg p-0 overflow-hidden bg-card border border-border/40"
         >
-          <button
-            type="button"
-            aria-label="Tutup"
-            onClick={handleClose}
-            className="absolute inset-0 -z-10 cursor-default"
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl"
+            style={{
+              background:
+                "radial-gradient(circle, oklch(0.78 0.18 25 / 0.5), transparent 70%)",
+            }}
           />
-          <div className="relative w-full max-w-lg overflow-hidden rounded-t-3xl border border-border/40 bg-card shadow-[0_-12px_40px_rgba(80,20,50,0.18)] backdrop-blur-xl sm:rounded-3xl sm:shadow-[0_24px_60px_rgba(80,20,50,0.25)]">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl"
-              style={{
-                background:
-                  "radial-gradient(circle, oklch(0.78 0.18 25 / 0.5), transparent 70%)",
-              }}
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -bottom-16 -left-16 size-40 rounded-full opacity-25 blur-3xl"
-              style={{
-                background:
-                  "radial-gradient(circle, oklch(0.7 0.15 200 / 0.4), transparent 70%)",
-              }}
-            />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-16 -left-16 size-40 rounded-full opacity-25 blur-3xl"
+            style={{
+              background:
+                "radial-gradient(circle, oklch(0.7 0.15 200 / 0.4), transparent 70%)",
+            }}
+          />
 
-            <header className="relative flex items-start justify-between gap-3 border-border/40 border-b p-5">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
-                  Mata pelajaran baru
-                </p>
-                <h2
-                  id="add-subject-title"
-                  className="mt-1 font-heading text-[20px] font-bold leading-tight"
-                >
-                  Mau belajar apa lagi hari ini? ✨
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={status === "loading"}
-                className="grid size-9 shrink-0 place-items-center rounded-full border border-border/40 bg-background/60 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-background disabled:opacity-40"
-                aria-label="Tutup"
-              >
-                <X size={16} strokeWidth={2.5} />
-              </button>
-            </header>
-
-            <div className="relative border-border/40 border-b bg-background/30 p-1.5 backdrop-blur-sm">
-              <div className="flex gap-1">
-                <TabButton
-                  active={tab === "suggest"}
-                  onClick={() => setTab("suggest")}
-                >
-                  <Sparkles size={12} strokeWidth={2.5} />
-                  Mapel nasional
-                </TabButton>
-                <TabButton
-                  active={tab === "custom"}
-                  onClick={() => setTab("custom")}
-                >
-                  <Wand2 size={12} strokeWidth={2.5} />
-                  Custom + AI
-                </TabButton>
-              </div>
+          <DialogHeader className="relative flex-row items-start justify-between gap-3 border-border/40 border-b p-5">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                Mata pelajaran baru
+              </p>
+              <DialogTitle className="mt-1 font-heading text-[20px] font-bold leading-tight">
+                Mau belajar apa lagi hari ini? ✨
+              </DialogTitle>
             </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={status === "loading"}
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-border/40 bg-background/60 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-background disabled:opacity-40"
+              aria-label="Tutup"
+            >
+              <X size={16} strokeWidth={2.5} />
+            </button>
+          </DialogHeader>
 
-            <div className="relative max-h-[60vh] overflow-y-auto p-5 sm:max-h-[480px]">
-              {tab === "suggest" && <SuggestTab />}
-              {tab === "custom" && (
-                <CustomTab
-                  name={name}
-                  context={context}
-                  status={status}
-                  error={error}
-                  onNameChange={setName}
-                  onContextChange={setContext}
-                  onPick={(v) => setName(v)}
-                  onSubmit={handleCustom}
-                />
-              )}
-              {status === "success" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card/95 p-6 backdrop-blur-md">
-                  <div className="grid size-16 place-items-center rounded-full bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white shadow-[0_8px_24px_rgba(20,184,166,0.4)]">
-                    <Sparkles size={28} strokeWidth={2.5} />
-                  </div>
-                  <p className="font-heading text-[18px] font-bold">
-                    Beres! Mapel kamu siap 🎉
-                  </p>
-                  <p className="text-center text-[12.5px] text-muted-foreground">
-                    Spark udah bikinin outline + 5 soal pretest buat ukur
-                    kemampuan awal kamu.
-                  </p>
-                </div>
-              )}
+          <div className="relative border-border/40 border-b bg-background/30 p-1.5 backdrop-blur-sm">
+            <div className="flex gap-1">
+              <TabButton
+                active={tab === "suggest"}
+                onClick={() => setTab("suggest")}
+              >
+                <Sparkles size={12} strokeWidth={2.5} />
+                Mapel nasional
+              </TabButton>
+              <TabButton
+                active={tab === "custom"}
+                onClick={() => setTab("custom")}
+              >
+                <Wand2 size={12} strokeWidth={2.5} />
+                Custom + AI
+              </TabButton>
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="relative max-h-[60vh] overflow-y-auto p-5 sm:max-h-[480px]">
+            {tab === "suggest" && <SuggestTab />}
+            {tab === "custom" && (
+              <CustomTab
+                name={name}
+                context={context}
+                status={status}
+                error={error}
+                onNameChange={setName}
+                onContextChange={setContext}
+                onPick={(v) => setName(v)}
+                onSubmit={handleCustom}
+              />
+            )}
+            {status === "success" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card/95 p-6 backdrop-blur-md">
+                <div className="grid size-16 place-items-center rounded-full bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white shadow-[0_8px_24px_rgba(20,184,166,0.4)]">
+                  <Sparkles size={28} strokeWidth={2.5} />
+                </div>
+                <p className="font-heading text-[18px] font-bold">
+                  Beres! Mapel kamu siap 🎉
+                </p>
+                <p className="text-center text-[12.5px] text-muted-foreground">
+                  Spark udah bikinin outline + 5 soal pretest buat ukur
+                  kemampuan awal kamu.
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

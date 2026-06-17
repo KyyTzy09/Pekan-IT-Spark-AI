@@ -881,6 +881,11 @@ export async function markMaterialRead(input: {
   });
   if (!material) return { ok: false, error: "Materi tidak ditemukan" };
 
+  const existingRead = await prisma.materialRead.findUnique({
+    where: { userId_materialId: { userId, materialId: parsed.data.materialId } },
+  });
+  const wasAlreadyCompleted = existingRead?.completed ?? false;
+
   await markMaterialReadInternal(
     userId,
     parsed.data.materialId,
@@ -890,6 +895,12 @@ export async function markMaterialRead(input: {
 
   let unlockedBadges: any[] = [];
   if (parsed.data.completed) {
+    if (!wasAlreadyCompleted) {
+      await addXp(userId, 10, "CHAT_SESSION", {
+        materialId: parsed.data.materialId,
+        source: "LIBRARY_READ",
+      }).catch(console.error);
+    }
     await recordActivity(userId).catch(console.error);
     unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);
   }

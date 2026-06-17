@@ -115,7 +115,7 @@ export const dailyMixPlanSchema = z.object({
     .describe("Deskripsi 1-2 kalimat apa yang akan dipelajari hari ini"),
   items: z
     .array(challengeItemPlanSchema)
-    .min(2)
+    .min(1)
     .max(12)
     .describe("Daftar item tantangan (2-8 item)"),
   reasoning: z

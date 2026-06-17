@@ -228,16 +228,17 @@ export async function streamText({
   }
 
   if (isHeavy) {
-    // Socratic tutor AI chat: try Sumopod (openaiDefault) first, fall back to Groq (openaiHeavy)
-    const sumopodModel = "deepseek-v4-flash";
-    const sumopodBaseURL = openaiDefault.baseURL;
+    // Socratic tutor AI chat: try Groq (openaiHeavy) first, fall back to Sumopod (openaiDefault)
+    const heavyModelName =
+      process.env.HEAVY_MODEL_NAME ?? "llama-3.3-70b-versatile";
+    const groqBaseURL = openaiHeavy.baseURL;
     console.log(`
 =========================================
-[AI_SERVICE] streamText REQUEST (Primary: Sumopod)
+[AI_SERVICE] streamText REQUEST (Primary: Groq)
 -----------------------------------------
 * Model Type: ${model}
-* Model Name: ${sumopodModel}
-* Endpoint:   ${sumopodBaseURL}
+* Model Name: ${heavyModelName}
+* Endpoint:   ${groqBaseURL}
 * Temp:       ${temperature}
 * System:
 ${system ? system : "(none)"}
@@ -246,57 +247,14 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
 =========================================
 `);
     try {
-      const response = await openaiDefault.chat.completions.create({
-        model: sumopodModel,
+      const response = await openaiHeavy.chat.completions.create({
+        model: heavyModelName,
         messages: apiMessages,
         temperature,
       });
 
       const text = response.choices[0]?.message?.content || "";
       console.log(`
-=========================================
-[AI_SERVICE] streamText RESPONSE (Sumopod)
------------------------------------------
-* Model Used: ${response.model || sumopodModel}
-* Output Text:
-${text}
-=========================================
-`);
-      return {
-        text: Promise.resolve(text),
-      };
-    } catch (sumopodErr) {
-      logAIError(
-        "streamText (Primary: Sumopod)",
-        sumopodModel,
-        sumopodBaseURL,
-        sumopodErr,
-      );
-      const heavyModelName =
-        process.env.HEAVY_MODEL_NAME ?? "llama-3.3-70b-versatile";
-      const groqBaseURL = openaiHeavy.baseURL;
-      console.warn(
-        `[AI_SERVICE] Sumopod streamText failed. Trying Groq (${heavyModelName}) at ${groqBaseURL}...`,
-      );
-      try {
-        console.log(`
-=========================================
-[AI_SERVICE] streamText REQUEST (Fallback 1: Groq)
------------------------------------------
-* Model Name: ${heavyModelName}
-* Endpoint:   ${groqBaseURL}
-* Messages:
-${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
-=========================================
-`);
-        const response = await openaiHeavy.chat.completions.create({
-          model: heavyModelName,
-          messages: apiMessages,
-          temperature,
-        });
-
-        const text = response.choices[0]?.message?.content || "";
-        console.log(`
 =========================================
 [AI_SERVICE] streamText RESPONSE (Groq)
 -----------------------------------------
@@ -305,15 +263,57 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
 ${text}
 =========================================
 `);
+      return {
+        text: Promise.resolve(text),
+      };
+    } catch (groqErr) {
+      logAIError(
+        "streamText (Primary: Groq)",
+        heavyModelName,
+        groqBaseURL,
+        groqErr,
+      );
+      const sumopodModel = "deepseek-v4-flash";
+      const sumopodBaseURL = openaiDefault.baseURL;
+      console.warn(
+        `[AI_SERVICE] Groq streamText failed. Trying Sumopod (${sumopodModel}) at ${sumopodBaseURL}...`,
+      );
+      try {
+        console.log(`
+=========================================
+[AI_SERVICE] streamText REQUEST (Fallback 1: Sumopod)
+-----------------------------------------
+* Model Name: ${sumopodModel}
+* Endpoint:   ${sumopodBaseURL}
+* Messages:
+${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
+=========================================
+`);
+        const response = await openaiDefault.chat.completions.create({
+          model: sumopodModel,
+          messages: apiMessages,
+          temperature,
+        });
+
+        const text = response.choices[0]?.message?.content || "";
+        console.log(`
+=========================================
+[AI_SERVICE] streamText RESPONSE (Sumopod)
+-----------------------------------------
+* Model Used: ${response.model || sumopodModel}
+* Output Text:
+${text}
+=========================================
+`);
         return {
           text: Promise.resolve(text),
         };
-      } catch (groqErr) {
+      } catch (sumopodErr) {
         logAIError(
-          "streamText (Fallback 1: Groq)",
-          heavyModelName,
-          groqBaseURL,
-          groqErr,
+          "streamText (Fallback 1: Sumopod)",
+          sumopodModel,
+          sumopodBaseURL,
+          sumopodErr,
         );
         try {
           console.log(`
@@ -350,43 +350,7 @@ ${text}
             openaiHeavy.baseURL,
             fallbackHeavyErr,
           );
-          try {
-            console.log(`
-=========================================
-[AI_SERVICE] streamText REQUEST (Fallback 3: deepseek-v4-flash)
------------------------------------------
-* Model Name: deepseek-v4-flash
-* Endpoint:   ${openaiDefault.baseURL}
-=========================================
-`);
-            const response = await openaiDefault.chat.completions.create({
-              model: "deepseek-v4-flash",
-              messages: apiMessages,
-              temperature,
-            });
-
-            const text = response.choices[0]?.message?.content || "";
-            console.log(`
-=========================================
-[AI_SERVICE] streamText RESPONSE (Fallback 3: deepseek-v4-flash)
------------------------------------------
-* Model Used: ${response.model || "deepseek-v4-flash"}
-* Output Text:
-${text}
-=========================================
-`);
-            return {
-              text: Promise.resolve(text),
-            };
-          } catch (fallbackErr) {
-            logAIError(
-              "streamText (Fallback 3: deepseek-v4-flash)",
-              "deepseek-v4-flash",
-              openaiDefault.baseURL,
-              fallbackErr,
-            );
-            throw sumopodErr;
-          }
+          throw groqErr;
         }
       }
     }

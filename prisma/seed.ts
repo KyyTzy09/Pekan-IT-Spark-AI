@@ -3630,6 +3630,16 @@ async function seedConcepts(
   subjects: Record<string, { id: string }>,
   topicMap: Record<string, Record<string, { id: string }>>,
 ) {
+  const existingConcepts = await prisma.concept.findMany({
+    select: { topicId: true, slug: true },
+  });
+  const existingConceptSet = new Set<string>();
+  for (const ec of existingConcepts) {
+    existingConceptSet.add(`${ec.topicId}_${ec.slug}`);
+  }
+
+  const toCreate = [];
+
   for (const [subjectSlug, concepts] of Object.entries(CONCEPTS_BY_SUBJECT)) {
     const _subjId = subjects[subjectSlug].id;
     for (const c of concepts) {
@@ -3639,19 +3649,28 @@ async function seedConcepts(
         continue;
       }
       const slug = c.name.toLowerCase().replace(/\s+/g, "-");
-      await prisma.concept.upsert({
-        where: { topicId_slug: { topicId, slug } },
-        update: {},
-        create: {
-          name: c.name,
-          slug,
-          description: c.description,
-          contentMd: c.contentMd,
-          topicId,
-        },
+      const key = `${topicId}_${slug}`;
+      if (existingConceptSet.has(key)) {
+        continue; // Skip existing
+      }
+
+      toCreate.push({
+        name: c.name,
+        slug,
+        description: c.description,
+        contentMd: c.contentMd,
+        topicId,
       });
     }
-    console.log(`Concepts created for ${subjectSlug}: ${concepts.length}`);
+  }
+
+  if (toCreate.length > 0) {
+    await prisma.concept.createMany({
+      data: toCreate,
+    });
+    console.log(`Concepts seeded: ${toCreate.length} new concepts added`);
+  } else {
+    console.log("All concepts are already up-to-date");
   }
 }
 
@@ -3668,7 +3687,17 @@ async function seedPrerequisites() {
     conceptKey.set(`${c.topic.subject.slug}::${c.name}`, c.id);
   }
 
-  let total = 0;
+  const existingPrereqs = await prisma.conceptPrerequisite.findMany({
+    select: { prerequisiteId: true, conceptId: true },
+  });
+  const existingPrereqSet = new Set<string>();
+  for (const ep of existingPrereqs) {
+    existingPrereqSet.add(`${ep.prerequisiteId}_${ep.conceptId}`);
+  }
+
+  const toCreate = [];
+
+  let _total = 0;
   for (const [subjectSlug, edges] of Object.entries(PREREQUISITES_BY_SUBJECT)) {
     for (const edge of edges) {
       const dependentId = conceptKey.get(`${subjectSlug}::${edge.dependent}`);
@@ -3682,24 +3711,30 @@ async function seedPrerequisites() {
         continue;
       }
       if (dependentId === prerequisiteId) continue;
-      await prisma.conceptPrerequisite.upsert({
-        where: {
-          prerequisiteId_conceptId: {
-            prerequisiteId,
-            conceptId: dependentId,
-          },
-        },
-        update: { minMasteryScore: edge.minMasteryScore ?? 0.7 },
-        create: {
-          prerequisiteId,
-          conceptId: dependentId,
-          minMasteryScore: edge.minMasteryScore ?? 0.7,
-        },
+
+      const key = `${prerequisiteId}_${dependentId}`;
+      if (existingPrereqSet.has(key)) {
+        _total++;
+        continue; // Skip existing
+      }
+
+      toCreate.push({
+        prerequisiteId,
+        conceptId: dependentId,
+        minMasteryScore: edge.minMasteryScore ?? 0.7,
       });
-      total++;
+      _total++;
     }
   }
-  console.log(`Prerequisites seeded: ${total}`);
+
+  if (toCreate.length > 0) {
+    await prisma.conceptPrerequisite.createMany({
+      data: toCreate,
+    });
+    console.log(`Prerequisites seeded: ${toCreate.length} new edges added`);
+  } else {
+    console.log("All prerequisites are already up-to-date");
+  }
 }
 
 async function generateAndSeedEmbeddings() {

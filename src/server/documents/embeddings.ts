@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { embed, embeddingModel, embedMany } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 
@@ -89,18 +90,15 @@ export async function embedDocumentChunks(
     values: chunks.map((c) => c.content),
     maxRetries: 1,
   });
-  await prisma.$transaction(
-    chunks.map((c, i) =>
-      prisma.documentEmbedding.create({
-        data: {
-          documentId,
-          chunkIndex: c.index,
-          chunkContent: c.content,
-          embedding: JSON.stringify(embeddings[i]),
-        },
-      }),
-    ),
-  );
+  await prisma.documentEmbedding.createMany({
+    data: chunks.map((c, i) => ({
+      id: randomUUID(),
+      documentId,
+      chunkIndex: c.index,
+      chunkContent: c.content,
+      embedding: JSON.stringify(embeddings[i]),
+    })),
+  });
   return { chunks: chunks.length, skipped: false };
 }
 

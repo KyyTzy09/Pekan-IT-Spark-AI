@@ -20,7 +20,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { startNewChat } from "@/server/actions/chat";
-import { getConceptDetail } from "@/server/actions/subjects";
+import { getConceptDetail, markConceptAsRead } from "@/server/actions/subjects";
+import { gooeyToast } from "goey-toast";
 
 interface ConceptDetailDialogProps {
   conceptId: string | null;
@@ -56,6 +57,7 @@ export function ConceptDetailDialog({
   const [loading, setLoading] = React.useState(false);
   const [data, setData] = React.useState<ConceptData | null>(null);
   const [chatLoading, setChatLoading] = React.useState(false);
+  const [readLoading, setReadLoading] = React.useState(false);
 
   React.useEffect(() => {
     const id = conceptId;
@@ -99,6 +101,35 @@ export function ConceptDetailDialog({
       console.error("Gagal memulai sesi chat tutor:", err);
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async () => {
+    if (!conceptId || readLoading || !data) return;
+    setReadLoading(true);
+    try {
+      const res = await markConceptAsRead(conceptId);
+      if (res.ok) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: res.newStatus,
+                masteryScore: prev.status === "NOT_STARTED" ? 0.1 : prev.masteryScore,
+              }
+            : null
+        );
+        if (res.earnedXp > 0) {
+          gooeyToast.success("Materi Selesai Dibaca!", {
+            description: `Kamu mendapatkan +${res.earnedXp} XP!`,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Gagal menandai materi selesai dibaca:", err);
+      gooeyToast.error("Gagal memperbarui status membaca");
+    } finally {
+      setReadLoading(false);
     }
   };
 
@@ -233,6 +264,28 @@ export function ConceptDetailDialog({
                   </>
                 )}
               </Button>
+
+              {data.status === "NOT_STARTED" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMarkAsRead}
+                  disabled={readLoading}
+                  className="rounded-full font-semibold border-border/40 hover:bg-background/80"
+                >
+                  {readLoading ? (
+                    <>
+                      <Loader2 size={13} className="mr-1.5 animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={13} className="mr-1.5 text-emerald-600" />
+                      Selesai Membaca (+5 XP)
+                    </>
+                  )}
+                </Button>
+              )}
 
               <Button
                 size="sm"

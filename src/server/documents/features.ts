@@ -186,14 +186,14 @@ const materialSchema = z.object({
   keyPoints: z
     .array(z.string().min(8).max(200))
     .min(3)
-    .max(7)
+    .max(20)
     .describe("Poin-poin penting dari materi ini"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   estimatedMinutes: z
     .number()
     .int()
     .min(2)
-    .max(30)
+    .max(60)
     .describe("Estimasi waktu membaca materi dalam menit"),
 });
 
@@ -206,6 +206,8 @@ Tugas kamu adalah membuat materi pembelajaran (materi edukasi) yang mendalam, ko
 - Sertakan contoh pembahasan/cara menyelesaikan tipe soal seperti yang ada di dokumen.
 - Gunakan bahasa Indonesia yang bersahabat, jelas, dan mudah dipahami anak SMA/SMK (boleh pakai emoji secukupnya).
 - Gunakan KaTeX ($...$ atau $$...$$) untuk rumus matematika atau fisika/kimia jika ada.
+- PENTING: Batasi jumlah poin penting (keyPoints) antara 3 sampai 15 poin saja.
+- PENTING: Estimasi waktu membaca (estimatedMinutes) harus berkisar antara 5 sampai 45 menit saja.
 
 Format output harus JSON valid dengan struktur:
 {

@@ -187,7 +187,9 @@ export async function getParentHistoryData(
     });
   }
 
-  history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  history.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 
   return {
     ok: true,
@@ -341,61 +343,6 @@ export async function getParentDashboardData(activeStudentId?: string) {
     });
   }
 
-  // 6. Get AI recommendations (cached per student per day)
-  const today = new Date().toISOString().split("T")[0];
-  let aiRecommendation = "";
-
-  const cachedTip = await prisma.parentTipCache.findUnique({
-    where: { studentId_forDate: { studentId, forDate: today } },
-  });
-
-  if (cachedTip) {
-    aiRecommendation = cachedTip.content;
-  } else {
-    try {
-      const subjectsList = summary.subjects
-        .map((s) => `${s.name} (${s.masteryPct}% dikuasai)`)
-        .join(", ");
-      const strugglingList = struggling
-        .map(
-          (s) =>
-            `'${s.concept.name}' (pelajaran ${s.concept.topic.subject.name})`,
-        )
-        .join(", ");
-
-      const systemPrompt =
-        "Anda adalah Spark, AI konsultan pendidikan anak untuk orang tua. Berikan rekomendasi dukungan belajar yang hangat, ramah, dan positif.";
-      const userPrompt = `
-Nama anak: ${studentName}
-Mata pelajaran saat ini: ${subjectsList || "Belum ada mapel terpilih"}
-Konsep yang sedang dihadapi kesulitan: ${strugglingList || "Tidak ada kesulitan signifikan saat ini"}
-
-Berikan 3 poin rekomendasi dukungan yang konkret, santun, dan positif bagi orang tua untuk mendampingi anak dalam belajar. Pastikan nada bicaranya optimis, tidak menyalahkan anak, dan fokus pada kolaborasi/dukungan psikologis orang tua. Format output langsung berupa 3 paragraf pendek dengan bullet points.
-`;
-
-      const aiRes = await generateText({
-        model: "fast",
-        system: systemPrompt,
-        prompt: userPrompt,
-        temperature: 0.7,
-      });
-      aiRecommendation = aiRes.text.trim();
-
-      await prisma.parentTipCache.upsert({
-        where: { studentId_forDate: { studentId, forDate: today } },
-        update: { content: aiRecommendation },
-        create: { studentId, forDate: today, content: aiRecommendation },
-      });
-    } catch (err) {
-      console.error("Gagal generate AI parent tips:", err);
-      aiRecommendation = `
-• **Ajak Ngobrol Santai**: Tanyakan kepada ${studentName} pelajaran apa yang paling menarik hari ini tanpa memberi tekanan ujian.
-• **Fokus pada Usaha, Bukan Hasil**: Berikan apresiasi pada konsistensi belajar harian ${studentName} dan bantu dia merasa nyaman jika menemui soal yang sulit.
-• **Ciptakan Ruang Kondusif**: Sediakan tempat belajar yang tenang dan bebas gangguan agar ${studentName} bisa lebih fokus menyelesaikan misi belajarnya.
-`.trim();
-    }
-  }
-
   return {
     ok: true,
     children: links.map((l) => ({
@@ -417,6 +364,100 @@ Berikan 3 poin rekomendasi dukungan yang konkret, santun, dan positif bagi orang
       subjectName: s.concept.topic.subject.name,
       masteryScore: s.masteryScore,
     })),
-    aiRecommendation,
+    aiRecommendation: "",
   };
+}
+
+export async function getParentAiRecommendation(
+  studentId: string,
+  studentName: string,
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "UNAUTHORIZED" };
+  }
+  if (session.user.role !== "PARENT") {
+    return { ok: false, error: "FORBIDDEN" };
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const cachedTip = await prisma.parentTipCache.findUnique({
+    where: { studentId_forDate: { studentId, forDate: today } },
+  });
+
+  if (cachedTip) {
+    return { ok: true, recommendation: cachedTip.content };
+  }
+
+  try {
+    const summary = await getDashboardSummary(studentId);
+    const struggling = await prisma.studentKnowledgeProfile.findMany({
+      where: {
+        userId: studentId,
+        masteryScore: { lt: 0.7 },
+      },
+      include: {
+        concept: {
+          select: {
+            name: true,
+            topic: {
+              select: {
+                subject: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { masteryScore: "asc" },
+      take: 5,
+    });
+
+    const subjectsList = summary.subjects
+      .map((s) => `${s.name} (${s.masteryPct}% dikuasai)`)
+      .join(", ");
+    const strugglingList = struggling
+      .map(
+        (s) =>
+          `'${s.concept.name}' (pelajaran ${s.concept.topic.subject.name})`,
+      )
+      .join(", ");
+
+    const systemPrompt =
+      "Anda adalah Spark, AI konsultan pendidikan anak untuk orang tua. Berikan rekomendasi dukungan belajar yang hangat, ramah, dan positif.";
+    const userPrompt = `
+Nama anak: ${studentName}
+Mata pelajaran saat ini: ${subjectsList || "Belum ada mapel terpilih"}
+Konsep yang sedang dihadapi kesulitan: ${strugglingList || "Tidak ada kesulitan signifikan saat ini"}
+
+Berikan 3 poin rekomendasi dukungan yang konkret, santun, dan positif bagi orang tua untuk mendampingi anak dalam belajar. Pastikan nada bicaranya optimis, tidak menyalahkan anak, dan fokus pada kolaborasi/dukungan psikologis orang tua. Format output langsung berupa 3 paragraf pendek dengan bullet points.
+`;
+
+    const aiRes = await generateText({
+      model: "fast",
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.7,
+    });
+    const content = aiRes.text.trim();
+
+    await prisma.parentTipCache.upsert({
+      where: { studentId_forDate: { studentId, forDate: today } },
+      update: { content },
+      create: { studentId, forDate: today, content },
+    });
+
+    return { ok: true, recommendation: content };
+  } catch (err) {
+    console.error("Gagal generate AI parent tips:", err);
+    const fallback = `
+• **Ajak Ngobrol Santai**: Tanyakan kepada ${studentName} pelajaran apa yang paling menarik hari ini tanpa memberi tekanan ujian.
+• **Fokus pada Usaha, Bukan Hasil**: Berikan apresiasi pada konsistensi belajar harian ${studentName} dan bantu dia merasa nyaman jika menemui soal yang sulit.
+• **Ciptakan Ruang Kondusif**: Sediakan tempat belajar yang tenang dan bebas gangguan agar ${studentName} bisa lebih fokus menyelesaikan misi belajarnya.
+`.trim();
+    return { ok: true, recommendation: fallback };
+  }
 }

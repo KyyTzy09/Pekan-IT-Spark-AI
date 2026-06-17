@@ -374,6 +374,7 @@ export type SubjectExplorerSummary = {
   }>;
   totalConcepts: number;
   masteredConcepts: number;
+  pretestCompleted: boolean;
 };
 
 export async function getSubjectDetail(
@@ -393,18 +394,42 @@ export async function getSubjectDetail(
   });
   if (!subject) return null;
 
-  const profiles = await prisma.studentKnowledgeProfile.findMany({
-    where: {
-      userId,
-      concept: { topic: { subjectId: subject.id } },
-    },
-    select: {
-      conceptId: true,
-      status: true,
-      masteryScore: true,
-    },
-  });
+  const [profiles, pretestQuestionCount] = await Promise.all([
+    prisma.studentKnowledgeProfile.findMany({
+      where: {
+        userId,
+        concept: { topic: { subjectId: subject.id } },
+      },
+      select: {
+        conceptId: true,
+        status: true,
+        masteryScore: true,
+      },
+    }),
+    prisma.question.count({
+      where: {
+        isActive: true,
+        tags: { has: "pretest" },
+        concept: { topic: { subjectId: subject.id } },
+      },
+    }),
+  ]);
+
   const profileMap = new Map(profiles.map((p) => [p.conceptId, p]));
+
+  let pretestCompleted = true;
+  if (pretestQuestionCount > 0) {
+    const attemptsCount = await prisma.questionAttempt.count({
+      where: {
+        userId,
+        question: {
+          tags: { has: "pretest" },
+          concept: { topic: { subjectId: subject.id } },
+        },
+      },
+    });
+    pretestCompleted = attemptsCount >= pretestQuestionCount;
+  }
 
   const topics = subject.topics.map((t) => {
     const conceptIds = t.concepts.map((c) => c.id);
@@ -446,6 +471,7 @@ export async function getSubjectDetail(
       0,
     ),
     masteredConcepts: allProfiles.filter((p) => p.status === "MASTERED").length,
+    pretestCompleted,
   };
 }
 

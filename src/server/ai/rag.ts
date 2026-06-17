@@ -150,29 +150,35 @@ export async function retrieveContext(
 async function keywordSearch(
   options: SearchOptions,
 ): Promise<RetrievedDocument[]> {
-  const { query, userId, limit = 3 } = options;
+  const { query, userId, subjectId, limit = 3 } = options;
   const queryTokens = simpleTokenize(query);
   const results: RetrievedDocument[] = [];
 
-  const userKnowledgeProfiles = await prisma.studentKnowledgeProfile.findMany({
-    where: { userId },
+  const concepts = await prisma.concept.findMany({
+    where: subjectId
+      ? { topic: { subjectId } }
+      : {
+          topic: {
+            subject: {
+              OR: [{ createdById: null }, { createdById: userId }],
+            },
+          },
+        },
     include: {
-      concept: {
-        include: { topic: true },
-      },
+      topic: { select: { name: true, subject: { select: { name: true } } } },
     },
   });
 
-  for (const profile of userKnowledgeProfiles) {
-    const conceptText = `${profile.concept.name} ${profile.concept.description || ""} ${profile.concept.contentMd || ""}`;
+  for (const c of concepts) {
+    const conceptText = `${c.name} ${c.description || ""} ${c.contentMd || ""}`;
     const conceptTokens = simpleTokenize(conceptText);
     const score = cosineSimilarity(queryTokens, conceptTokens);
 
     if (score > 0.05) {
       results.push({
-        id: profile.concept.id,
+        id: c.id,
         content: conceptText.substring(0, 2000),
-        title: profile.concept.name,
+        title: c.name,
         type: "concept",
         score,
       });

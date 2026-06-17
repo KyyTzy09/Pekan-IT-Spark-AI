@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
+  addXp,
   checkAndUnlockBadges,
   recordActivity,
 } from "@/server/actions/gamification";
@@ -682,6 +683,28 @@ export async function submitDocumentQuizAttemptAction(
         attempts: updatedAttempts,
       },
     });
+
+    const questionsArray = Array.isArray(quizRecord.questions)
+      ? (quizRecord.questions as any[])
+      : [];
+
+    let correctCount = 0;
+    for (let i = 0; i < questionsArray.length; i++) {
+      const q = questionsArray[i];
+      const selectedIndex = answers[i];
+      if (q && typeof q.correctIndex === "number" && selectedIndex === q.correctIndex) {
+        correctCount++;
+      }
+    }
+
+    const earnedXp = correctCount * 10;
+    if (earnedXp > 0) {
+      await addXp(userId, earnedXp, "ANSWER_CORRECT", {
+        documentQuizId: quizId,
+        correctCount,
+        totalQuestions: questionsArray.length,
+      }).catch(console.error);
+    }
 
     await recordActivity(userId).catch(console.error);
     const unlockedBadges = await checkAndUnlockBadges(userId).catch(() => []);

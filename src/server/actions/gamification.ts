@@ -16,11 +16,37 @@ function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+let cachedLevels: Array<{ level: number; name: string; minXp: number }> | null =
+  null;
+let cachedBadges: Array<{
+  id: string;
+  name: string;
+  description: string | null;
+  xpReward: number;
+  category: any;
+}> | null = null;
+
 async function loadLevelTable() {
-  return prisma.level.findMany({
+  if (cachedLevels) return cachedLevels;
+  cachedLevels = await prisma.level.findMany({
     orderBy: { level: "asc" },
     select: { level: true, name: true, minXp: true },
   });
+  return cachedLevels;
+}
+
+async function loadBadgeTable() {
+  if (cachedBadges) return cachedBadges;
+  cachedBadges = await prisma.badge.findMany({
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      xpReward: true,
+      category: true,
+    },
+  });
+  return cachedBadges;
 }
 
 // ============================================================================
@@ -358,6 +384,23 @@ export async function checkAndUnlockBadges(
     throw new Error("FORBIDDEN");
   }
 
+  // Get owned badges first
+  const owned = new Set(
+    (
+      await prisma.userBadge.findMany({
+        where: { userId },
+        select: { badgeId: true },
+      })
+    ).map((b) => b.badgeId),
+  );
+
+  const allBadges = await loadBadgeTable();
+
+  // If user already owns all badges, exit immediately! Saves 7 heavy aggregation queries.
+  if (owned.size === allBadges.length) {
+    return [];
+  }
+
   // Load user stats in parallel
   const [
     profile,
@@ -407,27 +450,6 @@ export async function checkAndUnlockBadges(
     materialsRead,
     reflectionsSubmitted: reflections,
   };
-
-  // Get all badges the user already has
-  const owned = new Set(
-    (
-      await prisma.userBadge.findMany({
-        where: { userId },
-        select: { badgeId: true },
-      })
-    ).map((b) => b.badgeId),
-  );
-
-  // Get all badges, check rules
-  const allBadges = await prisma.badge.findMany({
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      xpReward: true,
-      category: true,
-    },
-  });
 
   const newlyUnlocked: BadgeUnlock[] = [];
   for (const badge of allBadges) {

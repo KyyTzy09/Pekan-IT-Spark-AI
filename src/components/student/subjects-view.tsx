@@ -297,7 +297,8 @@ export function SubjectDetailView({
 }: {
   summary: SubjectExplorerSummary;
 }) {
-  const { subject, topics, totalConcepts, masteredConcepts } = summary;
+  const { subject, topics, totalConcepts, masteredConcepts, pretestCompleted } =
+    summary;
   const pct =
     totalConcepts > 0
       ? Math.round((masteredConcepts / totalConcepts) * 100)
@@ -359,35 +360,37 @@ export function SubjectDetailView({
                       penting.
                     </span>
                   </p>
-                  <div className="mt-3 overflow-hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 shadow-sm">
-                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-start gap-2">
-                        <Star
-                          size={16}
-                          className="mt-0.5 shrink-0 text-amber-500"
-                          fill="currentColor"
-                        />
-                        <div>
-                          <p className="text-[12px] font-bold text-amber-600 dark:text-amber-500">
-                            Uji Kemampuan Awal
-                          </p>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-                            Ambil pretest untuk mengukur tingkat pemahaman awal
-                            kamu pada mata pelajaran kustom ini.
-                          </p>
+                  {!pretestCompleted && (
+                    <div className="mt-3 overflow-hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 shadow-sm">
+                      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-2">
+                          <Star
+                            size={16}
+                            className="mt-0.5 shrink-0 text-amber-500"
+                            fill="currentColor"
+                          />
+                          <div>
+                            <p className="text-[12px] font-bold text-amber-600 dark:text-amber-500">
+                              Uji Kemampuan Awal
+                            </p>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                              Ambil pretest untuk mengukur tingkat pemahaman
+                              awal kamu pada mata pelajaran kustom ini.
+                            </p>
+                          </div>
                         </div>
+                        <Button
+                          asChild
+                          size="sm"
+                          className="rounded-full bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.25)] shrink-0 self-start sm:self-center"
+                        >
+                          <Link href={`/practice/pretest/${subject.id}`}>
+                            Mulai Pretest
+                          </Link>
+                        </Button>
                       </div>
-                      <Button
-                        asChild
-                        size="sm"
-                        className="rounded-full bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.25)] shrink-0 self-start sm:self-center"
-                      >
-                        <Link href={`/practice/pretest/${subject.id}`}>
-                          Mulai Pretest
-                        </Link>
-                      </Button>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>
@@ -400,16 +403,29 @@ export function SubjectDetailView({
                 />
                 {masteredConcepts} / {totalConcepts} dikuasai
               </div>
-              <Button
-                asChild
-                size="sm"
-                className="rounded-full bg-[var(--coral)] text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)]"
-              >
-                <Link href="/practice">
-                  <Sparkles size={13} strokeWidth={2.5} />
-                  Latihan sekarang
-                </Link>
-              </Button>
+              {pretestCompleted ? (
+                <Button
+                  asChild
+                  size="sm"
+                  className="rounded-full bg-[var(--coral)] text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)]"
+                >
+                  <Link href="/practice">
+                    <Sparkles size={13} strokeWidth={2.5} />
+                    Latihan sekarang
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  asChild
+                  size="sm"
+                  className="rounded-full bg-amber-500 text-white shadow-[0_6px_18px_rgba(245,158,11,0.25)] hover:bg-amber-600 animate-pulse"
+                >
+                  <Link href={`/practice/pretest/${subject.id}`}>
+                    <Star size={13} strokeWidth={2.5} fill="currentColor" />
+                    Ambil Pretest Dulu
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
           <div className="relative mt-5 grid grid-cols-3 gap-3 sm:gap-4">
@@ -435,28 +451,63 @@ export function SubjectDetailView({
         </header>
       </Reveal>
 
-      <Reveal delay={80}>
-        <section>
-          <header className="mb-4 flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
-                Topik
-              </p>
-              <h2 className="mt-1 font-heading text-[20px] font-bold leading-tight text-foreground">
-                Skill tree
-              </h2>
+      {pretestCompleted ? (
+        <Reveal delay={80}>
+          <section>
+            <header className="mb-4 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                  Topik
+                </p>
+                <h2 className="mt-1 font-heading text-[20px] font-bold leading-tight text-foreground">
+                  Skill tree
+                </h2>
+              </div>
+              <span className="text-[10.5px] font-semibold text-muted-foreground">
+                Tap topik buat liat konstelasi konsep
+              </span>
+            </header>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {topics.map((t) => (
+                <TopicCard key={t.id} topic={t} subjectColor={subject.color} />
+              ))}
             </div>
-            <span className="text-[10.5px] font-semibold text-muted-foreground">
-              Tap topik buat liat konstelasi konsep
-            </span>
-          </header>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {topics.map((t) => (
-              <TopicCard key={t.id} topic={t} subjectColor={subject.color} />
-            ))}
+          </section>
+        </Reveal>
+      ) : (
+        <Reveal delay={80}>
+          <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-amber-500/5 p-6 text-center shadow-md sm:p-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-10 blur-3xl"
+              style={{
+                background: "radial-gradient(circle, #f59e0b, transparent 70%)",
+              }}
+            />
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 mb-4 animate-pulse">
+              <Lock size={26} strokeWidth={2.5} />
+            </div>
+            <h3 className="font-heading text-[18px] font-bold text-foreground">
+              Materi & Latihan Terkunci 🔒
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-muted-foreground">
+              Ukur tingkat pemahaman awal kamu terlebih dahulu agar Spark AI
+              dapat menyesuaikan materi belajar serta tingkat kesulitan soal
+              latihan adaptif untukmu!
+            </p>
+            <div className="mt-5">
+              <Button
+                asChild
+                className="rounded-full bg-amber-500 text-white hover:bg-amber-600 shadow-[0_8px_20px_rgba(245,158,11,0.3)] font-bold px-6 py-5 text-sm"
+              >
+                <Link href={`/practice/pretest/${subject.id}`}>
+                  Mulai Pretest Sekarang 🚀
+                </Link>
+              </Button>
+            </div>
           </div>
-        </section>
-      </Reveal>
+        </Reveal>
+      )}
     </div>
   );
 }

@@ -1,10 +1,11 @@
-import { Heart, Lightbulb, Sparkles, Users } from "lucide-react";
+import { Heart, Sparkles, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AlertsSection } from "@/components/parent/alerts-section";
 import { MetricsOverview } from "@/components/parent/metrics-overview";
+import { ParentAiRecommendation } from "@/components/parent/ParentAiRecommendation";
 import { SubjectProgress } from "@/components/parent/subject-progress";
 import { WeeklyTimeline } from "@/components/parent/weekly-timeline";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,6 @@ export default async function ParentDashboardPage({
     timeline,
     alerts = [],
     strugglingConcepts = [],
-    aiRecommendation,
   } = result;
 
   // Onboarding state if no child is linked
@@ -283,51 +283,13 @@ export default async function ParentDashboardPage({
         </section>
       </div>
 
-      {/* ── AI SPARK RECOMMENDATION ── */}
-      {aiRecommendation && (
-        <Suspense fallback={null}>
-          <section className="relative overflow-hidden rounded-3xl border border-[var(--blue)]/20 bg-gradient-to-br from-[var(--blue)]/5 via-transparent to-[var(--teal)]/5 p-6 shadow-md backdrop-blur-xl sm:p-8">
-            <div className="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 opacity-10">
-              <Sparkles
-                size={260}
-                className="text-[var(--blue)] animate-pulse"
-              />
-            </div>
-
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start relative">
-              <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[var(--blue)] to-[var(--teal)] text-white shadow-[0_6px_20px_rgba(20,184,166,0.18)]">
-                <Lightbulb size={22} className="animate-bounce" />
-              </div>
-
-              <div className="space-y-3 min-w-0">
-                <div>
-                  <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-[var(--blue)]">
-                    Rekomendasi AI Spark
-                  </span>
-                  <h2 className="font-heading text-[18px] font-extrabold leading-tight text-foreground sm:text-[20px] mt-0.5">
-                    Tips Dukungan Orang Tua
-                  </h2>
-                </div>
-                <div
-                  className="text-[13.5px] leading-relaxed text-muted-foreground space-y-3.5 pt-1
-                    [&>p]:leading-relaxed [&>ul]:space-y-2 [&>ul]:pl-5 [&>ul]:list-disc
-                    [&_strong]:text-foreground [&_strong]:font-bold"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: AI recommendation text contains safe formatted HTML
-                  dangerouslySetInnerHTML={{
-                    __html: aiRecommendation
-                      .replace(/\n\n/g, "<br/><br/>")
-                      .replace(/\n/g, "<br/>")
-                      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                      .replace(/•\s*(.*?)(<br\/>|$)/g, "<li>$1</li>")
-                      .replace(/(<li>.*?<\/li>)/g, "<ul>$1</ul>")
-                      .replace(/<\/ul>\s*<ul>/g, ""),
-                  }}
-                />
-              </div>
-            </div>
-          </section>
-        </Suspense>
-      )}
+      {/* ── AI SPARK RECOMMENDATION (Asynchronous & Non-blocking) ── */}
+      <Suspense fallback={null}>
+        <ParentAiRecommendation
+          studentId={activeChild.id}
+          studentName={activeChild.name ?? "Anak"}
+        />
+      </Suspense>
     </div>
   );
 }

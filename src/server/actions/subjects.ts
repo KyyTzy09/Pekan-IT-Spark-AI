@@ -1,11 +1,16 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
-import { addXp, checkAndUnlockBadges } from "@/server/actions/gamification";
+import {
+  addXp,
+  checkAndUnlockBadges,
+  recordActivity,
+} from "@/server/actions/gamification";
 import {
   type CurriculumOutline,
   generateCurriculumOutline,
@@ -18,6 +23,7 @@ import {
 } from "@/server/learning/adaptive";
 import type {
   BloomTaxonomy,
+  ConceptStatus,
   Difficulty,
   QuestionType,
   SubjectSlug,
@@ -140,109 +146,180 @@ export async function addCustomSubject(
     }
   }
 
-  const subject = await prisma.$transaction(async (tx) => {
-    const subjectRecord = await tx.subject.create({
-      data: {
-        slug: uniqueSlug as SubjectSlug,
-        name: parsed.data.name,
-        description: outline.description,
-        icon: outline.icon,
-        color: outline.color,
-        order: 100,
-        isCustom: true,
-        source: "AI_GENERATED",
-        createdById: userId,
-        isVerified: false,
-      },
+  const subjectId = randomUUID();
+  const topicsData: any[] = [];
+  const conceptsData: any[] = [];
+  const questionsData: any[] = [];
+
+  for (let tIdx = 0; tIdx < outline.topics.length; tIdx++) {
+    const t = outline.topics[tIdx];
+    const topicId = randomUUID();
+    const topicSlug = `${slugify(t.name)}-${tIdx}`;
+
+    topicsData.push({
+      id: topicId,
+      subjectId,
+      name: t.name,
+      description: t.description || null,
+      slug: topicSlug,
+      order: tIdx,
+      isCustom: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    for (let tIdx = 0; tIdx < outline.topics.length; tIdx++) {
-      const t = outline.topics[tIdx];
-      const topicSlug = `${slugify(t.name)}-${tIdx}`;
-      const topicRecord = await tx.topic.create({
-        data: {
-          subjectId: subjectRecord.id,
-          name: t.name,
-          description: t.description,
-          slug: topicSlug,
-          order: tIdx,
-          isCustom: true,
-        },
+    for (let cIdx = 0; cIdx < t.concepts.length; cIdx++) {
+      const c = t.concepts[cIdx];
+      const details = conceptDetailsMap.get(c.name.toLowerCase().trim());
+      const contentMd =
+        details?.contentMd || `${c.description}. Selamat belajar!`;
+      const conceptSlug = `${slugify(c.name)}-${cIdx}`;
+      const conceptId = randomUUID();
+
+      conceptsData.push({
+        id: conceptId,
+        topicId,
+        name: c.name,
+        description: c.description || null,
+        slug: conceptSlug,
+        order: cIdx,
+        contentMd,
+        isCustom: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
-      for (let cIdx = 0; cIdx < t.concepts.length; cIdx++) {
-        const c = t.concepts[cIdx];
-        const details = conceptDetailsMap.get(c.name.toLowerCase().trim());
-        const contentMd =
-          details?.contentMd || `${c.description}. Selamat belajar!`;
-        const conceptSlug = `${slugify(c.name)}-${cIdx}`;
-
-        const conceptRecord = await tx.concept.create({
-          data: {
-            topicId: topicRecord.id,
-            name: c.name,
-            description: c.description,
-            slug: conceptSlug,
-            order: cIdx,
-            contentMd,
-            isCustom: true,
-          },
-        });
-
-        // Insert practice questions for this concept
-        if (details && details.questions.length > 0) {
-          for (const q of details.questions) {
-            await tx.question.create({
-              data: {
-                conceptId: conceptRecord.id,
-                type: "MULTIPLE_CHOICE" as QuestionType,
-                difficulty: q.difficulty as Difficulty,
-                bloomTaxonomy: "UNDERSTAND" as BloomTaxonomy,
-                questionText: q.questionText,
-                options: q.options,
-                correctAnswer: q.correctAnswer,
-                explanation: q.explanation,
-                hint: q.hint || null,
-                commonMisconceptions: null,
-                tags: ["practice", "ai-generated"],
-                isActive: true,
-              },
-            });
-          }
+      if (details && details.questions.length > 0) {
+        for (const q of details.questions) {
+          questionsData.push({
+            id: randomUUID(),
+            conceptId,
+            type: "MULTIPLE_CHOICE" as QuestionType,
+            difficulty: q.difficulty as Difficulty,
+            bloomTaxonomy: "UNDERSTAND" as BloomTaxonomy,
+            questionText: q.questionText,
+            options: q.options || null,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation || null,
+            hint: q.hint || null,
+            commonMisconceptions: null,
+            tags: ["practice", "ai-generated"],
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         }
       }
     }
+  }
 
-    for (let qIdx = 0; qIdx < outline.pretestQuestions.length; qIdx++) {
-      const q = outline.pretestQuestions[qIdx];
-      const topicRecord = await tx.topic.findFirst({
-        where: {
-          subjectId: subjectRecord.id,
-          order: q.topicIndex,
-        },
-        select: { id: true, concepts: { take: 1, select: { id: true } } },
-      });
-      if (!topicRecord?.concepts[0]) continue;
-      await tx.question.create({
+  for (let qIdx = 0; qIdx < outline.pretestQuestions.length; qIdx++) {
+    const q = outline.pretestQuestions[qIdx];
+    const matchingTopic = topicsData.find((t) => t.order === q.topicIndex);
+    if (!matchingTopic) continue;
+
+    const firstConcept = conceptsData.find(
+      (c) => c.topicId === matchingTopic.id,
+    );
+    if (!firstConcept) continue;
+
+    questionsData.push({
+      id: randomUUID(),
+      conceptId: firstConcept.id,
+      type: "MULTIPLE_CHOICE" as QuestionType,
+      difficulty: q.difficulty as Difficulty,
+      bloomTaxonomy: "UNDERSTAND" as BloomTaxonomy,
+      questionText: q.questionText,
+      options: q.options || null,
+      correctAnswer: q.correctAnswer,
+      explanation: q.explanation || null,
+      hint: null,
+      commonMisconceptions: null,
+      tags: ["pretest", "ai-generated"],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  const subject = await prisma.$transaction(
+    async (tx) => {
+      const subjectRecord = await tx.subject.create({
         data: {
-          conceptId: topicRecord.concepts[0].id,
-          type: "MULTIPLE_CHOICE" as QuestionType,
-          difficulty: q.difficulty as Difficulty,
-          bloomTaxonomy: "UNDERSTAND" as BloomTaxonomy,
-          questionText: q.questionText,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-          hint: null,
-          commonMisconceptions: null,
-          tags: ["pretest", "ai-generated"],
-          isActive: true,
+          id: subjectId,
+          slug: uniqueSlug as SubjectSlug,
+          name: parsed.data.name,
+          description: outline.description || null,
+          icon: outline.icon || null,
+          color: outline.color || null,
+          order: 100,
+          isCustom: true,
+          source: "AI_GENERATED",
+          createdById: userId,
+          isVerified: false,
         },
       });
-    }
 
-    return subjectRecord;
+      if (topicsData.length > 0) {
+        await tx.topic.createMany({
+          data: topicsData,
+        });
+      }
+
+      if (conceptsData.length > 0) {
+        await tx.concept.createMany({
+          data: conceptsData,
+        });
+      }
+
+      if (questionsData.length > 0) {
+        await tx.question.createMany({
+          data: questionsData,
+        });
+      }
+
+      return subjectRecord;
+    },
+    {
+      timeout: 30000,
+    },
+  );
+
+  // Generate RAG embeddings for all concepts of this custom subject
+  const concepts = await prisma.concept.findMany({
+    where: { topic: { subjectId: subject.id } },
+    select: { id: true, name: true, description: true, contentMd: true },
   });
+
+  if (concepts.length > 0) {
+    try {
+      const { embedMany, embeddingModel } = await import("@/lib/ai");
+      const embedTexts = concepts.map(
+        (c) =>
+          `Konsep: ${c.name}. Deskripsi: ${c.description || ""}. Materi: ${c.contentMd || ""}`,
+      );
+      const { embeddings } = await embedMany({
+        model: embeddingModel,
+        values: embedTexts,
+      });
+
+      await prisma.conceptEmbedding.createMany({
+        data: concepts.map((c, idx) => ({
+          conceptId: c.id,
+          embedding: JSON.stringify(embeddings[idx] || []),
+        })),
+        skipDuplicates: true,
+      });
+      console.log(
+        `[addCustomSubject] Generated embeddings for ${concepts.length} concepts.`,
+      );
+    } catch (err) {
+      console.error(
+        "[addCustomSubject] Failed to generate concept embeddings for RAG:",
+        err,
+      );
+    }
+  }
 
   revalidatePath("/subjects");
   revalidatePath("/dashboard");
@@ -467,4 +544,54 @@ async function generateUniqueSlug(base: string): Promise<string> {
     if (!exists) return candidate;
   }
   return `${cleaned}-${Date.now().toString(36).slice(-6)}`;
+}
+
+export async function markConceptAsRead(
+  conceptId: string,
+): Promise<{ ok: boolean; newStatus: ConceptStatus; earnedXp: number }> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
+  const userId = session.user.id;
+
+  const concept = await prisma.concept.findUnique({
+    where: { id: conceptId },
+    select: { id: true },
+  });
+  if (!concept) throw new Error("Concept not found");
+
+  const existingProfile = await prisma.studentKnowledgeProfile.findUnique({
+    where: { userId_conceptId: { userId, conceptId } },
+  });
+
+  const prevStatus: ConceptStatus = existingProfile?.status ?? "NOT_STARTED";
+
+  if (prevStatus === "NOT_STARTED") {
+    await prisma.studentKnowledgeProfile.upsert({
+      where: { userId_conceptId: { userId, conceptId } },
+      create: {
+        userId,
+        conceptId,
+        masteryScore: 0.1,
+        status: "LEARNING",
+      },
+      update: {
+        status: "LEARNING",
+        masteryScore: 0.1,
+      },
+    });
+
+    await addXp(userId, 5, "CHAT_SESSION", {
+      conceptId,
+      source: "CONCEPT_READ",
+    }).catch(console.error);
+
+    await recordActivity(userId).catch(console.error);
+
+    revalidatePath("/dashboard");
+    revalidatePath("/subjects");
+
+    return { ok: true, newStatus: "LEARNING", earnedXp: 5 };
+  }
+
+  return { ok: true, newStatus: prevStatus, earnedXp: 0 };
 }
