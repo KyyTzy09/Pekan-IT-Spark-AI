@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  BookOpen,
+  Clock,
   Heart,
   LayoutDashboard,
   LogOut,
@@ -24,19 +26,22 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/parent", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/parent/history", label: "Riwayat", icon: Clock },
+  { href: "/parent/guide", label: "Panduan", icon: BookOpen },
   { href: "/parent/link", label: "Hubungkan Anak", icon: UserPlus },
 ];
 
-export function ParentSidebar() {
-  const pathname = usePathname();
-  const { data: session } = useSession();
-  const [mobileOpen, setMobileOpen] = React.useState(false);
-
-  const user = session?.user;
-
-  const SidebarContent = () => (
+function SidebarContent({
+  pathname,
+  user,
+  onClose,
+}: {
+  pathname: string;
+  user: { name?: string | null; email?: string | null };
+  onClose: () => void;
+}) {
+  return (
     <div className="flex h-full w-full flex-col bg-card/60 border-r border-border/40 backdrop-blur-xl p-6">
-      {/* Brand Logo */}
       <div className="flex items-center gap-3 mb-8">
         <span className="grid size-10 place-items-center rounded-2xl bg-gradient-to-br from-[var(--blue)] to-[var(--teal)] text-white shadow-[0_8px_20px_rgba(14,165,233,0.25)]">
           <Sparkles size={18} strokeWidth={2.5} />
@@ -51,7 +56,6 @@ export function ParentSidebar() {
         </div>
       </div>
 
-      {/* Navigation Links */}
       <nav className="flex-1 space-y-1.5">
         <p className="text-[9.5px] font-extrabold uppercase tracking-widest text-muted-foreground mb-3 px-3">
           Menu Utama
@@ -63,7 +67,7 @@ export function ParentSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => setMobileOpen(false)}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 rounded-2xl px-4.5 py-3 text-[13.5px] font-bold transition-all duration-300 group",
                 active
@@ -90,7 +94,6 @@ export function ParentSidebar() {
         })}
       </nav>
 
-      {/* Supportive Kid-friendly Quote Box */}
       <div className="mb-6 rounded-2xl border border-[color-mix(in_oklch,var(--teal)_20%,transparent)] bg-[color-mix(in_oklch,var(--teal)_6%,transparent)] p-4">
         <div className="flex items-center gap-2 text-[var(--teal)] mb-1">
           <Heart size={14} fill="currentColor" />
@@ -104,23 +107,20 @@ export function ParentSidebar() {
         </p>
       </div>
 
-      {/* User Info & Logout */}
       <div className="border-t border-border/40 pt-4 flex flex-col gap-3">
-        {user && (
-          <div className="flex items-center gap-3 px-2">
-            <span className="grid size-9 place-items-center rounded-xl bg-muted text-muted-foreground font-bold text-[14px]">
-              {user.name ? user.name[0].toUpperCase() : <Smile size={16} />}
-            </span>
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-[13px] font-bold text-foreground">
-                {user.name || "Orang Tua"}
-              </p>
-              <p className="truncate text-[10.5px] text-muted-foreground">
-                {user.email || "parent@sparkai.com"}
-              </p>
-            </div>
+        <div className="flex items-center gap-3 px-2">
+          <span className="grid size-9 place-items-center rounded-xl bg-muted text-muted-foreground font-bold text-[14px]">
+            {user.name ? user.name[0].toUpperCase() : <Smile size={16} />}
+          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-[13px] font-bold text-foreground">
+              {user.name || "Orang Tua"}
+            </p>
+            <p className="truncate text-[10.5px] text-muted-foreground">
+              {user.email || "parent@sparkai.com"}
+            </p>
           </div>
-        )}
+        </div>
         <Button
           variant="ghost"
           onClick={() => signOut({ callbackUrl: "/auth/login" })}
@@ -132,12 +132,20 @@ export function ParentSidebar() {
       </div>
     </div>
   );
+}
+
+export function ParentSidebar() {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const user = session?.user ?? { name: null, email: null };
 
   return (
     <>
       {/* Desktop Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 md:flex lg:w-72">
-        <SidebarContent />
+        <SidebarContent pathname={pathname} user={user} onClose={() => {}} />
       </aside>
 
       {/* Mobile Top Navigation Header */}
@@ -163,7 +171,7 @@ export function ParentSidebar() {
             showCloseButton={false}
           >
             <SheetTitle className="sr-only">Parent Navigation Menu</SheetTitle>
-            <SidebarContent />
+            <SidebarContent pathname={pathname} user={user} onClose={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
       </header>

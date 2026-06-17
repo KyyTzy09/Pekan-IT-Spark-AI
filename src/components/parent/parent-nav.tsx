@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Sparkles, X } from "lucide-react";
+import { BookOpen, Clock, LayoutDashboard, LogOut, Menu, Sparkles, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -13,8 +13,10 @@ export function ParentNav() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const navItems = [
-    { href: "/parent", label: "Dashboard" },
-    { href: "/parent/link", label: "Hubungkan Anak" },
+    { href: "/parent", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/parent/history", label: "Riwayat", icon: Clock },
+    { href: "/parent/guide", label: "Panduan", icon: BookOpen },
+    { href: "/parent/link", label: "Hubungkan Anak", icon: UserPlus },
   ];
 
   return (
@@ -39,18 +41,20 @@ export function ParentNav() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1.5">
             {navItems.map((item) => {
+              const Icon = item.icon;
               const active = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "relative rounded-xl px-4 py-2 text-[13px] font-bold transition-all duration-200",
+                    "relative flex items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-bold transition-all duration-200",
                     active
                       ? "text-[var(--blue)] bg-[var(--blue)]/8"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
+                  <Icon size={14} strokeWidth={2.5} />
                   {item.label}
                 </Link>
               );
