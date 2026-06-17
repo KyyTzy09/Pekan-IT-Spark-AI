@@ -4,7 +4,38 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { getAvatarCustomizationAction } from "@/server/actions/gamification";
 
-export function SparkCharacter({
+// Global in-memory cache for current user's avatar to avoid repeated server calls
+// across multiple SparkCharacter instances on the same page.
+let avatarCache: {
+  color: string;
+  accessory: string | null;
+  background: string | null;
+} | null = null;
+let avatarCachePromise: Promise<{
+  color: string;
+  accessory: string | null;
+  background: string | null;
+} | null> | null = null;
+
+function getCachedAvatar() {
+  if (avatarCache) return Promise.resolve(avatarCache);
+  if (avatarCachePromise) return avatarCachePromise;
+
+  avatarCachePromise = getAvatarCustomizationAction().then((res) => {
+    if (res.ok && res.avatar) {
+      avatarCache = {
+        color: res.avatar.color,
+        accessory: res.avatar.accessory,
+        background: res.avatar.background,
+      };
+      return avatarCache;
+    }
+    return null;
+  });
+  return avatarCachePromise;
+}
+
+export const SparkCharacter = React.memo(function SparkCharacter({
   size = "md",
   className,
   color: propColor,
@@ -21,7 +52,7 @@ export function SparkCharacter({
     color: string;
     accessory: string | null;
     background: string | null;
-  } | null>(null);
+  } | null>(avatarCache);
 
   React.useEffect(() => {
     // Auto-fetch if customization is not explicitly supplied as props
@@ -30,14 +61,8 @@ export function SparkCharacter({
       propAccessory === undefined &&
       propBackground === undefined
     ) {
-      getAvatarCustomizationAction().then((res) => {
-        if (res.ok && res.avatar) {
-          setDbCustom({
-            color: res.avatar.color,
-            accessory: res.avatar.accessory,
-            background: res.avatar.background,
-          });
-        }
+      getCachedAvatar().then((avatar) => {
+        if (avatar) setDbCustom(avatar);
       });
     }
   }, [propColor, propAccessory, propBackground]);
@@ -232,4 +257,4 @@ export function SparkCharacter({
       />
     </div>
   );
-}
+});

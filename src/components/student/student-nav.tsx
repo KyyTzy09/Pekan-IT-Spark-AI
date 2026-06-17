@@ -22,9 +22,20 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import type { DashboardSummary } from "@/server/actions/dashboard";
+
+export type NavProfileData = {
+  name: string | null;
+  school: string | null;
+  grade: number | null;
+  levelName: string;
+  levelLevel: number;
+  totalXp: number;
+  xpToNext: number | null;
+  progress: number;
+  streak: number;
+};
 
 type NavItem = {
   href: string;
@@ -134,28 +145,6 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-// Profile Widget Skeleton Loader
-function ProfileWidgetSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/45 bg-card/40 p-3.5 animate-pulse">
-      <div className="flex items-center gap-3">
-        <div className="size-10 rounded-xl bg-muted" />
-        <div className="flex-1 space-y-2">
-          <div className="h-3.5 w-24 rounded bg-muted" />
-          <div className="h-3 w-16 rounded bg-muted" />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex justify-between">
-          <div className="h-2.5 w-12 rounded bg-muted" />
-          <div className="h-2.5 w-8 rounded bg-muted" />
-        </div>
-        <div className="h-1.5 w-full rounded-full bg-muted" />
-      </div>
-    </div>
-  );
-}
-
 // Profile Widget Fallback (Unauthenticated / Error)
 function ProfileWidgetFallback() {
   return (
@@ -176,39 +165,10 @@ function ProfileWidgetFallback() {
 }
 
 // Profile Widget
-function ProfileWidget() {
-  const [data, setData] = useState<DashboardSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
+function ProfileWidget({ data }: { data: NavProfileData | null }) {
+  if (!data) return <ProfileWidgetFallback />;
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/dashboard")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch dashboard");
-        return res.json();
-      })
-      .then((json) => {
-        if (active) {
-          setData(json);
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setIsError(true);
-          setIsLoading(false);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (isLoading) return <ProfileWidgetSkeleton />;
-  if (isError || !data) return <ProfileWidgetFallback />;
-
-  const name = data.student.name || "Siswa";
+  const name = data.name || "Siswa";
   const initials = name
     .split(" ")
     .map((n) => n[0])
@@ -216,8 +176,7 @@ function ProfileWidget() {
     .join("")
     .toUpperCase();
 
-  const levelInfo = data.level;
-  const streak = data.streak.current;
+  const streak = data.streak;
 
   return (
     <Link
@@ -249,13 +208,13 @@ function ProfileWidget() {
           </p>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="text-[10px] text-muted-foreground truncate">
-              {data.student.school || "Siswa Spark"}
+              {data.school || "Siswa Spark"}
             </span>
-            {data.student.grade && (
+            {data.grade && (
               <>
                 <span className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />
                 <span className="text-[10px] font-semibold text-muted-foreground shrink-0">
-                  Kelas {data.student.grade}
+                  Kelas {data.grade}
                 </span>
               </>
             )}
@@ -267,21 +226,21 @@ function ProfileWidget() {
         <div className="flex items-center justify-between text-[10px] font-semibold">
           <span className="text-[var(--coral)] flex items-center gap-1">
             <Sparkles size={10} className="animate-pulse" />
-            {levelInfo.name}
+            {data.levelName}
           </span>
-          <span className="text-muted-foreground">{levelInfo.totalXp} XP</span>
+          <span className="text-muted-foreground">{data.totalXp} XP</span>
         </div>
         <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[var(--coral)] to-[var(--orange)] transition-all duration-500"
-            style={{ width: `${levelInfo.progress}%` }}
+            style={{ width: `${data.progress}%` }}
           />
         </div>
         <div className="flex items-center justify-between text-[9px] font-medium text-muted-foreground">
-          <span>Lv. {levelInfo.level}</span>
-          {levelInfo.xpToNext ? (
+          <span>Lv. {data.levelLevel}</span>
+          {data.xpToNext ? (
             <span>
-              {levelInfo.xpToNext} XP ke Lv. {levelInfo.level + 1}
+              {data.xpToNext} XP ke Lv. {data.levelLevel + 1}
             </span>
           ) : (
             <span>Level Maksimal</span>
@@ -307,37 +266,47 @@ function ProfileWidget() {
   );
 }
 
-export function StudentNav({
+export const StudentNav = memo(function StudentNav({
   variant = "sidebar",
   className,
+  profileData = null,
 }: {
   variant?: "sidebar" | "bottom";
   className?: string;
+  profileData?: NavProfileData | null;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Flat list of navigation items for quick lookup
-  const flatItems = SECTIONS.flatMap((s) => s.items);
+  const flatItems = useMemo(() => SECTIONS.flatMap((s) => s.items), []);
 
   // Bottom Navigation has 4 primary buttons + 1 "Lainnya" button
-  const bottomNavItems = [
-    flatItems.find((item) => item.href === "/dashboard"),
-    flatItems.find((item) => item.href === "/chat"),
-    flatItems.find((item) => item.href === "/challenge"),
-    flatItems.find((item) => item.href === "/practice"),
-  ].filter(Boolean) as NavItem[];
+  const bottomNavItems = useMemo(
+    () =>
+      [
+        flatItems.find((item) => item.href === "/dashboard"),
+        flatItems.find((item) => item.href === "/chat"),
+        flatItems.find((item) => item.href === "/challenge"),
+        flatItems.find((item) => item.href === "/practice"),
+      ].filter(Boolean) as NavItem[],
+    [flatItems],
+  );
 
   // Drawer has secondary navigation items
-  const drawerItems = [
-    flatItems.find((item) => item.href === "/profile"),
-    flatItems.find((item) => item.href === "/leaderboard"),
-    flatItems.find((item) => item.href === "/subjects"),
-    flatItems.find((item) => item.href === "/materials"),
-    flatItems.find((item) => item.href === "/activity"),
-    flatItems.find((item) => item.href === "/upload"),
-    flatItems.find((item) => item.href === "/settings/invite"),
-  ].filter(Boolean) as NavItem[];
+  const drawerItems = useMemo(
+    () =>
+      [
+        flatItems.find((item) => item.href === "/profile"),
+        flatItems.find((item) => item.href === "/leaderboard"),
+        flatItems.find((item) => item.href === "/subjects"),
+        flatItems.find((item) => item.href === "/materials"),
+        flatItems.find((item) => item.href === "/activity"),
+        flatItems.find((item) => item.href === "/upload"),
+        flatItems.find((item) => item.href === "/settings/invite"),
+      ].filter(Boolean) as NavItem[],
+    [flatItems],
+  );
 
   const activeIndex = bottomNavItems.findIndex((item) => item.match(pathname));
   const isDrawerActive = drawerItems.some((item) => item.match(pathname));
@@ -492,7 +461,7 @@ export function StudentNav({
 
                 {/* Active user status inside the drawer */}
                 <div className="mb-5">
-                  <ProfileWidget />
+                  <ProfileWidget data={profileData} />
                 </div>
 
                 {/* Secondary navigation grid */}
@@ -579,7 +548,7 @@ export function StudentNav({
       </Link>
 
       {/* Reactive User Level Widget */}
-      <ProfileWidget />
+      <ProfileWidget data={profileData} />
 
       {/* Categorized Menu Sections */}
       <div className="flex-1 space-y-5 overflow-y-auto pr-1">
@@ -673,4 +642,4 @@ export function StudentNav({
       </button>
     </nav>
   );
-}
+});

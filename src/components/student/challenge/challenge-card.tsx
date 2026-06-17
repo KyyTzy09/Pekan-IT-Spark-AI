@@ -2,6 +2,7 @@
 
 import { BookOpen, ChevronRight, MessageCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
@@ -61,7 +62,11 @@ const STATUS_META: Record<
   },
 };
 
-export function ChallengeCard({ challenge }: { challenge: ChallengeListItem }) {
+export const ChallengeCard = memo(function ChallengeCard({
+  challenge,
+}: {
+  challenge: ChallengeListItem;
+}) {
   const meta = STATUS_META[challenge.status];
   const mix = challenge.mixConfig;
   const progressPct =
@@ -159,4 +164,4 @@ export function ChallengeCard({ challenge }: { challenge: ChallengeListItem }) {
       )}
     </Link>
   );
-}
+});

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { UploadView } from "@/components/student/upload-view";
+import { UploadPageClient } from "@/components/student/upload-page-client";
 import { auth } from "@/lib/auth";
 import { listDocuments } from "@/server/actions/documents";
 
@@ -17,5 +17,5 @@ export default async function UploadPage() {
   const result = await listDocuments();
   const initial = result.ok ? result.documents : [];
 
-  return <UploadView initialDocuments={initial} />;
+  return <UploadPageClient initialDocuments={initial} />;
 }

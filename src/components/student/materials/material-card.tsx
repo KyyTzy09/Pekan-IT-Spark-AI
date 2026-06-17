@@ -2,6 +2,7 @@
 
 import { BookOpen, CheckCircle2, ChevronRight, Clock } from "lucide-react";
 import Link from "next/link";
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
@@ -56,7 +57,11 @@ const SOURCE_LABEL: Record<MaterialSource, string> = {
   ADAPTIVE: "Adaptif",
 };
 
-export function MaterialCard({ material }: { material: MaterialLibraryItem }) {
+export const MaterialCard = memo(function MaterialCard({
+  material,
+}: {
+  material: MaterialLibraryItem;
+}) {
   const meta = DIFFICULTY_META[material.difficulty];
   const date = new Date(material.createdAt).toLocaleDateString("id-ID", {
     day: "numeric",
@@ -125,4 +130,4 @@ export function MaterialCard({ material }: { material: MaterialLibraryItem }) {
       </div>
     </Link>
   );
-}
+});
