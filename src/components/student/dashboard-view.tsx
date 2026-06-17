@@ -1,38 +1,20 @@
 import {
   ArrowRight,
   ArrowUpRight,
-  BarChart3,
   BookOpen,
   Brain,
-  Calendar,
-  CheckCircle2,
-  CircleDashed,
   Flame,
-  Lock,
   MessageCircle,
   Play,
-  Plus,
   Star,
-  Target,
   TrendingUp,
-  Wand2,
   Zap,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
-import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
-import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 import { SparkCharacter } from "@/components/student/spark-character";
-import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
 
-const SubjectMasteryChart = dynamic(
-  () =>
-    import("@/components/student/student-charts").then(
-      (m) => m.SubjectMasteryChart,
-    ),
-  { ssr: false },
-);
 const WeeklyActivityChart = dynamic(
   () =>
     import("@/components/student/weekly-activity-chart").then(
@@ -46,7 +28,6 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type {
   DashboardRecommendation,
-  DashboardSubjectProgress,
   DashboardSummary,
 } from "@/server/actions/dashboard";
 
@@ -127,15 +108,6 @@ export function DashboardView({
           recentDocuments={summary.recentDocuments}
         />
       </Reveal>
-
-      {/* Gamification widgets: Study Buddy and Mascot Customizer */}
-      <Reveal className="grid gap-4 sm:grid-cols-2">
-        <StudyBuddyWidget streak={summary.streak.current} />
-        <AvatarCustomizerWidget totalXp={summary.level.totalXp} />
-      </Reveal>
-
-      <QuickActions />
-      <SubjectsProgress subjects={summary.subjects} />
     </div>
   );
 }
@@ -610,316 +582,6 @@ function ContinueLearningCard({
   );
 }
 
-function QuickActions() {
-  const actions = [
-    {
-      href: "/chat",
-      title: "Tanya Spark",
-      desc: "Chat Socratic, sabar & suportif",
-      icon: MessageCircle,
-      accent: "from-[var(--coral)] to-[var(--orange)]",
-    },
-    {
-      href: "/practice",
-      title: "Latihan Hari Ini",
-      desc: "Soal adaptif sesuai level",
-      icon: Target,
-      accent: "from-[var(--purple)] to-[var(--pink)]",
-    },
-    {
-      href: "/subjects",
-      title: "Lanjutkan Topik",
-      desc: "Skill tree & konstelasi",
-      icon: BookOpen,
-      accent: "from-[var(--teal)] to-[var(--green)]",
-    },
-    {
-      href: "/upload",
-      title: "Upload Materi",
-      desc: "PDF/DOCX dari guru",
-      icon: Calendar,
-      accent: "from-[var(--yellow)] to-[var(--orange)]",
-    },
-  ];
-  return (
-    <Reveal delay={140} className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-      {actions.map((a) => {
-        const Icon = a.icon;
-        return (
-          <Link
-            key={a.href}
-            href={a.href}
-            className="group/qa relative overflow-hidden rounded-2xl border border-border/40 bg-card/80 p-4 shadow-[0_6px_18px_rgba(80,20,50,0.05)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(80,20,50,0.12)]"
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-8 -top-8 size-24 rounded-full opacity-20 blur-2xl transition-opacity group-hover/qa:opacity-40"
-              style={{
-                background: `linear-gradient(135deg, var(--coral), var(--purple))`,
-              }}
-            />
-            <div className="relative flex items-start gap-3">
-              <span
-                className={cn(
-                  "grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_6px_14px_rgba(0,0,0,0.1)] transition-transform group-hover/qa:-translate-y-0.5",
-                  a.accent,
-                )}
-              >
-                <Icon size={17} strokeWidth={2.5} />
-              </span>
-              <div className="min-w-0">
-                <p className="font-heading text-[13.5px] font-bold text-foreground">
-                  {a.title}
-                </p>
-                <p className="mt-0.5 text-[10.5px] leading-snug text-muted-foreground">
-                  {a.desc}
-                </p>
-              </div>
-            </div>
-          </Link>
-        );
-      })}
-    </Reveal>
-  );
-}
 
-function SubjectsProgress({
-  subjects,
-}: {
-  subjects: DashboardSubjectProgress[];
-}) {
-  if (subjects.length === 0) {
-    return (
-      <Reveal>
-        <section className="rounded-3xl border border-dashed border-border/60 bg-card/40 p-6 text-center sm:p-8">
-          <span className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-[var(--purple)] to-[var(--pink)] text-white">
-            <BookOpen size={20} strokeWidth={2.5} />
-          </span>
-          <h2 className="font-heading text-[18px] font-bold text-foreground">
-            Belum ada mata pelajaran fokus
-          </h2>
-          <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-relaxed text-muted-foreground">
-            Pilih minimal 1 mapel biar Spark bisa nyiapin soal, chat, dan
-            rekomendasi yang sesuai buat kamu.
-          </p>
-          <Button
-            asChild
-            size="sm"
-            className="mt-4 rounded-full bg-[var(--coral)] text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)]"
-          >
-            <Link href="/subjects">
-              Pilih mata pelajaran
-              <ArrowRight size={13} strokeWidth={2.5} />
-            </Link>
-          </Button>
-        </section>
-      </Reveal>
-    );
-  }
 
-  return (
-    <Reveal delay={180}>
-      <section>
-        <header className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
-              Progress per mapel
-            </p>
-            <h2 className="mt-1 font-heading text-[20px] font-bold leading-tight tracking-tight text-foreground sm:text-[22px]">
-              Konstelasi pengetahuan kamu
-            </h2>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <AddSubjectDialog
-              trigger={
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--coral)]/8 px-3 py-1.5 text-[11.5px] font-bold text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.2)] transition-all hover:-translate-y-0.5 hover:bg-[var(--coral)]/12"
-                >
-                  <Wand2 size={11} strokeWidth={2.5} />
-                  Tambah mapel
-                </button>
-              }
-            />
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="rounded-full text-[12.5px] font-semibold"
-            >
-              <Link href="/subjects">
-                Lihat semua
-                <ArrowRight size={13} />
-              </Link>
-            </Button>
-          </div>
-        </header>
 
-        {/* Subject Mastery Bar Chart — only show when 2+ subjects */}
-        {subjects.length >= 2 && (
-          <div className="mb-5 overflow-hidden rounded-2xl border border-border/30 bg-background/30 p-4 backdrop-blur-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--purple)]/15 to-[var(--pink)]/15 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]">
-                <BarChart3
-                  size={13}
-                  className="text-[var(--purple)]"
-                  strokeWidth={2.5}
-                />
-              </span>
-              <p className="text-[11px] font-bold text-muted-foreground">
-                Perbandingan penguasaan per mapel
-              </p>
-            </div>
-            <SubjectMasteryChart
-              subjects={subjects.map((s) => ({
-                id: s.id,
-                name: s.name,
-                masteryPct: s.masteryPct,
-                color: s.color,
-                masteredConcepts: s.masteredConcepts,
-                totalConcepts: s.totalConcepts,
-              }))}
-            />
-          </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {subjects.map((s) => (
-            <SubjectProgressCard key={s.id} subject={s} />
-          ))}
-          <AddSubjectTile />
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-function AddSubjectTile() {
-  return (
-    <AddSubjectDialog
-      trigger={
-        <button
-          type="button"
-          className="group/asb relative flex min-h-[148px] flex-col items-start justify-between gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-border/50 bg-background/40 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--coral)]/40 hover:bg-[var(--coral)]/4 hover:shadow-[0_12px_28px_rgba(225,29,72,0.1)]"
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-10 -top-10 size-28 rounded-full opacity-30 blur-3xl transition-opacity group-hover/asb:opacity-60"
-            style={{
-              background:
-                "radial-gradient(circle, oklch(0.78 0.18 25 / 0.4), transparent 70%)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-10 -left-10 size-24 rounded-full opacity-25 blur-3xl transition-opacity group-hover/asb:opacity-50"
-            style={{
-              background:
-                "radial-gradient(circle, oklch(0.7 0.15 280 / 0.4), transparent 70%)",
-            }}
-          />
-          <span className="relative grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_8px_18px_rgba(225,29,72,0.35)]">
-            <Wand2 size={18} strokeWidth={2.5} />
-          </span>
-          <div className="relative flex-1">
-            <p className="font-heading text-[15px] font-bold leading-tight text-foreground">
-              Mau belajar mapel lain?
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-              Spark AI bisa bikin outline + soal pretest sesuai mapel yang kamu
-              mau.
-            </p>
-          </div>
-          <div className="relative inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--coral)]">
-            <Plus size={11} strokeWidth={2.8} />
-            Tambah mapel custom
-          </div>
-        </button>
-      }
-    />
-  );
-}
-
-function SubjectProgressCard({
-  subject,
-}: {
-  subject: DashboardSubjectProgress;
-}) {
-  return (
-    <Link
-      href={`/subjects/${subject.slug.toLowerCase()}`}
-      className="group/sub relative overflow-hidden rounded-2xl border border-border/40 bg-card/80 p-4 shadow-[0_6px_18px_rgba(80,20,50,0.05)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(80,20,50,0.12)] sm:p-5"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-12 -top-12 size-32 rounded-full opacity-25 blur-3xl transition-opacity group-hover/sub:opacity-50"
-        style={{
-          background: subject.color
-            ? `linear-gradient(135deg, ${subject.color}, transparent)`
-            : "linear-gradient(135deg, var(--coral), transparent)",
-        }}
-      />
-      <div className="relative flex items-start gap-3">
-        <span
-          className="grid size-11 shrink-0 place-items-center rounded-2xl text-white shadow-[0_6px_14px_rgba(0,0,0,0.1)]"
-          style={{
-            background: subject.color
-              ? `linear-gradient(135deg, ${subject.color}, oklch(0.65 0.15 60))`
-              : "linear-gradient(135deg, var(--coral), var(--orange))",
-          }}
-        >
-          <span className="text-[18px]">{subject.icon ?? "📚"}</span>
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-heading text-[15px] font-bold text-foreground">
-              {subject.name}
-            </h3>
-            <span className="font-heading text-[14px] font-bold tabular-nums text-foreground">
-              {subject.masteryPct}%
-            </span>
-          </div>
-          <p className="text-[10.5px] font-semibold text-muted-foreground">
-            {subject.masteredConcepts} dikuasai · {subject.learningConcepts}{" "}
-            proses · {subject.strugglingConcepts} struggle
-          </p>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-muted/80">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${subject.masteryPct}%`,
-                background: subject.color
-                  ? `linear-gradient(90deg, ${subject.color}, oklch(0.7 0.15 60))`
-                  : "linear-gradient(90deg, var(--coral), var(--orange))",
-              }}
-            />
-          </div>
-          <div className="mt-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-              <CircleDashed size={10} />
-              {subject.notStartedConcepts +
-                subject.learningConcepts +
-                subject.masteredConcepts +
-                subject.strugglingConcepts}{" "}
-              konsep
-            </div>
-            <div className="flex items-center gap-1.5">
-              {subject.strugglingConcepts > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--coral)]/8 px-1.5 py-0.5 text-[9.5px] font-bold text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
-                  <Lock size={9} />
-                  {subject.strugglingConcepts} butuh bantuan
-                </span>
-              )}
-              {subject.masteredConcepts > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--teal)]/8 px-1.5 py-0.5 text-[9.5px] font-bold text-[var(--teal)] shadow-[inset_0_0_0_1px_rgba(20,184,166,0.2)]">
-                  <CheckCircle2 size={9} />
-                  {subject.masteredConcepts} ⭐
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}

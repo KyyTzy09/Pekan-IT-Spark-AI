@@ -1,180 +1,13 @@
 "use client";
 
-import katex from "katex";
-import { useMemo } from "react";
+import type { ComponentProps } from "react";
+import Markdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import { cn } from "@/lib/utils";
-import {
-  detectMathRegions,
-  isLikelyTableLine,
-} from "@/server/documents/content-check";
 
-type Segment =
-  | { kind: "text"; value: string }
-  | { kind: "math"; latex: string; display: boolean };
-
-function splitTextWithMath(text: string): Segment[] {
-  const regions = detectMathRegions(text);
-  if (regions.length === 0) return [{ kind: "text", value: text }];
-  const out: Segment[] = [];
-  let cursor = 0;
-  for (const r of regions) {
-    if (r.start > cursor) {
-      out.push({ kind: "text", value: text.slice(cursor, r.start) });
-    }
-    out.push({ kind: "math", latex: r.latex, display: r.display });
-    cursor = r.end;
-  }
-  if (cursor < text.length) {
-    out.push({ kind: "text", value: text.slice(cursor) });
-  }
-  return out;
-}
-
-function renderMath(latex: string, display: boolean): string {
-  try {
-    return katex.renderToString(latex, {
-      throwOnError: false,
-      displayMode: display,
-      strict: "ignore",
-      output: "html",
-    });
-  } catch {
-    return latex;
-  }
-}
-
-function isTableLine(line: string): boolean {
-  return isLikelyTableLine(line);
-}
-
-type Block =
-  | { kind: "p"; text: string }
-  | { kind: "h"; level: 2 | 3; text: string }
-  | { kind: "table"; rows: string[][] }
-  | { kind: "code"; text: string };
-
-function parseBlocks(text: string): Block[] {
-  const lines = text.split(/\n/);
-  const out: Block[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i] ?? "";
-    if (isTableLine(line)) {
-      const next = lines[i + 1] ?? "";
-      const sep = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(next.trim());
-      if (sep) {
-        const rows: string[][] = [];
-        rows.push(parseTableRow(line));
-        rows.push(parseTableRow(next));
-        i += 2;
-        while (i < lines.length && isTableLine(lines[i] ?? "")) {
-          rows.push(parseTableRow(lines[i] ?? ""));
-          i++;
-        }
-        out.push({ kind: "table", rows });
-        continue;
-      }
-    }
-    if (/^###\s+/.test(line)) {
-      out.push({ kind: "h", level: 3, text: line.replace(/^###\s+/, "") });
-    } else if (/^##\s+/.test(line)) {
-      out.push({ kind: "h", level: 2, text: line.replace(/^##\s+/, "") });
-    } else if (line.trim() === "") {
-      // skip
-    } else {
-      out.push({ kind: "p", text: line });
-    }
-    i++;
-  }
-  return out;
-}
-
-function parseTableRow(line: string): string[] {
-  return line
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split(/\s*\|\s*/)
-    .map((c) => c.trim());
-}
-
-function MathInline({ latex }: { latex: string }) {
-  const html = useMemo(() => renderMath(latex, false), [latex]);
-  return (
-    <span
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: katex output is sanitized
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-}
-
-function MathBlock({ latex }: { latex: string }) {
-  const html = useMemo(() => renderMath(latex, true), [latex]);
-  return (
-    <div
-      className="my-2 overflow-x-auto text-center"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: katex output is sanitized
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-}
-
-function InlineLine({ text }: { text: string }) {
-  const segments = useMemo(() => splitTextWithMath(text), [text]);
-  return (
-    <>
-      {segments.map((seg, idx) => {
-        if (seg.kind === "text") return <span key={idx}>{seg.value}</span>;
-        if (seg.display) {
-          return (
-            <span key={idx} className="block">
-              <MathBlock latex={seg.latex} />
-            </span>
-          );
-        }
-        return <MathInline key={idx} latex={seg.latex} />;
-      })}
-    </>
-  );
-}
-
-function Table({ rows }: { rows: string[][] }) {
-  if (rows.length < 2) return null;
-  const header = rows[0] ?? [];
-  const body = rows.slice(2);
-  return (
-    <div className="my-3 overflow-x-auto rounded-2xl border border-border/40 bg-background/60">
-      <table className="w-full border-collapse text-[12.5px]">
-        <thead className="bg-foreground/5">
-          <tr>
-            {header.map((c, i) => (
-              <th
-                key={i}
-                className="border-b border-border/40 px-3 py-2 text-left font-bold"
-              >
-                <InlineLine text={c} />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {body.map((row, ri) => (
-            <tr key={ri} className="even:bg-foreground/[0.02]">
-              {row.map((c, ci) => (
-                <td
-                  key={ci}
-                  className="border-b border-border/30 px-3 py-2 align-top"
-                >
-                  <InlineLine text={c} />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+type MarkdownProps = ComponentProps<typeof Markdown>;
 
 export function DocumentMarkdownText({
   text,
@@ -183,49 +16,212 @@ export function DocumentMarkdownText({
   text: string;
   className?: string;
 }) {
-  const blocks = useMemo(() => parseBlocks(text), [text]);
   return (
-    <div className={cn("space-y-2 text-[13.5px] leading-relaxed", className)}>
-      {blocks.map((b, i) => {
-        if (b.kind === "h" && b.level === 2) {
-          return (
-            <h3
-              key={i}
-              className="font-heading text-[15px] font-bold leading-snug"
-            >
-              <InlineLine text={b.text} />
-            </h3>
-          );
-        }
-        if (b.kind === "h") {
-          return (
-            <h4
-              key={i}
-              className="font-heading text-[13.5px] font-bold leading-snug"
-            >
-              <InlineLine text={b.text} />
-            </h4>
-          );
-        }
-        if (b.kind === "table") {
-          return <Table key={i} rows={b.rows} />;
-        }
-        if (b.kind === "code") {
-          return (
-            <pre
-              key={i}
-              className="overflow-x-auto rounded-xl bg-foreground/5 p-3 text-[12px]"
-            >
-              <code>{b.text}</code>
-            </pre>
-          );
-        }
-        return (
-          <p key={i} className="whitespace-pre-line">
-            <InlineLine text={b.text} />
-          </p>
-        );
-      })}
+    <div
+      className={cn(
+        "document-markdown space-y-3 text-[13.5px] leading-relaxed text-foreground",
+        className,
+      )}
+    >
+      <Markdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={components}
+      >
+        {text}
+      </Markdown>
     </div>
   );
 }
+
+const components: MarkdownProps["components"] = {
+  h1: ({ children, ...props }) => (
+    <h1
+      className="font-heading text-[20px] font-bold leading-tight tracking-tight"
+      {...props}
+    >
+      {children}
+    </h1>
+  ),
+  h2: ({ children, ...props }) => (
+    <h2
+      className="font-heading text-[18px] font-bold leading-snug"
+      {...props}
+    >
+      {children}
+    </h2>
+  ),
+  h3: ({ children, ...props }) => (
+    <h3
+      className="font-heading text-[16px] font-bold leading-snug"
+      {...props}
+    >
+      {children}
+    </h3>
+  ),
+  h4: ({ children, ...props }) => (
+    <h4
+      className="font-heading text-[14px] font-bold leading-snug"
+      {...props}
+    >
+      {children}
+    </h4>
+  ),
+  h5: ({ children, ...props }) => (
+    <h5
+      className="font-heading text-[13.5px] font-bold leading-snug"
+      {...props}
+    >
+      {children}
+    </h5>
+  ),
+  h6: ({ children, ...props }) => (
+    <h6
+      className="font-heading text-[13px] font-bold leading-snug"
+      {...props}
+    >
+      {children}
+    </h6>
+  ),
+  p: ({ children, ...props }) => (
+    <p className="leading-relaxed" {...props}>
+      {children}
+    </p>
+  ),
+  strong: ({ children, ...props }) => (
+    <strong className="font-bold text-foreground" {...props}>
+      {children}
+    </strong>
+  ),
+  em: ({ children, ...props }) => (
+    <em className="italic" {...props}>
+      {children}
+    </em>
+  ),
+  ul: ({ children, ...props }) => (
+    <ul
+      className="list-disc space-y-1.5 pl-6 marker:text-[var(--coral)]/70"
+      {...props}
+    >
+      {children}
+    </ul>
+  ),
+  ol: ({ children, ...props }) => (
+    <ol
+      className="list-decimal space-y-1.5 pl-6 marker:font-bold marker:text-[var(--coral)]/70"
+      {...props}
+    >
+      {children}
+    </ol>
+  ),
+  li: ({ children, ...props }) => (
+    <li className="leading-relaxed" {...props}>
+      {children}
+    </li>
+  ),
+  a: ({ children, href, ...props }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-semibold text-[var(--coral)] underline decoration-[var(--coral)]/40 underline-offset-2 hover:decoration-[var(--coral)]"
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+  blockquote: ({ children, ...props }) => (
+    <blockquote
+      className="rounded-r-xl border-l-4 border-[var(--coral)]/40 bg-[var(--coral)]/5 py-2 pl-4 pr-3 italic text-muted-foreground"
+      {...props}
+    >
+      {children}
+    </blockquote>
+  ),
+  code: ({ children, className: codeClassName, ...props }) => {
+    const isBlock = (props as { node?: { position?: unknown } }).node
+      ? false
+      : false;
+    if (isBlock || codeClassName?.includes("language-")) {
+      return (
+        <code
+          className={cn(
+            "block overflow-x-auto rounded-xl bg-foreground/5 p-3 text-[12px]",
+            codeClassName,
+          )}
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code
+        className="rounded-md bg-foreground/8 px-1.5 py-0.5 font-mono text-[12.5px] text-[var(--coral)]"
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children, ...props }) => (
+    <pre
+      className="my-3 overflow-x-auto rounded-2xl border border-border/40 bg-foreground/5 p-4 text-[12.5px] leading-relaxed"
+      {...props}
+    >
+      {children}
+    </pre>
+  ),
+  table: ({ children, ...props }) => (
+    <div className="my-3 overflow-x-auto rounded-2xl border border-border/40 bg-background/60">
+      <table className="w-full border-collapse text-[12.5px]" {...props}>
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children, ...props }) => (
+    <thead className="bg-foreground/5" {...props}>
+      {children}
+    </thead>
+  ),
+  th: ({ children, ...props }) => (
+    <th
+      className="border-b border-border/40 px-3 py-2 text-left font-bold"
+      {...props}
+    >
+      {children}
+    </th>
+  ),
+  tbody: ({ children, ...props }) => (
+    <tbody {...props}>{children}</tbody>
+  ),
+  tr: ({ children, ...props }) => (
+    <tr className="even:bg-foreground/[0.02]" {...props}>
+      {children}
+    </tr>
+  ),
+  td: ({ children, ...props }) => (
+    <td
+      className="border-b border-border/30 px-3 py-2 align-top"
+      {...props}
+    >
+      {children}
+    </td>
+  ),
+  hr: ({ ...props }) => (
+    <hr
+      className="my-4 border-0 border-t border-border/40"
+      {...props}
+    />
+  ),
+  img: ({ src, alt, ...props }) => (
+    // biome-ignore lint/performance/noImgElement: markdown image source is dynamic
+    <img
+      src={src}
+      alt={alt ?? ""}
+      className="my-2 max-w-full rounded-xl border border-border/40"
+      loading="lazy"
+      {...props}
+    />
+  ),
+};

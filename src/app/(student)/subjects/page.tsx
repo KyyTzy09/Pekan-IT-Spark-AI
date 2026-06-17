@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AddSubjectDialog } from "@/components/student/add-subject-dialog";
 import {
   type SubjectListItem,
   SubjectsListView,
@@ -82,7 +83,18 @@ export default async function SubjectsPage() {
       <SubjectsListView
         subjects={summaries}
         focusedIds={focusedIds}
-        addAction={null}
+        addAction={
+          <AddSubjectDialog
+            trigger={
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--coral)]/8 px-3 py-1.5 text-[11.5px] font-bold text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.2)] transition-all hover:-translate-y-0.5 hover:bg-[var(--coral)]/12"
+              >
+                + Tambah mapel
+              </button>
+            }
+          />
+        }
       />
     </div>
   );
