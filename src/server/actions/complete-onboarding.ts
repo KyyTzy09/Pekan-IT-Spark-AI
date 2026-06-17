@@ -127,46 +127,57 @@ export async function completeOnboarding(
         }))
       : [];
 
-  await prisma.$transaction(async (tx) => {
-    const ops: Promise<unknown>[] = [
-      tx.studentProfile.upsert({
-        where: { userId },
-        update: profileData,
-        create: { userId, ...profileData },
-      }),
-      tx.user.update({
-        where: { id: userId },
-        data: { isOnboarded: true },
-      }),
-    ];
+  try {
+    await prisma.$transaction(async (tx) => {
+      const ops: Promise<unknown>[] = [
+        tx.studentProfile.upsert({
+          where: { userId },
+          update: profileData,
+          create: { userId, ...profileData },
+        }),
+        tx.user.update({
+          where: { id: userId },
+          data: { isOnboarded: true },
+        }),
+      ];
 
-    if (knowledgeUpserts.length > 0) {
-      for (const u of knowledgeUpserts) {
+      if (knowledgeUpserts.length > 0) {
+        for (const u of knowledgeUpserts) {
+          ops.push(
+            tx.studentKnowledgeProfile.upsert({
+              where: { userId_conceptId: { userId, conceptId: u.conceptId } },
+              create: u,
+              update: {
+                masteryScore: u.masteryScore,
+                status: u.status,
+                attemptCount: { increment: u.attemptCount },
+                lastAttemptAt: u.lastAttemptAt,
+              },
+            }),
+          );
+        }
+      }
+
+      if (attemptsData.length > 0) {
         ops.push(
-          tx.studentKnowledgeProfile.upsert({
-            where: { userId_conceptId: { userId, conceptId: u.conceptId } },
-            create: u,
-            update: {
-              masteryScore: u.masteryScore,
-              status: u.status,
-              attemptCount: { increment: u.attemptCount },
-              lastAttemptAt: u.lastAttemptAt,
-            },
+          tx.questionAttempt.createMany({
+            data: attemptsData,
           }),
         );
       }
-    }
 
-    if (attemptsData.length > 0) {
-      ops.push(
-        tx.questionAttempt.createMany({
-          data: attemptsData,
-        }),
-      );
-    }
-
-    await Promise.all(ops);
-  });
+      await Promise.all(ops);
+    });
+  } catch (err) {
+    console.error("[ONBOARDING_SERVICE] completeOnboarding transaction failed", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      ok: false,
+      message: "Gagal menyimpan data onboarding. Coba lagi, ya.",
+    };
+  }
 
   return {
     ok: true,

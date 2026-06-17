@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { OnboardingShell } from "@/components/student/onboarding-shell";
-import { OnboardingWizard } from "@/components/student/onboarding-wizard";
+import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
+import { OnboardingWizardClient } from "@/components/onboarding/OnboardingWizardClient";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Kenalan dulu — Spark Ai",
   description:
-    "Isi profil kamu, pilih mapel fokus, dan mulai ngobrol sama Spark.",
+    "Isi profil kamu, pilih mapel fokus, atau bikin mapel kustom pakai AI.",
 };
 
 const PRETEST_PER_SUBJECT = 3;
@@ -36,6 +36,7 @@ export default async function OnboardingPage() {
   if (session.user.role !== "STUDENT") redirect("/");
 
   const subjects = await prisma.subject.findMany({
+    where: { isCustom: false },
     orderBy: { order: "asc" },
     select: { id: true, name: true, slug: true, icon: true, color: true },
   });
@@ -47,7 +48,7 @@ export default async function OnboardingPage() {
 
   return (
     <OnboardingShell>
-      <OnboardingWizard
+      <OnboardingWizardClient
         userName={session.user.name ?? "Teman"}
         subjects={subjects}
         pretestQuestions={pretest.pretestQuestions}
@@ -57,10 +58,8 @@ export default async function OnboardingPage() {
   );
 }
 
-type SubjectSlim = { id: string; name: string };
-
 async function getPretestPool(
-  subjects: SubjectSlim[],
+  subjects: { id: string; name: string }[],
   limits: { perSubject: number; totalCap: number },
 ): Promise<PretestData> {
   if (subjects.length === 0) {

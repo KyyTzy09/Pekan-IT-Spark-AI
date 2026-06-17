@@ -114,27 +114,34 @@ export async function addXp(
       data: { totalXp: { increment: amount } },
       select: { totalXp: true, level: true },
     });
-    return { previousLevel: updated.level, newTotalXp: updated.totalXp };
+
+    const levels = await loadLevelTable();
+    const newInfo = levelFromXp(updated.totalXp, levels);
+
+    if (newInfo.level !== updated.level) {
+      await tx.studentProfile.update({
+        where: { userId },
+        data: { level: newInfo.level },
+      });
+    }
+
+    return {
+      previousLevel: updated.level,
+      newTotalXp: updated.totalXp,
+      level: newInfo.level,
+      levelName: newInfo.name,
+      leveledUp: newInfo.level > updated.level,
+    };
   });
-
-  const levels = await loadLevelTable();
-  const newInfo = levelFromXp(result.newTotalXp, levels);
-
-  if (newInfo.level !== result.previousLevel) {
-    await prisma.studentProfile.update({
-      where: { userId },
-      data: { level: newInfo.level },
-    });
-  }
 
   revalidatePath("/dashboard");
 
   return {
     amount,
     totalXp: result.newTotalXp,
-    level: newInfo.level,
-    levelName: newInfo.name,
-    leveledUp: newInfo.level > result.previousLevel,
+    level: result.level,
+    levelName: result.levelName,
+    leveledUp: result.leveledUp,
     previousLevel: result.previousLevel,
   };
 }

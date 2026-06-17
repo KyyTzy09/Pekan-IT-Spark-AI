@@ -454,6 +454,9 @@ export type QuizResult =
     }
   | { ok: false; error: string };
 
+const QUIZ_TTL_MS = 2 * 60 * 60 * 1000;
+const QUIZ_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
 const QUIZ_BATCH_STORE = new Map<
   string,
   {
@@ -473,6 +476,20 @@ const QUIZ_BATCH_STORE = new Map<
     timeLimitSec: number;
   }
 >();
+
+function cleanupExpiredQuizzes() {
+  const now = Date.now();
+  for (const [id, session] of QUIZ_BATCH_STORE) {
+    const elapsed = now - session.startedAt;
+    const maxAge = Math.max(session.timeLimitSec * 1000 + 60_000, QUIZ_TTL_MS);
+    if (elapsed > maxAge) {
+      QUIZ_BATCH_STORE.delete(id);
+    }
+  }
+}
+
+const cleanupTimer = setInterval(cleanupExpiredQuizzes, QUIZ_CLEANUP_INTERVAL_MS);
+cleanupTimer.unref?.();
 
 function newQuizId(): string {
   return `qz_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;

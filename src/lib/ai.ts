@@ -31,22 +31,13 @@ function logAIError(
   err: unknown,
 ) {
   console.error(
-    `
-=========================================
-[AI_SERVICE] ERROR OCCURRED
------------------------------------------
-* Method:        ${method}
-* Target Model:  ${modelName}
-* Endpoint:      ${baseURL}
-* Error Message: ${err instanceof Error ? err.message : String(err)}
-* Full Stack / Error Object:
-`,
-    err,
-    `
-=========================================
-`,
+    `[AI_ERROR] ${method} | model=${modelName} | endpoint=${baseURL} | msg=${err instanceof Error ? err.message : String(err)}`,
   );
 }
+
+const AI_TIMEOUT_MS = 30_000;
+const AI_TIMEOUT_STREAM_MS = 60_000;
+const AI_TIMEOUT_EMBED_MS = 15_000;
 
 export async function generateText({
   model,
@@ -97,7 +88,7 @@ ${prompt ? prompt : "(none)"}
       model: modelName,
       messages,
       temperature,
-    });
+    }, { timeout: AI_TIMEOUT_MS });
 
     const textResult = response.choices[0]?.message?.content || "";
     console.log(`
@@ -135,7 +126,7 @@ ${prompt ? prompt : "(none)"}
           model: "glm-5",
           messages,
           temperature,
-        });
+        }, { timeout: AI_TIMEOUT_MS });
         const textResult = response.choices[0]?.message?.content || "";
         console.log(`
 =========================================
@@ -173,7 +164,7 @@ ${prompt ? prompt : "(none)"}
             model: "deepseek-v4-flash",
             messages,
             temperature,
-          });
+          }, { timeout: AI_TIMEOUT_MS });
           const textResult = response.choices[0]?.message?.content || "";
           console.log(`
 =========================================
@@ -251,7 +242,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
         model: heavyModelName,
         messages: apiMessages,
         temperature,
-      });
+      }, { timeout: AI_TIMEOUT_STREAM_MS });
 
       const text = response.choices[0]?.message?.content || "";
       console.log(`
@@ -293,7 +284,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
           model: sumopodModel,
           messages: apiMessages,
           temperature,
-        });
+        }, { timeout: AI_TIMEOUT_STREAM_MS });
 
         const text = response.choices[0]?.message?.content || "";
         console.log(`
@@ -328,7 +319,7 @@ ${text}
             model: "glm-5",
             messages: apiMessages,
             temperature,
-          });
+          }, { timeout: AI_TIMEOUT_STREAM_MS });
 
           const text = response.choices[0]?.message?.content || "";
           console.log(`
@@ -374,7 +365,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
         model: modelName,
         messages: apiMessages,
         temperature,
-      });
+      }, { timeout: AI_TIMEOUT_STREAM_MS });
 
       const text = response.choices[0]?.message?.content || "";
       console.log(`
@@ -420,7 +411,7 @@ export async function embed({
     const response = await openaiDefault.embeddings.create({
       model: modelName,
       input: value,
-    });
+    }, { timeout: AI_TIMEOUT_EMBED_MS });
     const embedding = response.data[0]?.embedding || [];
     console.log(`
 =========================================
@@ -469,7 +460,7 @@ ${values.length > 10 ? `  ... and ${values.length - 10} more inputs` : ""}
     const response = await openaiDefault.embeddings.create({
       model: modelName,
       input: values,
-    });
+    }, { timeout: AI_TIMEOUT_EMBED_MS });
     const embeddings = response.data.map((item) => item.embedding);
     console.log(`
 =========================================

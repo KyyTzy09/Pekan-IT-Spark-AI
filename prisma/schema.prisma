@@ -341,6 +341,9 @@ model Question {
   quizQuestions  QuizQuestion[]
   challengeItems ChallengeItem[]
 
+  @@index([conceptId])
+  @@index([difficulty, bloomTaxonomy])
+  @@index([isActive])
   @@map("questions")
 }
 
@@ -355,6 +358,9 @@ model QuestionAttempt {
   timeSpent  Int?
   createdAt  DateTime @default(now())
 
+  @@index([userId])
+  @@index([questionId])
+  @@index([userId, questionId])
   @@map("question_attempts")
 }
 
@@ -396,6 +402,9 @@ model QuizAttempt {
   startedAt   DateTime  @default(now())
   completedAt DateTime?
 
+  @@index([userId])
+  @@index([quizId])
+  @@index([userId, quizId])
   @@map("quiz_attempts")
 }
 
@@ -415,6 +424,7 @@ model ChatSession {
   messages  ChatMessage[]
   documents Document[]
 
+  @@index([userId, updatedAt])
   @@map("chat_sessions")
 }
 
@@ -427,6 +437,7 @@ model ChatMessage {
   metadata  Json?       @db.JsonB
   createdAt DateTime    @default(now())
 
+  @@index([sessionId, createdAt])
   @@map("chat_messages")
 }
 
@@ -493,6 +504,8 @@ model XpTransaction {
   metadata  Json?    @db.JsonB
   createdAt DateTime @default(now())
 
+  @@index([userId, createdAt])
+  @@index([userId, source])
   @@map("xp_transactions")
 }
 
@@ -597,6 +610,9 @@ model LearningActivity {
   xpEarned  Int      @default(0)
   createdAt DateTime @default(now())
 
+  @@index([userId, createdAt])
+  @@index([userId, type])
+  @@index([createdAt])
   @@map("learning_activities")
 }
 
@@ -687,6 +703,8 @@ model StudentKnowledgeProfile {
   updatedAt     DateTime      @updatedAt
 
   @@unique([userId, conceptId])
+  @@index([userId])
+  @@index([status])
   @@map("student_knowledge_profiles")
 }
 

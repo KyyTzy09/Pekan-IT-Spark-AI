@@ -496,6 +496,7 @@ async function generateAndStoreDailyChallenges(
     });
   } catch (err) {
     console.error("generateAndStoreDailyChallenges failed:", err);
+    throw err;
   }
 }
 
@@ -1666,108 +1667,144 @@ export async function aggregateStudentProgress(
     }
   }
 
-  const perSubject = (
-    await Promise.all(
-      Array.from(subjectMap.values()).map(
-        async ({
-          subject,
-          masteryScores,
-        }): Promise<SubjectProgressBreakdown> => {
-          const masteryAvg =
-            masteryScores.length > 0
-              ? masteryScores.reduce((a, b) => a + b, 0) / masteryScores.length
-              : 0;
-          const masteryScore = Math.round(masteryAvg * 100);
+  const subjectIds = Array.from(subjectMap.keys());
 
-          const [
-            completedChallenges,
-            totalChallenges,
-            materialReads,
-            reflections,
-          ] = await Promise.all([
-            prisma.challenge.count({
-              where: {
-                userId,
-                subjectId: subject.id,
-                status: "COMPLETED",
-                scheduledFor: { gte: windowStart },
-              },
-            }),
-            prisma.challenge.count({
-              where: {
-                userId,
-                subjectId: subject.id,
-                scheduledFor: { gte: windowStart },
-              },
-            }),
-            prisma.materialRead.findMany({
-              where: {
-                userId,
-                completed: true,
-                readAt: { gte: windowStart },
-                material: { subjectId: subject.id },
-              },
-              select: { readSeconds: true },
-            }),
-            prisma.reflection.findMany({
-              where: {
-                userId,
-                submittedAt: { gte: windowStart },
-                challenge: { subjectId: subject.id },
-              },
-              select: { depth: true },
-            }),
-          ]);
+  if (subjectIds.length === 0) {
+    return {
+      userId,
+      windowDays: safeWindow,
+      windowStart: windowStart.toISOString(),
+      windowEnd: now.toISOString(),
+      overallScore: 0,
+      masteryScore: 0,
+      challengeScore: 0,
+      materialsScore: 0,
+      reflectionsScore: 0,
+      perSubject: [],
+    };
+  }
 
-          const challengeScore =
-            totalChallenges > 0
-              ? Math.round((completedChallenges / totalChallenges) * 100)
-              : 0;
+  const [allChallenges, allSubjectMaterialReads, allSubjectReflections] = await Promise.all([
+    prisma.challenge.findMany({
+      where: {
+        userId,
+        subjectId: { in: subjectIds },
+        scheduledFor: { gte: windowStart },
+      },
+      select: { id: true, subjectId: true, status: true },
+    }),
+    prisma.materialRead.findMany({
+      where: {
+        userId,
+        completed: true,
+        readAt: { gte: windowStart },
+        material: { subjectId: { in: subjectIds } },
+      },
+      select: { readSeconds: true, material: { select: { subjectId: true } } },
+    }),
+    prisma.reflection.findMany({
+      where: {
+        userId,
+        submittedAt: { gte: windowStart },
+        challenge: { subjectId: { in: subjectIds } },
+      },
+      select: { depth: true, challenge: { select: { subjectId: true } } },
+    }),
+  ]);
 
-          const materialsRead = materialReads.length;
-          const readSeconds = materialReads.reduce(
-            (acc, r) => acc + r.readSeconds,
-            0,
-          );
-          const materialsScore = Math.min(100, materialsRead * 33);
+  const challengeMap = new Map<
+    string,
+    { total: number; completed: number }
+  >();
+  for (const c of allChallenges) {
+    if (!c.subjectId) continue;
+    const entry = challengeMap.get(c.subjectId) ?? { total: 0, completed: 0 };
+    entry.total++;
+    if (c.status === "COMPLETED") entry.completed++;
+    challengeMap.set(c.subjectId, entry);
+  }
 
-          const depthValues = reflections.map((r) => DEPTH_VALUE[r.depth] ?? 1);
-          const avgDepth =
-            depthValues.length > 0
-              ? depthValues.reduce((a, b) => a + b, 0) / depthValues.length
-              : null;
-          const reflectionsScore = Math.min(100, reflections.length * 100);
+  const materialMap = new Map<string, { count: number; readSeconds: number }>();
+  for (const m of allSubjectMaterialReads) {
+    const sid = m.material.subjectId;
+    if (!sid) continue;
+    const entry = materialMap.get(sid) ?? { count: 0, readSeconds: 0 };
+    entry.count++;
+    entry.readSeconds += m.readSeconds;
+    materialMap.set(sid, entry);
+  }
 
-          const overallScore = Math.round(
-            masteryScore * 0.4 +
-              challengeScore * 0.3 +
-              materialsScore * 0.2 +
-              reflectionsScore * 0.1,
-          );
+  const reflectionMap = new Map<
+    string,
+    { count: number; depths: number[] }
+  >();
+  for (const r of allSubjectReflections) {
+    const sid = r.challenge.subjectId;
+    if (!sid) continue;
+    const entry = reflectionMap.get(sid) ?? { count: 0, depths: [] };
+    entry.count++;
+    entry.depths.push(DEPTH_VALUE[r.depth] ?? 1);
+    reflectionMap.set(sid, entry);
+  }
 
-          return {
-            subjectId: subject.id,
-            subjectName: subject.name,
-            subjectSlug: subject.slug,
-            masteryScore,
-            challengeScore,
-            materialsScore,
-            reflectionsScore,
-            overallScore,
-            stats: {
-              conceptsTracked: masteryScores.length,
-              challengesCompleted: completedChallenges,
-              challengesTotal: totalChallenges,
-              materialsRead,
-              readSeconds,
-              reflectionsSubmitted: reflections.length,
-              avgDepth,
-            },
-          };
+  const perSubject = Array.from(subjectMap.values())
+    .map(({ subject, masteryScores }): SubjectProgressBreakdown => {
+      const masteryAvg =
+        masteryScores.length > 0
+          ? masteryScores.reduce((a, b) => a + b, 0) / masteryScores.length
+          : 0;
+      const masteryScore = Math.round(masteryAvg * 100);
+
+      const ch = challengeMap.get(subject.id) ?? {
+        total: 0,
+        completed: 0,
+      };
+      const mat = materialMap.get(subject.id) ?? {
+        count: 0,
+        readSeconds: 0,
+      };
+      const ref = reflectionMap.get(subject.id) ?? {
+        count: 0,
+        depths: [],
+      };
+
+      const challengeScore =
+        ch.total > 0 ? Math.round((ch.completed / ch.total) * 100) : 0;
+      const materialsScore = Math.min(100, mat.count * 33);
+      const reflectionsScore = Math.min(100, ref.count * 100);
+      const avgDepth =
+        ref.depths.length > 0
+          ? ref.depths.reduce((a, b) => a + b, 0) / ref.depths.length
+          : null;
+
+      const overallScore = Math.round(
+        masteryScore * 0.4 +
+          challengeScore * 0.3 +
+          materialsScore * 0.2 +
+          reflectionsScore * 0.1,
+      );
+
+      return {
+        subjectId: subject.id,
+        subjectName: subject.name,
+        subjectSlug: subject.slug,
+        masteryScore,
+        challengeScore,
+        materialsScore,
+        reflectionsScore,
+        overallScore,
+        stats: {
+          conceptsTracked: masteryScores.length,
+          challengesCompleted: ch.completed,
+          challengesTotal: ch.total,
+          materialsRead: mat.count,
+          readSeconds: mat.readSeconds,
+          reflectionsSubmitted: ref.count,
+          avgDepth,
         },
-      ),
-    )
-  ).sort((a, b) => b.overallScore - a.overallScore);
+      };
+    })
+    .sort((a, b) => b.overallScore - a.overallScore);
 
   const overallMasteryScore =
     profiles.length > 0
@@ -1893,35 +1930,64 @@ export async function getProgressTimeline(
       : 0,
   );
 
+  const [allCompletedItems, allMaterialReads, allReflections] =
+    await Promise.all([
+      prisma.challengeItem.findMany({
+        where: {
+          status: "COMPLETED",
+          completedAt: { gte: startDate, lt: endDate },
+          challenge: { userId },
+        },
+        select: { completedAt: true },
+      }),
+      prisma.materialRead.findMany({
+        where: {
+          userId,
+          completed: true,
+          readAt: { gte: startDate, lt: endDate },
+        },
+        select: { readAt: true },
+      }),
+      prisma.reflection.findMany({
+        where: {
+          userId,
+          submittedAt: { gte: startDate, lt: endDate },
+        },
+        select: { submittedAt: true },
+      }),
+    ]);
+
+  const dayBuckets = Array.from({ length: safeDays }, () => ({
+    challengesCompleted: 0,
+    materialsRead: 0,
+    reflectionsSubmitted: 0,
+  }));
+
+  function dayIndex(time: Date): number {
+    return Math.floor((time.getTime() - startDate.getTime()) / dayMs);
+  }
+
+  for (const item of allCompletedItems) {
+    if (!item.completedAt) continue;
+    const di = dayIndex(item.completedAt);
+    if (di >= 0 && di < safeDays) dayBuckets[di].challengesCompleted++;
+  }
+  for (const read of allMaterialReads) {
+    const di = dayIndex(read.readAt);
+    if (di >= 0 && di < safeDays) dayBuckets[di].materialsRead++;
+  }
+  for (const ref of allReflections) {
+    const di = dayIndex(ref.submittedAt);
+    if (di >= 0 && di < safeDays) dayBuckets[di].reflectionsSubmitted++;
+  }
+
   const points: ProgressTimelinePoint[] = [];
   for (let i = 0; i < safeDays; i++) {
-    const dayStart = new Date(startDate.getTime() + i * dayMs);
-    const dayEnd = new Date(dayStart.getTime() + dayMs);
-    const dayDate = dayStart.toISOString().split("T")[0];
-
-    const [challengesCompleted, materialsRead, reflectionsSubmitted] =
-      await Promise.all([
-        prisma.challengeItem.count({
-          where: {
-            status: "COMPLETED",
-            completedAt: { gte: dayStart, lt: dayEnd },
-            challenge: { userId },
-          },
-        }),
-        prisma.materialRead.count({
-          where: {
-            userId,
-            completed: true,
-            readAt: { gte: dayStart, lt: dayEnd },
-          },
-        }),
-        prisma.reflection.count({
-          where: {
-            userId,
-            submittedAt: { gte: dayStart, lt: dayEnd },
-          },
-        }),
-      ]);
+    const dayDate = new Date(startDate.getTime() + i * dayMs)
+      .toISOString()
+      .split("T")[0];
+    const { challengesCompleted, materialsRead, reflectionsSubmitted } =
+      dayBuckets[i];
 
     const challengeScore = Math.min(
       100,
@@ -1929,9 +1995,9 @@ export async function getProgressTimeline(
     );
     const materialsScore = Math.min(100, materialsRead * 33);
     const reflectionsScore = Math.min(100, reflectionsSubmitted * 100);
-    const masteryScore = currentMasteryScore;
+
     const overallScore = Math.round(
-      masteryScore * 0.4 +
+      currentMasteryScore * 0.4 +
         challengeScore * 0.3 +
         materialsScore * 0.2 +
         reflectionsScore * 0.1,
@@ -1940,7 +2006,7 @@ export async function getProgressTimeline(
     points.push({
       date: dayDate,
       overallScore,
-      masteryScore,
+      masteryScore: currentMasteryScore,
       challengeScore,
       materialsScore,
       reflectionsScore,
