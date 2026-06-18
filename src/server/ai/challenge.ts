@@ -176,10 +176,10 @@ ATURAN WAJIB:
 - Reflection prompt HARUS terbuka (tidak yes/no) dan memicu siswa berpikir, bukan menjawab fakta.
 - Difficulty MATERIAL/REFLECTION: jika siswa lemah di konsep (mastery < 0.4) → EASY/explainer; jika sedang → MEDIUM; jika kuat (mastery > 0.7) → HARD/push further.
 - Sesuaikan gaya penulisan MATERIAL dengan gaya belajar siswa (learningStyle):
-  * VISUAL: gunakan analogi visual, deskripsi imajinatif visual, dan format yang mudah dicerna secara spasial.
-  * EXAMPLE_HEAVY: sertakan banyak contoh konkret, studi kasus nyata, dan soal-soal aplikatif yang relevan untuk usia SMA/SMK.
-  * SOCRATIC: gunakan pertanyaan-pertanyaan pemandu kritis di awal dan akhir sub-bab untuk memicu rasa ingin tahu.
-  * TEXTUAL: berikan penjelasan teoretis yang runtut, terstruktur, mendalam, dan kaya referensi.
+  * VISUAL: Wajib sertakan visualisasi konsep menggunakan diagram alir atau peta konsep dengan sintaks Mermaid.js (misal: \`\`\`mermaid\ngraph TD\n...\n\`\`\`). Gunakan analogi visual yang kuat.
+  * EXAMPLE_HEAVY: Struktur materi wajib dimulai dengan Studi Kasus nyata atau contoh soal konkret, diikuti bedah solusi langkah-demi-langkah (Step-by-Step Walkthrough).
+  * SOCRATIC: Sajikan materi dalam bentuk dialog tanya-jawab interaktif antara "Siswa" dan "Spark" untuk memandu siswa menemukan konsepnya secara mandiri.
+  * TEXTUAL: Berikan penjelasan akademis terstruktur yang mendalam dengan glosarium istilah dan referensi teori formal.
 - Sesuaikan kedalaman dan kompleksitas materi dengan jenjang kelas (grade) siswa agar menantang namun dapat dipahami.
 - Variasi: kalau kemarin ada MATERIAL tentang Trigonometri, hari ini ganti ke materi berbeda.
 - Reasoning: jelaskan kenapa komposisi ini cocok untuk siswa.
@@ -197,38 +197,30 @@ Format JSON yang wajib diikuti:
   "title": "Judul paket",
   "description": "Deskripsi singkat",
   "items": [
-    {
       "kind": "QUESTION",
       "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
       "conceptHint": "Nama konsep",
       "difficultyHint": "EASY" | "MEDIUM" | "HARD",
-      "rationale": "Kenapa ini dipilih"
-    },
-    {
+      "rationale": "Kenapa ini dipilih",
       "kind": "MATERIAL",
       "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
       "conceptHint": "Nama konsep",
       "difficultyHint": "EASY" | "MEDIUM" | "HARD",
       "rationale": "Kenapa ini dipilih",
-      "material": {
+      "material": 
         "title": "Judul materi",
         "content": "Isi materi markdown lengkap minimal 400 kata...",
         "keyPoints": ["poin 1", "poin 2"],
         "estimatedMinutes": 5,
-        "difficulty": "EASY" | "MEDIUM" | "HARD"
-      }
-    },
-    {
+        "difficulty": "EASY" | "MEDIUM" | "HARD",
       "kind": "REFLECTION",
       "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
       "conceptHint": "Nama konsep",
       "difficultyHint": "EASY" | "MEDIUM" | "HARD",
       "rationale": "Kenapa ini dipilih",
-      "reflection": {
+      "reflection": 
         "prompt": "Pertanyaan refleksi terbuka",
         "context": "Konteks refleksi"
-      }
-    }
   ],
   "reasoning": "Alasan komposisi"
 }`;
@@ -943,12 +935,12 @@ export async function generateMaterialMarkdown(args: {
 
   const styleNote =
     args.learningStyle === "VISUAL"
-      ? "Gunakan analogi visual dan deskripsi imajinatif."
+      ? "Siswa memiliki gaya belajar VISUAL. Wajib sertakan visualisasi konsep berupa diagram alir/peta konsep menggunakan sintaks Mermaid.js (misal: ```mermaid\ngraph TD\n...\n```) dan gunakan analogi visual imajinatif."
       : args.learningStyle === "EXAMPLE_HEAVY"
-        ? "Siswa suka contoh konkret — berikan 2-3 contoh relatable."
+        ? "Siswa memiliki gaya belajar EXAMPLE_HEAVY. Struktur materi wajib difokuskan pada Studi Kasus nyata atau contoh soal konkret, serta bedah solusi langkah-demi-langkah yang jelas."
         : args.learningStyle === "SOCRATIC"
-          ? "Masukkan 1-2 pertanyaan pemandu yang memancing思考."
-          : "Gaya bahasa kasual dan suportif, sesuai persona Spark.";
+          ? "Siswa memiliki gaya belajar SOCRATIC. Sajikan materi dalam bentuk dialog tanya-jawab interaktif antara 'Siswa' dan 'Spark' untuk menuntun siswa memahami konsep tersebut."
+          : "Siswa memiliki gaya belajar TEXTUAL. Berikan penjelasan akademis yang runtut, mendalam, terstruktur dengan sub-bab jelas, glosarium istilah, dan teori formal.";
 
   const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
 
@@ -1038,9 +1030,20 @@ export interface WeeklyChallengeInput {
 }
 
 export const weeklyChallengeSchema = z.object({
-  title: z.string().max(80).describe("Judul tantangan mingguan, asyik & memotivasi"),
-  description: z.string().max(200).describe("Deskripsi singkat tantangan mingguan"),
-  goal: z.number().int().min(5).max(12).describe("Jumlah item tantangan harian yang harus diselesaikan (5-12)"),
+  title: z
+    .string()
+    .max(80)
+    .describe("Judul tantangan mingguan, asyik & memotivasi"),
+  description: z
+    .string()
+    .max(200)
+    .describe("Deskripsi singkat tantangan mingguan"),
+  goal: z
+    .number()
+    .int()
+    .min(5)
+    .max(12)
+    .describe("Jumlah item tantangan harian yang harus diselesaikan (5-12)"),
 });
 
 export type WeeklyChallengePlan = z.infer<typeof weeklyChallengeSchema>;
@@ -1075,41 +1078,79 @@ Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
     });
 
     const rawJson = safeParseJson(text) as Record<string, unknown>;
-    const title = typeof rawJson.title === "string" ? rawJson.title.slice(0, 80) : "Misi Mingguan: Pemburu Ilmu";
-    const description = typeof rawJson.description === "string" ? rawJson.description.slice(0, 200) : "Selesaikan tantangan belajar minggu ini untuk klaim bonus XP!";
-    const goal = typeof rawJson.goal === "number" ? Math.max(5, Math.min(12, rawJson.goal)) : 8;
+    const title =
+      typeof rawJson.title === "string"
+        ? rawJson.title.slice(0, 80)
+        : "Misi Mingguan: Pemburu Ilmu";
+    const description =
+      typeof rawJson.description === "string"
+        ? rawJson.description.slice(0, 200)
+        : "Selesaikan tantangan belajar minggu ini untuk klaim bonus XP!";
+    const goal =
+      typeof rawJson.goal === "number"
+        ? Math.max(5, Math.min(12, rawJson.goal))
+        : 8;
 
     return { title, description, goal };
   } catch (err) {
     console.warn("generateWeeklyChallengeAI failed, using fallback:", err);
     return {
       title: "Misi Mingguan: Konsistensi Belajar",
-      description: "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
+      description:
+        "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
       goal: 8,
     };
   }
 }
 
 export const weeklyQuestionSchema = z.object({
-  questionText: z.string().describe("Soal HARD pilihan ganda untuk tantangan mingguan"),
+  questionText: z
+    .string()
+    .describe("Soal HARD pilihan ganda untuk tantangan mingguan"),
   options: z.array(z.string()).length(4).describe("4 pilihan jawaban"),
-  correctAnswer: z.string().describe("Jawaban benar, harus persis sama dengan salah satu opsi"),
-  explanation: z.string().describe("Penjelasan detail kenapa jawaban itu benar"),
-  hint: z.string().describe("Petunjuk berupa pertanyaan pancingan (bukan bocoran jawaban)"),
+  correctAnswer: z
+    .string()
+    .describe("Jawaban benar, harus persis sama dengan salah satu opsi"),
+  explanation: z
+    .string()
+    .describe("Penjelasan detail kenapa jawaban itu benar"),
+  hint: z
+    .string()
+    .describe("Petunjuk berupa pertanyaan pancingan (bukan bocoran jawaban)"),
   subjectName: z.string().describe("Nama mapel yang soal ini rujuk"),
 });
 
 export const weeklyMaterialSchema = z.object({
   title: z.string().max(100).describe("Judul materi"),
-  content: z.string().min(400).describe("Materi belajar mendalam dalam format Markdown (600-1000 kata)"),
-  keyPoints: z.array(z.string()).min(3).max(8).describe("3-8 poin penting dari materi"),
-  estimatedMinutes: z.number().int().min(5).max(30).describe("Estimasi waktu baca dalam menit"),
+  content: z
+    .string()
+    .min(400)
+    .describe("Materi belajar mendalam dalam format Markdown (600-1000 kata)"),
+  keyPoints: z
+    .array(z.string())
+    .min(3)
+    .max(8)
+    .describe("3-8 poin penting dari materi"),
+  estimatedMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(30)
+    .describe("Estimasi waktu baca dalam menit"),
   subjectName: z.string().describe("Nama mapel yang materi ini rujuk"),
 });
 
 export const weeklyContentSchema = z.object({
-  questions: z.array(weeklyQuestionSchema).min(8).max(15).describe("8-15 soal HARD"),
-  materials: z.array(weeklyMaterialSchema).min(1).max(3).describe("1-3 materi mendalam"),
+  questions: z
+    .array(weeklyQuestionSchema)
+    .min(8)
+    .max(15)
+    .describe("8-15 soal HARD"),
+  materials: z
+    .array(weeklyMaterialSchema)
+    .min(1)
+    .max(3)
+    .describe("1-3 materi mendalam"),
 });
 
 export type WeeklyContent = z.infer<typeof weeklyContentSchema>;
@@ -1158,4 +1199,3 @@ Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang meruju
     };
   }
 }
-

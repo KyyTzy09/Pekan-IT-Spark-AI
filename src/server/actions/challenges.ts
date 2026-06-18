@@ -324,30 +324,50 @@ async function generateAndStoreDailyChallenges(
 
   const focusedSubjects = focusedSubjectNames;
 
-  // Adaptive learning: dynamically compute challenge composition based on student's ability/performance
-  let mixConfig = { questions: 3, materials: 2, reflections: 2 }; // Default: 7 items
+  // Adaptive learning: dynamically compute challenge composition based on student's ability/performance & learning style
+  let mixConfig = { questions: 4, materials: 2, reflections: 2 }; // Default balanced: 8 items
+  const style = profile?.learningStyle;
 
-  if (weakConcepts.length > 3) {
-    // User has multiple weaknesses: focus on explanation/review (more materials)
-    mixConfig = {
-      questions: 3,
-      materials: 3,
-      reflections: 2, // Total: 8 items
-    };
-  } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
-    // Advanced user: focus heavily on application and critical thinking (more questions/reflections)
-    mixConfig = {
-      questions: 4,
-      materials: 1,
-      reflections: 3, // Total: 8 items
-    };
+  if (style === "EXAMPLE_HEAVY") {
+    if (weakConcepts.length > 3) {
+      mixConfig = { questions: 4, materials: 2, reflections: 1 }; // 7 items
+    } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
+      mixConfig = { questions: 5, materials: 1, reflections: 2 }; // 8 items
+    } else {
+      mixConfig = { questions: 5, materials: 1, reflections: 1 }; // 7 items
+    }
+  } else if (style === "TEXTUAL") {
+    if (weakConcepts.length > 3) {
+      mixConfig = { questions: 1, materials: 5, reflections: 1 }; // 7 items
+    } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
+      mixConfig = { questions: 2, materials: 3, reflections: 2 }; // 7 items
+    } else {
+      mixConfig = { questions: 2, materials: 4, reflections: 1 }; // 7 items
+    }
   } else {
-    // Balanced profile
-    mixConfig = {
-      questions: 4,
-      materials: 2,
-      reflections: 2, // Total: 8 items
-    };
+    // VISUAL, SOCRATIC, or null (Balanced)
+    if (weakConcepts.length > 3) {
+      // User has multiple weaknesses: focus on explanation/review (more materials)
+      mixConfig = {
+        questions: 3,
+        materials: 3,
+        reflections: 2, // Total: 8 items
+      };
+    } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
+      // Advanced user: focus heavily on application and critical thinking (more questions/reflections)
+      mixConfig = {
+        questions: 4,
+        materials: 1,
+        reflections: 3, // Total: 8 items
+      };
+    } else {
+      // Balanced profile
+      mixConfig = {
+        questions: 4,
+        materials: 2,
+        reflections: 2, // Total: 8 items
+      };
+    }
   }
 
   try {
@@ -648,7 +668,9 @@ export async function completeChallengeItem(input: {
     where: { id: parsed.data.itemId, challenge: { userId } },
     include: {
       challenge: true,
-      question: { select: { correctAnswer: true, explanation: true, options: true } },
+      question: {
+        select: { correctAnswer: true, explanation: true, options: true },
+      },
       material: { select: { id: true } },
     },
   });
@@ -897,7 +919,9 @@ export async function markMaterialRead(input: {
   if (!material) return { ok: false, error: "Materi tidak ditemukan" };
 
   const existingRead = await prisma.materialRead.findUnique({
-    where: { userId_materialId: { userId, materialId: parsed.data.materialId } },
+    where: {
+      userId_materialId: { userId, materialId: parsed.data.materialId },
+    },
   });
   const wasAlreadyCompleted = existingRead?.completed ?? false;
 
@@ -1456,7 +1480,11 @@ async function aggregateDailyProgress(
 
   const [challenges, items] = await Promise.all([
     prisma.challenge.findMany({
-      where: { userId, type: "DAILY", scheduledFor: { gte: dayStart, lt: dayEnd } },
+      where: {
+        userId,
+        type: "DAILY",
+        scheduledFor: { gte: dayStart, lt: dayEnd },
+      },
       select: {
         id: true,
         status: true,
@@ -1464,7 +1492,11 @@ async function aggregateDailyProgress(
     }),
     prisma.challengeItem.findMany({
       where: {
-        challenge: { userId, type: "DAILY", scheduledFor: { gte: dayStart, lt: dayEnd } },
+        challenge: {
+          userId,
+          type: "DAILY",
+          scheduledFor: { gte: dayStart, lt: dayEnd },
+        },
         status: "COMPLETED",
         completedAt: { gte: dayStart, lt: dayEnd },
       },
@@ -1699,39 +1731,40 @@ export async function aggregateStudentProgress(
     };
   }
 
-  const [allChallenges, allSubjectMaterialReads, allSubjectReflections] = await Promise.all([
-    prisma.challenge.findMany({
-      where: {
-        userId,
-        type: "DAILY",
-        subjectId: { in: subjectIds },
-        scheduledFor: { gte: windowStart },
-      },
-      select: { id: true, subjectId: true, status: true },
-    }),
-    prisma.materialRead.findMany({
-      where: {
-        userId,
-        completed: true,
-        readAt: { gte: windowStart },
-        material: { subjectId: { in: subjectIds } },
-      },
-      select: { readSeconds: true, material: { select: { subjectId: true } } },
-    }),
-    prisma.reflection.findMany({
-      where: {
-        userId,
-        submittedAt: { gte: windowStart },
-        challenge: { subjectId: { in: subjectIds } },
-      },
-      select: { depth: true, challenge: { select: { subjectId: true } } },
-    }),
-  ]);
+  const [allChallenges, allSubjectMaterialReads, allSubjectReflections] =
+    await Promise.all([
+      prisma.challenge.findMany({
+        where: {
+          userId,
+          type: "DAILY",
+          subjectId: { in: subjectIds },
+          scheduledFor: { gte: windowStart },
+        },
+        select: { id: true, subjectId: true, status: true },
+      }),
+      prisma.materialRead.findMany({
+        where: {
+          userId,
+          completed: true,
+          readAt: { gte: windowStart },
+          material: { subjectId: { in: subjectIds } },
+        },
+        select: {
+          readSeconds: true,
+          material: { select: { subjectId: true } },
+        },
+      }),
+      prisma.reflection.findMany({
+        where: {
+          userId,
+          submittedAt: { gte: windowStart },
+          challenge: { subjectId: { in: subjectIds } },
+        },
+        select: { depth: true, challenge: { select: { subjectId: true } } },
+      }),
+    ]);
 
-  const challengeMap = new Map<
-    string,
-    { total: number; completed: number }
-  >();
+  const challengeMap = new Map<string, { total: number; completed: number }>();
   for (const c of allChallenges) {
     if (!c.subjectId) continue;
     const entry = challengeMap.get(c.subjectId) ?? { total: 0, completed: 0 };
@@ -1750,10 +1783,7 @@ export async function aggregateStudentProgress(
     materialMap.set(sid, entry);
   }
 
-  const reflectionMap = new Map<
-    string,
-    { count: number; depths: number[] }
-  >();
+  const reflectionMap = new Map<string, { count: number; depths: number[] }>();
   for (const r of allSubjectReflections) {
     const sid = r.challenge.subjectId;
     if (!sid) continue;
@@ -2088,7 +2118,17 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
 
   const existing = await prisma.weeklyChallenge.findUnique({
     where: { userId_weekStart: { userId, weekStart: monday } },
-    include: { challenge: { select: { id: true, title: true, description: true, status: true, items: { select: { id: true, kind: true, status: true } } } } },
+    include: {
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          items: { select: { id: true, kind: true, status: true } },
+        },
+      },
+    },
   });
 
   if (existing) {
@@ -2148,7 +2188,8 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
     console.error("AI weekly challenge generation failed:", err);
     return {
       title: "Misi Mingguan: Pemburu Ilmu",
-      description: "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
+      description:
+        "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
       goal: 8,
     };
   });
@@ -2172,7 +2213,11 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
         status: "ACTIVE",
         source: "AUTO_WEEKLY",
         scheduledFor: monday,
-        mixConfig: { questions: weeklyContent.questions.length, materials: weeklyContent.materials.length, reflections: 0 },
+        mixConfig: {
+          questions: weeklyContent.questions.length,
+          materials: weeklyContent.materials.length,
+          reflections: 0,
+        },
       },
     });
 
