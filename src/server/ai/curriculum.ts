@@ -132,15 +132,36 @@ function safeParseJson(text: string): unknown {
     .trim();
   try {
     return JSON.parse(cleaned);
-  } catch (err) {
+  } catch {
     const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
-      } catch (_e) {}
+    if (firstBrace === -1) {
+      throw new Error(
+        `Failed to parse JSON from AI response (no JSON object found): ${text.slice(0, 200)}...`,
+      );
     }
-    throw err;
+    // Find matching closing brace using depth counting
+    let depth = 0;
+    let end = -1;
+    for (let i = firstBrace; i < cleaned.length; i++) {
+      if (cleaned[i] === "{") depth++;
+      if (cleaned[i] === "}") depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+    if (end <= firstBrace) {
+      throw new Error(
+        `Failed to parse JSON from AI response (unbalanced braces): ${text.slice(0, 200)}...`,
+      );
+    }
+    try {
+      return JSON.parse(cleaned.slice(firstBrace, end + 1));
+    } catch {
+      throw new Error(
+        `Failed to parse JSON from AI response (invalid JSON after extraction): ${text.slice(0, 200)}...`,
+      );
+    }
   }
 }
 
