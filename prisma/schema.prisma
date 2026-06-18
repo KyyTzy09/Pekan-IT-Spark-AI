@@ -547,20 +547,23 @@ model DailyQuest {
 }
 
 model WeeklyChallenge {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   weekStart   DateTime
   title       String
   description String?
   goal        Int
-  progress    Int      @default(0)
-  completed   Boolean  @default(false)
-  xpRewarded  Boolean  @default(false)
+  progress    Int        @default(0)
+  completed   Boolean    @default(false)
+  xpRewarded  Boolean    @default(false)
   badgeId     String?
-  createdAt   DateTime @default(now())
+  challengeId String?
+  challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
 
   @@unique([userId, weekStart])
+  @@index([challengeId])
   @@map("weekly_challenges")
 }
 
@@ -715,6 +718,11 @@ enum ChallengeStatus {
   EXPIRED
 }
 
+enum ChallengeType {
+  DAILY
+  WEEKLY
+}
+
 enum ChallengeItemKind {
   QUESTION
   MATERIAL
@@ -730,6 +738,7 @@ enum ChallengeItemStatus {
 
 enum ChallengeSource {
   AUTO_DAILY
+  AUTO_WEEKLY
   ON_DEMAND
 }
 
@@ -759,6 +768,7 @@ model Challenge {
   subject      Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   title        String
   description  String          @db.Text
+  type         ChallengeType   @default(DAILY)
   status       ChallengeStatus @default(ACTIVE)
   source       ChallengeSource @default(AUTO_DAILY)
   scheduledFor DateTime        @db.Date
@@ -767,10 +777,12 @@ model Challenge {
   completedAt  DateTime?
   items        ChallengeItem[]
   reflections  Reflection[]
+  weeklyChallenge WeeklyChallenge[]
 
   @@index([userId, scheduledFor])
   @@index([userId, status])
   @@index([userId, subjectId])
+  @@index([userId, type])
   @@map("challenges")
 }
 

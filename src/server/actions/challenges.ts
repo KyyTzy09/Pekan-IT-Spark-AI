@@ -17,6 +17,7 @@ import {
   generateDailyMix,
   generateOnDemandChallenge,
   generateWeeklyChallengeAI,
+  generateWeeklyChallengeContent,
 } from "@/server/ai/challenge";
 import type {
   ChallengeItemKind,
@@ -170,6 +171,7 @@ async function fetchChallengesForDate(
   const rows = await prisma.challenge.findMany({
     where: {
       userId,
+      type: "DAILY",
       scheduledFor: { gte: dayStart, lt: dayEnd },
     },
     orderBy: { generatedAt: "asc" },
@@ -431,6 +433,7 @@ async function generateAndStoreDailyChallenges(
             subjectId,
             title,
             description,
+            type: "DAILY",
             status: "ACTIVE",
             source: "AUTO_DAILY",
             scheduledFor: toDateOnly(date),
@@ -1088,6 +1091,7 @@ export async function generateOnDemand(input: {
       description:
         plan.description || "Latihan adaptif tambahan atas permintaan siswa.",
       status: "ACTIVE" as const,
+      type: "DAILY" as const,
       source: "ON_DEMAND" as const,
       scheduledFor: toDateOnly(today),
       mixConfig: challengeMix,
@@ -1452,7 +1456,7 @@ async function aggregateDailyProgress(
 
   const [challenges, items] = await Promise.all([
     prisma.challenge.findMany({
-      where: { userId, scheduledFor: { gte: dayStart, lt: dayEnd } },
+      where: { userId, type: "DAILY", scheduledFor: { gte: dayStart, lt: dayEnd } },
       select: {
         id: true,
         status: true,
@@ -1460,7 +1464,7 @@ async function aggregateDailyProgress(
     }),
     prisma.challengeItem.findMany({
       where: {
-        challenge: { userId, scheduledFor: { gte: dayStart, lt: dayEnd } },
+        challenge: { userId, type: "DAILY", scheduledFor: { gte: dayStart, lt: dayEnd } },
         status: "COMPLETED",
         completedAt: { gte: dayStart, lt: dayEnd },
       },
@@ -1659,7 +1663,7 @@ export async function aggregateStudentProgress(
   }
 
   const recentChallengeSubjects = await prisma.challenge.findMany({
-    where: { userId, scheduledFor: { gte: windowStart } },
+    where: { userId, type: "DAILY", scheduledFor: { gte: windowStart } },
     select: {
       subjectId: true,
       subject: { select: { id: true, name: true, slug: true } },
@@ -1699,6 +1703,7 @@ export async function aggregateStudentProgress(
     prisma.challenge.findMany({
       where: {
         userId,
+        type: "DAILY",
         subjectId: { in: subjectIds },
         scheduledFor: { gte: windowStart },
       },
@@ -2081,77 +2086,184 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
   const userId = await requireStudent();
   const monday = startOfWeek(new Date());
 
-  let weekly = await prisma.weeklyChallenge.findUnique({
+  const existing = await prisma.weeklyChallenge.findUnique({
     where: { userId_weekStart: { userId, weekStart: monday } },
+    include: { challenge: { select: { id: true, title: true, description: true, status: true, items: { select: { id: true, kind: true, status: true } } } } },
   });
 
-  if (!weekly) {
-    const profile = await prisma.studentProfile.findUnique({
-      where: { userId },
-      select: {
-        grade: true,
-        focusedSubjects: true,
-        user: { select: { name: true } },
+  if (existing) {
+    const sunday = new Date(monday.getTime() + 7 * 86_400_000);
+    const completedCount = await prisma.challengeItem.count({
+      where: {
+        challenge: {
+          userId,
+          type: "DAILY",
+          scheduledFor: { gte: monday, lt: sunday },
+        },
+        status: "COMPLETED",
       },
     });
 
-    const focusedSubjectIds = profile?.focusedSubjects ?? [];
-    const focusedSubjectModels =
-      focusedSubjectIds.length > 0
-        ? await prisma.subject.findMany({
-            where: { id: { in: focusedSubjectIds } },
-            select: { name: true },
-          })
-        : [];
-    const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+    if (completedCount !== existing.progress) {
+      await prisma.weeklyChallenge.update({
+        where: { id: existing.id },
+        data: {
+          progress: Math.min(completedCount, existing.goal),
+          completed: completedCount >= existing.goal,
+        },
+      });
+    }
 
-    const aiPlan = await generateWeeklyChallengeAI({
-      userName: profile?.user.name ?? undefined,
-      grade: profile?.grade,
-      focusedSubjects: focusedSubjectNames,
-    }).catch((err) => {
-      console.error("AI weekly challenge generation failed:", err);
-      return {
-        title: "Misi Mingguan: Pemburu Ilmu",
-        description: "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
-        goal: 8,
-      };
-    });
-
-    weekly = await prisma.weeklyChallenge.create({
-      data: {
-        userId,
-        weekStart: monday,
-        title: aiPlan.title,
-        description: aiPlan.description,
-        goal: aiPlan.goal,
-        progress: 0,
-        completed: false,
-        xpRewarded: false,
-      },
-    });
+    return {
+      ...existing,
+      weekStart: existing.weekStart.toISOString(),
+      createdAt: existing.createdAt.toISOString(),
+    };
   }
 
-  const sunday = new Date(monday.getTime() + 7 * 86_400_000);
-  const completedCount = await prisma.challengeItem.count({
-    where: {
-      challenge: {
-        userId,
-        scheduledFor: { gte: monday, lt: sunday },
-      },
-      status: "COMPLETED",
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: {
+      grade: true,
+      focusedSubjects: true,
+      user: { select: { name: true } },
     },
   });
 
-  if (completedCount !== weekly.progress) {
-    weekly = await prisma.weeklyChallenge.update({
-      where: { id: weekly.id },
+  const focusedSubjectIds = profile?.focusedSubjects ?? [];
+  const focusedSubjectModels =
+    focusedSubjectIds.length > 0
+      ? await prisma.subject.findMany({
+          where: { id: { in: focusedSubjectIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+  const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+
+  const aiPlan = await generateWeeklyChallengeAI({
+    userName: profile?.user.name ?? undefined,
+    grade: profile?.grade,
+    focusedSubjects: focusedSubjectNames,
+  }).catch((err) => {
+    console.error("AI weekly challenge generation failed:", err);
+    return {
+      title: "Misi Mingguan: Pemburu Ilmu",
+      description: "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
+      goal: 8,
+    };
+  });
+
+  const weeklyContent = await generateWeeklyChallengeContent({
+    userName: profile?.user.name ?? undefined,
+    grade: profile?.grade,
+    focusedSubjects: focusedSubjectNames,
+  }).catch((err) => {
+    console.error("AI weekly content generation failed:", err);
+    return { questions: [], materials: [] };
+  });
+
+  const challenge = await prisma.$transaction(async (tx) => {
+    const c = await tx.challenge.create({
       data: {
-        progress: Math.min(completedCount, weekly.goal),
-        completed: completedCount >= weekly.goal,
+        userId,
+        title: aiPlan.title,
+        description: aiPlan.description,
+        type: "WEEKLY",
+        status: "ACTIVE",
+        source: "AUTO_WEEKLY",
+        scheduledFor: monday,
+        mixConfig: { questions: weeklyContent.questions.length, materials: weeklyContent.materials.length, reflections: 0 },
       },
     });
-  }
+
+    let order = 0;
+
+    for (const q of weeklyContent.questions) {
+      const subject = focusedSubjectModels.find(
+        (s) => s.name.toLowerCase() === q.subjectName.toLowerCase(),
+      );
+      let conceptId: string | null = null;
+      if (subject) {
+        const concept = await tx.concept.findFirst({
+          where: { topic: { subjectId: subject.id } },
+          select: { id: true },
+          orderBy: { order: "asc" },
+        });
+        if (concept) conceptId = concept.id;
+      }
+      if (!conceptId) continue;
+
+      const questionRecord = await tx.question.create({
+        data: {
+          conceptId,
+          type: "MULTIPLE_CHOICE",
+          difficulty: "HARD",
+          bloomTaxonomy: "ANALYZE",
+          questionText: q.questionText,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          hint: q.hint,
+          tags: ["weekly-challenge", "ai-generated"],
+          isActive: true,
+        },
+      });
+
+      await tx.challengeItem.create({
+        data: {
+          challengeId: c.id,
+          order: order++,
+          kind: "QUESTION",
+          questionId: questionRecord.id,
+          points: 20,
+        },
+      });
+    }
+
+    for (const m of weeklyContent.materials) {
+      const subject = focusedSubjectModels.find(
+        (s) => s.name.toLowerCase() === m.subjectName.toLowerCase(),
+      );
+      const materialRecord = await tx.material.create({
+        data: {
+          userId,
+          subjectId: subject?.id ?? null,
+          title: m.title,
+          content: m.content,
+          keyPoints: m.keyPoints,
+          difficulty: "HARD",
+          estimatedMinutes: m.estimatedMinutes,
+          source: "CHALLENGE",
+        },
+      });
+
+      await tx.challengeItem.create({
+        data: {
+          challengeId: c.id,
+          order: order++,
+          kind: "MATERIAL",
+          materialId: materialRecord.id,
+          points: 15,
+        },
+      });
+    }
+
+    return c;
+  });
+
+  const weekly = await prisma.weeklyChallenge.create({
+    data: {
+      userId,
+      weekStart: monday,
+      title: aiPlan.title,
+      description: aiPlan.description,
+      goal: aiPlan.goal,
+      progress: 0,
+      completed: false,
+      xpRewarded: false,
+      challengeId: challenge.id,
+    },
+  });
 
   return {
     ...weekly,
@@ -2172,6 +2284,7 @@ export async function updateWeeklyChallengeProgress(userId: string) {
     where: {
       challenge: {
         userId,
+        type: "DAILY",
         scheduledFor: { gte: monday, lt: sunday },
       },
       status: "COMPLETED",

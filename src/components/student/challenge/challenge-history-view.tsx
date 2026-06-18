@@ -8,7 +8,7 @@ import { ChallengeCard } from "@/components/student/challenge/challenge-card";
 import { Button } from "@/components/ui/button";
 
 type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
-type ChallengeSource = "AUTO_DAILY" | "ON_DEMAND";
+type ChallengeSource = "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
 
 interface ChallengeListItem {
   id: string;

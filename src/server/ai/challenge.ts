@@ -1090,3 +1090,72 @@ Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
   }
 }
 
+export const weeklyQuestionSchema = z.object({
+  questionText: z.string().describe("Soal HARD pilihan ganda untuk tantangan mingguan"),
+  options: z.array(z.string()).length(4).describe("4 pilihan jawaban"),
+  correctAnswer: z.string().describe("Jawaban benar, harus persis sama dengan salah satu opsi"),
+  explanation: z.string().describe("Penjelasan detail kenapa jawaban itu benar"),
+  hint: z.string().describe("Petunjuk berupa pertanyaan pancingan (bukan bocoran jawaban)"),
+  subjectName: z.string().describe("Nama mapel yang soal ini rujuk"),
+});
+
+export const weeklyMaterialSchema = z.object({
+  title: z.string().max(100).describe("Judul materi"),
+  content: z.string().min(400).describe("Materi belajar mendalam dalam format Markdown (600-1000 kata)"),
+  keyPoints: z.array(z.string()).min(3).max(8).describe("3-8 poin penting dari materi"),
+  estimatedMinutes: z.number().int().min(5).max(30).describe("Estimasi waktu baca dalam menit"),
+  subjectName: z.string().describe("Nama mapel yang materi ini rujuk"),
+});
+
+export const weeklyContentSchema = z.object({
+  questions: z.array(weeklyQuestionSchema).min(8).max(15).describe("8-15 soal HARD"),
+  materials: z.array(weeklyMaterialSchema).min(1).max(3).describe("1-3 materi mendalam"),
+});
+
+export type WeeklyContent = z.infer<typeof weeklyContentSchema>;
+
+export async function generateWeeklyChallengeContent(
+  input: WeeklyChallengeInput,
+): Promise<WeeklyContent> {
+  console.log("[AI_SERVICE] generateWeeklyChallengeContent start");
+
+  const systemPrompt = `Kamu adalah Spark — tutor AI personal untuk siswa SMA/SMK Indonesia.
+Tugasmu adalah membuat konten TANTANGAN MINGGUAN berupa soal-soal SULIT dan materi MENDALAM untuk siswa.
+
+ATURAN WAJIB:
+1. Semua soal harus HARD (sulit) - menguji pemahaman mendalam, bukan hafalan.
+2. Soal harus membutuhkan analisis, sintesis, atau aplikasi konsep.
+3. Setiap soal punya 4 opsi jawaban dengan 1 jawaban benar yang pasti.
+4. correctAnswer HARUS persis sama dengan salah satu string di options.
+5. Materi harus 600-1000 kata, format Markdown bersih, dengan penjelasan mendalam.
+6. Materi harus menyertakan contoh konkret dan aplikasi di kehidupan nyata.
+7. Bahasa Indonesia yang asyik dan engaging untuk siswa SMA/SMK.
+8. Output HARUS JSON valid sesuai format yang diminta.`;
+
+  const userPrompt = `Buat konten tantangan mingguan untuk siswa:
+- Nama: ${input.userName ?? "Siswa"}
+- Kelas: ${input.grade ?? "SMA"}
+- Mata pelajaran fokus: ${input.focusedSubjects.join(", ") || "Semua Mapel"}
+  
+Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang merujuk pada mapel-mapel di atas. Soal harus benar-benar sulit, bukan soal mudah. Materi harus panjang dan berbobot.`;
+
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.6,
+    });
+
+    const parsedJson = safeParseJson(text);
+    const validated = weeklyContentSchema.parse(parsedJson);
+    return validated;
+  } catch (err) {
+    console.warn("generateWeeklyChallengeContent failed:", err);
+    return {
+      questions: [],
+      materials: [],
+    };
+  }
+}
+

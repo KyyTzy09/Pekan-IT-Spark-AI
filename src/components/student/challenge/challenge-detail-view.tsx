@@ -59,7 +59,7 @@ interface ChallengeDetail {
   title: string;
   description: string;
   status: ChallengeStatus;
-  source: "AUTO_DAILY" | "ON_DEMAND";
+  source: "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
   scheduledFor: string;
   generatedAt: string;
   completedAt: string | null;

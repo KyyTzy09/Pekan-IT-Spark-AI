@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
 type ChallengeItemKind = "QUESTION" | "MATERIAL" | "REFLECTION";
-type ChallengeSource = "AUTO_DAILY" | "ON_DEMAND";
+type ChallengeSource = "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
 
 interface ChallengeListItem {
   id: string;

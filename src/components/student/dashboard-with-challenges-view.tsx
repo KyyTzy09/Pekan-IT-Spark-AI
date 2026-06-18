@@ -11,7 +11,7 @@ type ChallengeListItem = {
   title: string;
   description: string;
   status: "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
-  source: "AUTO_DAILY" | "ON_DEMAND";
+  source: "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
   scheduledFor: string;
   completedAt: string | null;
   subject: {
