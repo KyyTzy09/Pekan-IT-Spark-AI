@@ -325,6 +325,22 @@ export async function addCustomSubject(
   revalidatePath("/dashboard");
   revalidatePath("/onboarding");
 
+  // Auto-favorite newly created custom subject so it appears in "Favorit kamu"
+  // and becomes eligible for daily/weekly challenges.
+  try {
+    const currentFocused = Array.isArray(profile?.focusedSubjects)
+      ? profile.focusedSubjects
+      : [];
+    if (!currentFocused.includes(subject.id)) {
+      await prisma.studentProfile.update({
+        where: { userId },
+        data: { focusedSubjects: { push: subject.id } },
+      });
+    }
+  } catch (err) {
+    console.error("[addCustomSubject] Failed to auto-favorite subject:", err);
+  }
+
   return { ok: true, subjectId: subject.id, slug: subject.slug };
 }
 
@@ -594,4 +610,74 @@ export async function markConceptAsRead(
   }
 
   return { ok: true, newStatus: prevStatus, earnedXp: 0 };
+}
+
+const toggleSubjectFavoriteSchema = z.object({
+  subjectId: z.string().min(1),
+});
+
+export type ToggleSubjectFavoriteResult =
+  | { ok: true; focusedSubjects: string[]; isFavorite: boolean }
+  | { ok: false; error: string };
+
+export async function toggleSubjectFavorite(
+  input: z.infer<typeof toggleSubjectFavoriteSchema>,
+): Promise<ToggleSubjectFavoriteResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Kamu harus login dulu." };
+  if (session.user.role !== "STUDENT") {
+    return { ok: false, error: "Hanya siswa yang bisa mengatur favorit." };
+  }
+
+  const parsed = toggleSubjectFavoriteSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Input tidak valid",
+    };
+  }
+
+  const userId = session.user.id;
+  const subjectId = parsed.data.subjectId;
+
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { id: true },
+  });
+  if (!subject) return { ok: false, error: "Mapel tidak ditemukan." };
+
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { focusedSubjects: true },
+  });
+  if (!profile) return { ok: false, error: "Profil siswa tidak ditemukan." };
+
+  const current = Array.isArray(profile.focusedSubjects)
+    ? profile.focusedSubjects
+    : [];
+  const isFavorite = current.includes(subjectId);
+
+  let next: string[];
+  if (isFavorite) {
+    if (current.length <= 1) {
+      return {
+        ok: false,
+        error: "Minimal harus ada 1 mapel favorit.",
+      };
+    }
+    next = current.filter((id) => id !== subjectId);
+  } else {
+    next = [...current, subjectId];
+  }
+
+  await prisma.studentProfile.update({
+    where: { userId },
+    data: { focusedSubjects: next },
+  });
+
+  revalidatePath("/subjects");
+  revalidatePath("/dashboard");
+  revalidatePath("/challenge");
+
+  return { ok: true, focusedSubjects: next, isFavorite: !isFavorite };
 }

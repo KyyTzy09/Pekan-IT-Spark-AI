@@ -1,3 +1,5 @@
+"use client";
+
 import {
   BookOpen,
   CheckCircle2,
@@ -11,11 +13,14 @@ import {
   Wand2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { Constellation } from "@/components/student/constellation-view";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { toggleSubjectFavorite } from "@/server/actions/subjects";
 import type { SubjectExplorerSummary } from "@/server/actions/dashboard";
 
 export type SubjectListItem = {
@@ -71,8 +76,8 @@ export function SubjectsListView({
               </h1>
               <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[14px]">
                 Tap mata pelajaran buat liat skill tree, konsep yang siap
-                dipelajari, dan progress konstelasi kamu. Topik yang kamu pilih
-                pas onboarding bakal muncul di urutan atas.
+                dipelajari, dan progress konstelasi kamu. Tap dan tahan mapel
+                buat nambahin atau hapus dari favorit.
               </p>
             </div>
             {addAction}
@@ -110,6 +115,7 @@ export function SubjectsListView({
                   key={s.id}
                   subject={s}
                   isFocused={focusedIds.includes(s.id)}
+                  focusedIds={focusedIds}
                 />
               ))}
             </div>
@@ -143,6 +149,7 @@ export function SubjectsListView({
                   key={s.id}
                   subject={s}
                   isFocused={focusedIds.includes(s.id)}
+                  focusedIds={focusedIds}
                 />
               ))}
             </div>
@@ -182,6 +189,7 @@ export function SubjectsListView({
                   key={s.id}
                   subject={s}
                   isFocused={focusedIds.includes(s.id)}
+                  focusedIds={focusedIds}
                 />
               ))}
             </div>
@@ -195,100 +203,213 @@ export function SubjectsListView({
 function SubjectCard({
   subject,
   isFocused,
+  focusedIds,
 }: {
   subject: SubjectListItem;
   isFocused: boolean;
+  focusedIds: string[];
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const isLongPress = React.useRef(false);
+
+  const closeMenu = React.useCallback(() => setMenuOpen(false), []);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu();
+      }
+    };
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen, closeMenu]);
+
+  const startLongPress = React.useCallback(() => {
+    isLongPress.current = false;
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      setMenuOpen(true);
+    }, 500);
+  }, []);
+
+  const cancelLongPress = React.useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handlePointerUp = React.useCallback(
+    (e: React.PointerEvent) => {
+      cancelLongPress();
+      if (isLongPress.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (!menuOpen) {
+        router.push(`/subjects/${subject.slug.toLowerCase()}`);
+      }
+    },
+    [cancelLongPress, menuOpen, router, subject.slug],
+  );
+
+  const handleContextMenu = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setMenuOpen(true);
+    },
+    [],
+  );
+
+  const handleToggle = React.useCallback(() => {
+    startTransition(async () => {
+      const result = await toggleSubjectFavorite({ subjectId: subject.id });
+      if (result.ok) {
+        setMenuOpen(false);
+      }
+    });
+  }, [subject.id]);
+
   return (
-    <Link
-      href={`/subjects/${subject.slug.toLowerCase()}`}
-      className="group/sub relative overflow-hidden rounded-2xl border border-border/40 bg-card/85 p-5 shadow-[0_8px_22px_rgba(80,20,50,0.06)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(80,20,50,0.14)]"
-    >
+    <div className="relative">
       <div
-        aria-hidden
-        className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full opacity-25 blur-3xl transition-opacity group-hover/sub:opacity-50"
-        style={{
-          background: subject.color
-            ? `linear-gradient(135deg, ${subject.color}, transparent)`
-            : "linear-gradient(135deg, var(--coral), transparent)",
+        role="button"
+        tabIndex={0}
+        onPointerDown={startLongPress}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={cancelLongPress}
+        onContextMenu={handleContextMenu}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            router.push(`/subjects/${subject.slug.toLowerCase()}`);
+          }
         }}
-      />
-      <div className="relative flex items-start gap-4">
-        <span
-          className="grid size-12 shrink-0 place-items-center rounded-2xl text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]"
+        className={cn(
+          "group/sub relative overflow-hidden rounded-2xl border border-border/40 bg-card/85 p-5 shadow-[0_8px_22px_rgba(80,20,50,0.06)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(80,20,50,0.14)]",
+          menuOpen && "ring-2 ring-[var(--coral)]",
+          isPending && "pointer-events-none opacity-60",
+        )}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full opacity-25 blur-3xl transition-opacity group-hover/sub:opacity-50"
           style={{
             background: subject.color
-              ? `linear-gradient(135deg, ${subject.color}, oklch(0.65 0.15 60))`
-              : "linear-gradient(135deg, var(--coral), var(--orange))",
+              ? `linear-gradient(135deg, ${subject.color}, transparent)`
+              : "linear-gradient(135deg, var(--coral), transparent)",
           }}
-        >
-          <span className="text-[20px]">{subject.icon ?? "📚"}</span>
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-heading text-[16px] font-bold text-foreground">
-              {subject.name}
-            </h3>
-            {isFocused && (
-              <span className="rounded-full bg-[var(--coral)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
-                Fokus
-              </span>
-            )}
-            {subject.isCustom && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full bg-[var(--purple)]/8 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
-                title="Mapel ini AI-generated oleh Spark, bukan kurikulum nasional"
-              >
-                <Wand2 size={8} strokeWidth={2.5} />
-                AI-generated
-              </span>
-            )}
-          </div>
-          {subject.description && (
-            <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground">
-              {subject.description}
-            </p>
-          )}
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-muted-foreground">
-              <CircleDashed size={10} />
-              {subject.totalConcepts} konsep
-            </div>
-            <span className="font-heading text-[13px] font-bold tabular-nums text-foreground">
-              {subject.averageMastery}%
-            </span>
-          </div>
-          <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted/80">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${subject.averageMastery}%`,
-                background: subject.color
-                  ? `linear-gradient(90deg, ${subject.color}, oklch(0.7 0.15 60))`
-                  : "linear-gradient(90deg, var(--coral), var(--orange))",
-              }}
-            />
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              {subject.mastered > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--teal)]/8 px-1.5 py-0.5 text-[9.5px] font-bold text-[var(--teal)] shadow-[inset_0_0_0_1px_rgba(20,184,166,0.2)]">
-                  <CheckCircle2 size={9} />
-                  {subject.mastered} ⭐
+        />
+        <div className="relative flex items-start gap-4">
+          <span
+            className="grid size-12 shrink-0 place-items-center rounded-2xl text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]"
+            style={{
+              background: subject.color
+                ? `linear-gradient(135deg, ${subject.color}, oklch(0.65 0.15 60))`
+                : "linear-gradient(135deg, var(--coral), var(--orange))",
+            }}
+          >
+            <span className="text-[20px]">{subject.icon ?? "📚"}</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-heading text-[16px] font-bold text-foreground">
+                {subject.name}
+              </h3>
+              {isFocused && (
+                <span className="rounded-full bg-[var(--coral)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
+                  Fokus
+                </span>
+              )}
+              {subject.isCustom && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-[var(--purple)]/8 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
+                  title="Mapel ini AI-generated oleh Spark, bukan kurikulum nasional"
+                >
+                  <Wand2 size={8} strokeWidth={2.5} />
+                  AI-generated
                 </span>
               )}
             </div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground transition-colors group-hover/sub:text-[var(--coral)]">
-              Buka
-              <ChevronRight
-                size={12}
-                className="transition-transform group-hover/sub:translate-x-0.5"
+            {subject.description && (
+              <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground">
+                {subject.description}
+              </p>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-muted-foreground">
+                <CircleDashed size={10} />
+                {subject.totalConcepts} konsep
+              </div>
+              <span className="font-heading text-[13px] font-bold tabular-nums text-foreground">
+                {subject.averageMastery}%
+              </span>
+            </div>
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted/80">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${subject.averageMastery}%`,
+                  background: subject.color
+                    ? `linear-gradient(90deg, ${subject.color}, oklch(0.7 0.15 60))`
+                    : "linear-gradient(90deg, var(--coral), var(--orange))",
+                }}
               />
-            </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                {subject.mastered > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--teal)]/8 px-1.5 py-0.5 text-[9.5px] font-bold text-[var(--teal)] shadow-[inset_0_0_0_1px_rgba(20,184,166,0.2)]">
+                    <CheckCircle2 size={9} />
+                    {subject.mastered} ⭐
+                  </span>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground transition-colors group-hover/sub:text-[var(--coral)]">
+                Buka
+                <ChevronRight
+                  size={12}
+                  className="transition-transform group-hover/sub:translate-x-0.5"
+                />
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </Link>
+
+      {menuOpen && (
+        <div
+          ref={menuRef}
+          className="absolute left-1/2 top-1/2 z-20 w-48 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/50 bg-card p-2 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-[12px]"
+            onClick={handleToggle}
+            disabled={isPending}
+          >
+            <Heart
+              size={14}
+              className={cn(
+                isFocused
+                  ? "fill-[var(--coral)] text-[var(--coral)]"
+                  : "text-muted-foreground",
+              )}
+            />
+            {isFocused ? "Hapus dari Favorit" : "Tambah ke Favorit"}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
