@@ -222,14 +222,20 @@ export function OnboardingWizardClient({
     if (submitting) return;
     setSubmitting(true);
     setError(null);
-    const answers = visiblePretest.map((q) => {
+    const answers = visiblePretest.map((q, _qi) => {
       const userAnswer = pretestAnswers[q.id] ?? "";
       const correct = correctAnswers[q.id] ?? "";
+      const letterIndex = userAnswer.charCodeAt(0) - 65;
+      const resolvedAnswer =
+        q.options && letterIndex >= 0 && letterIndex < q.options.length
+          ? q.options[letterIndex]
+          : userAnswer;
       return {
         questionId: q.id,
         conceptId: q.conceptId,
         answer: userAnswer,
-        isCorrect: userAnswer.toUpperCase() === correct.toUpperCase(),
+        isCorrect:
+          resolvedAnswer.trim().toUpperCase() === correct.trim().toUpperCase(),
       };
     });
     const result: CompleteOnboardingResult = await completeOnboarding({
@@ -259,10 +265,17 @@ export function OnboardingWizardClient({
 
     const pretestAnswers = generatedQuestions.map((q, qi) => {
       const userAnswer = customPretestAnswers[qi] ?? "";
+      const letterIndex = userAnswer.charCodeAt(0) - 65;
+      const resolvedAnswer =
+        letterIndex >= 0 && letterIndex < q.options.length
+          ? q.options[letterIndex]
+          : userAnswer;
       return {
         questionIndex: qi,
         answer: userAnswer,
-        isCorrect: userAnswer.toUpperCase() === q.correctAnswer.toUpperCase(),
+        isCorrect:
+          resolvedAnswer.trim().toUpperCase() ===
+          q.correctAnswer.trim().toUpperCase(),
         questionText: q.questionText,
         options: q.options,
         correctAnswer: q.correctAnswer,
