@@ -40,7 +40,10 @@ export default function ProfileLoading() {
             </div>
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex gap-4 p-3 rounded-2xl border border-border/30">
+                <div
+                  key={i}
+                  className="flex gap-4 p-3 rounded-2xl border border-border/30"
+                >
                   <div className="h-12 w-12 rounded-2xl bg-muted shrink-0" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 w-32 rounded bg-muted" />

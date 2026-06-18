@@ -121,7 +121,7 @@ export default async function PracticePage({
                   "inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all border",
                   !subjectSlug
                     ? "bg-[var(--purple)] border-[var(--purple)] text-white shadow-[0_4px_12px_rgba(124,58,237,0.25)]"
-                    : "bg-card/60 hover:bg-card border-border/40 text-muted-foreground hover:text-foreground hover:border-border"
+                    : "bg-card/60 hover:bg-card border-border/40 text-muted-foreground hover:text-foreground hover:border-border",
                 )}
               >
                 <span>📚</span>
@@ -140,7 +140,7 @@ export default async function PracticePage({
                       "inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all border",
                       isSelected
                         ? "text-white"
-                        : "bg-card/60 border-border/40 text-muted-foreground hover:text-foreground hover:bg-card/90"
+                        : "bg-card/60 border-border/40 text-muted-foreground hover:text-foreground hover:bg-card/90",
                     )}
                     style={
                       isSelected
@@ -200,4 +200,3 @@ export default async function PracticePage({
     </div>
   );
 }
-

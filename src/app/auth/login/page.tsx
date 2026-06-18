@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -17,6 +17,8 @@ import {
 import { AuthStreakTeaser } from "@/components/auth/auth-streak-teaser";
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { Button } from "@/components/ui/button";
+import { sanitizeInternalPath } from "@/lib/auth-utils";
+import { type AuthActionState, loginAction } from "@/server/actions/auth";
 
 const loginSchema = z.object({
   email: z
@@ -37,12 +39,14 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const callbackUrl = search.get("callbackUrl") || "/dashboard";
   const justRegistered = search.get("registered") === "1";
 
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>(
+    {},
+  );
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const authError = search.get("error");
 
@@ -70,25 +74,46 @@ function LoginForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
-    const result = await signIn("credentials", {
-      email: values.email,
-      password: values.password,
-      redirect: false,
-    });
+    setFieldErrors({});
 
-    if (!result || result.error) {
-      setServerError("Email atau password salah. Coba dicek kembali ya.");
+    const fd = new FormData();
+    fd.set("email", values.email);
+    fd.set("password", values.password);
+    fd.set("callbackUrl", callbackUrl);
+
+    let result: AuthActionState | undefined;
+    try {
+      result = await loginAction(undefined, fd);
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw error;
+      }
+      setServerError("Terjadi kesalahan. Coba lagi, ya.");
       return;
     }
 
-    router.push(callbackUrl);
-    router.refresh();
+    if (result?.error) {
+      setServerError(result.error);
+    }
+    if (result?.fieldErrors) {
+      setFieldErrors(result.fieldErrors);
+    }
   });
 
   const handleGoogle = async () => {
     setServerError(null);
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl });
+    const safe = sanitizeInternalPath(callbackUrl);
+    const target = safe
+      ? `/auth/redirect?callbackUrl=${encodeURIComponent(safe)}`
+      : "/auth/redirect";
+    await signIn("google", { callbackUrl: target });
   };
 
   return (
@@ -161,7 +186,7 @@ function LoginForm() {
           inputMode="email"
           placeholder="kamu@email.com"
           layout="horizontal"
-          error={errors.email?.message}
+          error={errors.email?.message ?? fieldErrors.email}
           {...register("email")}
         />
 
@@ -172,7 +197,7 @@ function LoginForm() {
           autoComplete="current-password"
           placeholder="••••••••"
           layout="horizontal"
-          error={errors.password?.message}
+          error={errors.password?.message ?? fieldErrors.password}
           {...register("password")}
         />
 

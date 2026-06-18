@@ -38,7 +38,11 @@ export function AuthRoleSelector({
   onChange: (next: AuthRole) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label="Pilih peran" className="grid grid-cols-2 gap-3">
+    <div
+      role="radiogroup"
+      aria-label="Pilih peran"
+      className="grid grid-cols-2 gap-3"
+    >
       {ROLE_CARDS.map((card) => {
         const isSelected = value === card.id;
         const Icon = card.icon;

@@ -90,7 +90,8 @@ export function CustomPretestStep({
                         : "border-border/40 bg-background/30 hover:border-border/70",
                     )}
                   >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold transition-colors"
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold transition-colors"
                       style={
                         active
                           ? {

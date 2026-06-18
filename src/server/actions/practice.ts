@@ -509,7 +509,10 @@ function cleanupExpiredQuizzes() {
   }
 }
 
-const cleanupTimer = setInterval(cleanupExpiredQuizzes, QUIZ_CLEANUP_INTERVAL_MS);
+const cleanupTimer = setInterval(
+  cleanupExpiredQuizzes,
+  QUIZ_CLEANUP_INTERVAL_MS,
+);
 cleanupTimer.unref?.();
 
 function newQuizId(): string {

@@ -177,7 +177,12 @@ export function UploadShareView({
           )}
 
           <div className="mt-4 flex justify-end border-t border-border/40 pt-4">
-            <Button asChild variant="outline" size="sm" className="rounded-full">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+            >
               <Link href={`/upload/${document.id}`}>Batal</Link>
             </Button>
           </div>

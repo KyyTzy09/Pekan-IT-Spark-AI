@@ -69,9 +69,7 @@ export function SubjectSearchDialog({
   const [error, setError] = React.useState<string | null>(null);
 
   const filtered = query
-    ? subjects.filter((s) =>
-        s.name.toLowerCase().includes(query.toLowerCase()),
-      )
+    ? subjects.filter((s) => s.name.toLowerCase().includes(query.toLowerCase()))
     : subjects;
 
   const handleGenerate = async () => {
@@ -96,7 +94,10 @@ export function SubjectSearchDialog({
       onCustomSubjectCreated(result);
       handleClose();
     } catch (err) {
-      console.error("[ONBOARDING_SERVICE] generateCustomSubjectPretest error:", err);
+      console.error(
+        "[ONBOARDING_SERVICE] generateCustomSubjectPretest error:",
+        err,
+      );
       setError("Gagal terhubung ke AI. Coba lagi.");
       setIsGenerating(false);
     }
@@ -113,11 +114,20 @@ export function SubjectSearchDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
       <DialogContent
         showCloseButton={false}
-        onInteractOutside={(e) => { if (isGenerating) e.preventDefault(); }}
-        onEscapeKeyDown={(e) => { if (isGenerating) e.preventDefault(); }}
+        onInteractOutside={(e) => {
+          if (isGenerating) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isGenerating) e.preventDefault();
+        }}
         className="max-w-lg p-0 overflow-hidden bg-card border border-border/40"
       >
         <div
@@ -214,7 +224,9 @@ export function SubjectSearchDialog({
           ) : (
             <div className="space-y-4">
               <div className="rounded-2xl border border-[var(--purple)]/25 bg-[var(--purple)]/5 p-3.5 text-[12px] leading-relaxed text-foreground/80">
-                <p className="font-bold text-[var(--purple)]">🪄 Spark AI bakal:</p>
+                <p className="font-bold text-[var(--purple)]">
+                  🪄 Spark AI bakal:
+                </p>
                 <ul className="mt-1.5 space-y-1 pl-4">
                   <li>• Bikin 3-6 topik sesuai mapel kamu</li>
                   <li>• Generate 3-6 konsep per topik</li>
@@ -275,7 +287,11 @@ export function SubjectSearchDialog({
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 size={15} className="animate-spin" strokeWidth={2.5} />
+                    <Loader2
+                      size={15}
+                      className="animate-spin"
+                      strokeWidth={2.5}
+                    />
                     Spark lagi mikir keras…
                   </>
                 ) : (

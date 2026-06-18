@@ -171,7 +171,11 @@ export function ParentSidebar() {
             showCloseButton={false}
           >
             <SheetTitle className="sr-only">Parent Navigation Menu</SheetTitle>
-            <SidebarContent pathname={pathname} user={user} onClose={() => setMobileOpen(false)} />
+            <SidebarContent
+              pathname={pathname}
+              user={user}
+              onClose={() => setMobileOpen(false)}
+            />
           </SheetContent>
         </Sheet>
       </header>

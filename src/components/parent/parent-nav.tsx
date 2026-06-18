@@ -1,6 +1,15 @@
 "use client";
 
-import { BookOpen, Clock, LayoutDashboard, LogOut, Menu, Sparkles, UserPlus, X } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Sparkles,
+  UserPlus,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";

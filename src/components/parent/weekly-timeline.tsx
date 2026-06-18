@@ -76,9 +76,7 @@ export function WeeklyTimeline({
                     className="stroke-[var(--blue)] fill-none transition-all duration-500"
                     strokeWidth="3.5"
                     strokeDasharray="100.5"
-                    strokeDashoffset={
-                      100.5 - (pt.overallScore / 100) * 100.5
-                    }
+                    strokeDashoffset={100.5 - (pt.overallScore / 100) * 100.5}
                     strokeLinecap="round"
                   />
                 </svg>
@@ -104,7 +102,9 @@ export function WeeklyTimeline({
                 <span
                   title="Refleksi Diri"
                   className={`size-1.5 rounded-full ${
-                    pt.reflectionsScore > 0 ? "bg-[var(--coral)]" : "bg-muted/40"
+                    pt.reflectionsScore > 0
+                      ? "bg-[var(--coral)]"
+                      : "bg-muted/40"
                   }`}
                 />
               </div>
@@ -118,12 +118,12 @@ export function WeeklyTimeline({
             Terjawab
           </div>
           <div className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-[var(--yellow)]" />{" "}
-            Materi Dibaca
+            <span className="size-2 rounded-full bg-[var(--yellow)]" /> Materi
+            Dibaca
           </div>
           <div className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-[var(--coral)]" />{" "}
-            Refleksi Terkirim
+            <span className="size-2 rounded-full bg-[var(--coral)]" /> Refleksi
+            Terkirim
           </div>
         </div>
       </div>

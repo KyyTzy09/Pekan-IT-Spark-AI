@@ -33,7 +33,10 @@ export default function PracticeLoading() {
           </div>
           <div className="space-y-3 pt-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-12 rounded-xl border border-border/40 bg-muted/40" />
+              <div
+                key={i}
+                className="h-12 rounded-xl border border-border/40 bg-muted/40"
+              />
             ))}
           </div>
         </div>

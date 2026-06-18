@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Rocket } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -14,10 +13,15 @@ import {
   AuthField,
   GoogleIcon,
 } from "@/components/auth/auth-form";
-import { AuthRoleSelector, type AuthRole } from "@/components/auth/auth-role-selector";
+import {
+  AuthRoleSelector,
+  type AuthRole,
+} from "@/components/auth/auth-role-selector";
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { PasswordStrength } from "@/components/auth/password-strength";
 import { Button } from "@/components/ui/button";
+import { sanitizeInternalPath } from "@/lib/auth-utils";
+import { type AuthActionState, registerAction } from "@/server/actions/auth";
 
 const studentSchema = z.object({
   role: z.literal("STUDENT"),
@@ -57,8 +61,10 @@ const registerSchema = z.discriminatedUnion("role", [
 type RegisterValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>(
+    {},
+  );
   const [googleLoading, setGoogleLoading] = React.useState(false);
   const [role, setRole] = React.useState<AuthRole>("STUDENT");
   const [password, setPassword] = React.useState("");
@@ -81,11 +87,13 @@ export default function RegisterPage() {
   const handleRoleChange = (next: AuthRole) => {
     setRole(next);
     setServerError(null);
+    setFieldErrors({});
     setValue("role" as never, next as never, { shouldValidate: false });
   };
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
+    setFieldErrors({});
 
     if (values.role === "PARENT" && !values.inviteCode) {
       setServerError(
@@ -94,41 +102,44 @@ export default function RegisterPage() {
       return;
     }
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
+    const fd = new FormData();
+    fd.set("role", values.role);
+    fd.set("name", values.name);
+    fd.set("email", values.email);
+    fd.set("password", values.password);
+    if (values.role === "PARENT" && values.inviteCode) {
+      fd.set("inviteCode", values.inviteCode);
+    }
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setServerError(data.message || "Gagal daftar. Coba lagi, ya.");
+    let result: AuthActionState | undefined;
+    try {
+      result = await registerAction(undefined, fd);
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "digest" in error &&
+        typeof (error as { digest?: unknown }).digest === "string" &&
+        (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw error;
+      }
+      setServerError("Terjadi kesalahan. Coba lagi, ya.");
       return;
     }
 
-    const signin = await signIn("credentials", {
-      email: values.email,
-      password: values.password,
-      redirect: false,
-    });
-
-    if (!signin || signin.error) {
-      router.push("/auth/login?registered=1");
-      return;
+    if (result?.error) {
+      setServerError(result.error);
     }
-
-    if (values.role === "STUDENT") {
-      router.push("/onboarding");
-    } else {
-      router.push("/parent");
+    if (result?.fieldErrors) {
+      setFieldErrors(result.fieldErrors);
     }
-    router.refresh();
   });
 
   const handleGoogle = async () => {
     setServerError(null);
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/onboarding" });
+    await signIn("google", { callbackUrl: "/auth/redirect" });
   };
 
   return (
@@ -192,7 +203,10 @@ export default function RegisterPage() {
           autoComplete="name"
           placeholder="Nama kamu"
           layout="horizontal"
-          error={(errors as Record<string, { message?: string }>).name?.message}
+          error={
+            (errors as Record<string, { message?: string }>).name?.message ??
+            fieldErrors.name
+          }
           {...register("name" as never)}
         />
 
@@ -205,7 +219,8 @@ export default function RegisterPage() {
           placeholder="kamu@email.com"
           layout="horizontal"
           error={
-            (errors as Record<string, { message?: string }>).email?.message
+            (errors as Record<string, { message?: string }>).email?.message ??
+            fieldErrors.email
           }
           {...register("email" as never)}
         />
@@ -220,7 +235,7 @@ export default function RegisterPage() {
               layout="horizontal"
               error={
                 (errors as Record<string, { message?: string }>).inviteCode
-                  ?.message
+                  ?.message ?? fieldErrors.inviteCode
               }
               {...register("inviteCode" as never)}
             />
@@ -236,7 +251,8 @@ export default function RegisterPage() {
             placeholder="Minimal 8 karakter"
             layout="horizontal"
             error={
-              (errors as Record<string, { message?: string }>).password?.message
+              (errors as Record<string, { message?: string }>).password
+                ?.message ?? fieldErrors.password
             }
             {...register("password" as never, {
               onChange: (e) => setPassword(e.target.value),

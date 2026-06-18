@@ -37,8 +37,7 @@ export function MetricsOverview({ metrics }: { metrics: Metrics }) {
           </span>
         </div>
         <p className="text-[10.5px] text-muted-foreground mt-2 leading-relaxed">
-          Streak terlama yang pernah dicapai: **{metrics.streak.longest}{" "}
-          hari**.
+          Streak terlama yang pernah dicapai: **{metrics.streak.longest} hari**.
         </p>
       </div>
 
@@ -95,8 +94,8 @@ export function MetricsOverview({ metrics }: { metrics: Metrics }) {
           </span>
         </div>
         <p className="text-[10.5px] text-muted-foreground mt-2 leading-relaxed">
-          Dihitung otomatis berdasarkan penguasaan konsep, tantangan harian,
-          dan refleksi.
+          Dihitung otomatis berdasarkan penguasaan konsep, tantangan harian, dan
+          refleksi.
         </p>
       </div>
     </section>

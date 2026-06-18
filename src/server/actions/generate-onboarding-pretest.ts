@@ -66,13 +66,10 @@ export async function generateCustomSubjectPretest(
       educationLevel: parsed.data.educationLevel,
     });
 
-    console.log(
-      "[ONBOARDING_SERVICE] generateCustomSubjectPretest success",
-      {
-        name: parsed.data.name,
-        questionCount: outline.pretestQuestions.length,
-      },
-    );
+    console.log("[ONBOARDING_SERVICE] generateCustomSubjectPretest success", {
+      name: parsed.data.name,
+      questionCount: outline.pretestQuestions.length,
+    });
 
     return {
       ok: true,

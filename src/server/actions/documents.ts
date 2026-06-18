@@ -692,7 +692,11 @@ export async function submitDocumentQuizAttemptAction(
     for (let i = 0; i < questionsArray.length; i++) {
       const q = questionsArray[i];
       const selectedIndex = answers[i];
-      if (q && typeof q.correctIndex === "number" && selectedIndex === q.correctIndex) {
+      if (
+        q &&
+        typeof q.correctIndex === "number" &&
+        selectedIndex === q.correctIndex
+      ) {
         correctCount++;
       }
     }

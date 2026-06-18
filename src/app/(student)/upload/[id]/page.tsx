@@ -102,8 +102,12 @@ export default async function UploadWorkspacePage({
         createdAt: m.createdAt.toISOString(),
       }))}
       quizzes={quizzes.map((q) => {
-        const questionsList = Array.isArray(q.questions) ? (q.questions as any[]) : [];
-        const attemptsList = Array.isArray(q.attempts) ? (q.attempts as any[]) : [];
+        const questionsList = Array.isArray(q.questions)
+          ? (q.questions as any[])
+          : [];
+        const attemptsList = Array.isArray(q.attempts)
+          ? (q.attempts as any[])
+          : [];
         const lastAttempt = attemptsList[attemptsList.length - 1];
         return {
           id: q.id,

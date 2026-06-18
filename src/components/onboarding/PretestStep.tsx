@@ -178,7 +178,13 @@ function PretestEmptyState({ selectedCount }: { selectedCount: number }) {
   );
 }
 
-function Check({ size = 10, strokeWidth = 3 }: { size?: number; strokeWidth?: number }) {
+function Check({
+  size = 10,
+  strokeWidth = 3,
+}: {
+  size?: number;
+  strokeWidth?: number;
+}) {
   return (
     <svg
       width={size}

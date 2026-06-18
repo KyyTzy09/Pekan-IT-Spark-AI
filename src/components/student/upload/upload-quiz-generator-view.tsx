@@ -30,7 +30,10 @@ export function UploadQuizGeneratorView({
       const { generateDocumentQuizAction } = await import(
         "@/server/actions/documents"
       );
-      const result = await generateDocumentQuizAction(document.id, count as 3 | 5 | 8);
+      const result = await generateDocumentQuizAction(
+        document.id,
+        count as 3 | 5 | 8,
+      );
       if (!result.ok) {
         setError(result.error);
         setIsGenerating(false);

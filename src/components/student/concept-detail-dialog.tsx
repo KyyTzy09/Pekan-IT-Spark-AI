@@ -115,9 +115,10 @@ export function ConceptDetailDialog({
             ? {
                 ...prev,
                 status: res.newStatus,
-                masteryScore: prev.status === "NOT_STARTED" ? 0.1 : prev.masteryScore,
+                masteryScore:
+                  prev.status === "NOT_STARTED" ? 0.1 : prev.masteryScore,
               }
-            : null
+            : null,
         );
         if (res.earnedXp > 0) {
           gooeyToast.success("Materi Selesai Dibaca!", {
@@ -280,7 +281,10 @@ export function ConceptDetailDialog({
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 size={13} className="mr-1.5 text-emerald-600" />
+                      <CheckCircle2
+                        size={13}
+                        className="mr-1.5 text-emerald-600"
+                      />
                       Selesai Membaca (+5 XP)
                     </>
                   )}

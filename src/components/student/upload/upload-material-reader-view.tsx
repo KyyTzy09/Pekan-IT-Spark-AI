@@ -124,9 +124,15 @@ export function UploadMaterialReaderView({
                   className="rounded-full"
                 >
                   <Sparkles size={12} className="mr-1" />
-                  {isEnhancing ? "Lagi upgrade..." : "Tingkatkan (Lebih Berbobot)"}
+                  {isEnhancing
+                    ? "Lagi upgrade..."
+                    : "Tingkatkan (Lebih Berbobot)"}
                 </Button>
-                <Button asChild size="sm" className="rounded-full bg-[var(--teal)] text-white">
+                <Button
+                  asChild
+                  size="sm"
+                  className="rounded-full bg-[var(--teal)] text-white"
+                >
                   <Link href={`/upload/${document.id}?tab=materials`}>
                     Selesai Membaca
                   </Link>

@@ -28,7 +28,7 @@ export function AlertsSection({ alerts }: { alerts: Alert[] }) {
               "relative overflow-hidden rounded-2xl border p-4.5 flex gap-3.5 backdrop-blur-xl shadow-sm",
               alert.severity === "warning"
                 ? "border-amber-500/25 bg-amber-500/5 text-amber-900 dark:text-amber-100"
-                : "border-[var(--blue)]/20 bg-[var(--blue)]/5 text-[var(--blue)]"
+                : "border-[var(--blue)]/20 bg-[var(--blue)]/5 text-[var(--blue)]",
             )}
           >
             <div
@@ -36,7 +36,7 @@ export function AlertsSection({ alerts }: { alerts: Alert[] }) {
                 "grid size-9 shrink-0 place-items-center rounded-xl text-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]",
                 alert.severity === "warning"
                   ? "bg-amber-500"
-                  : "bg-gradient-to-br from-[var(--blue)] to-[var(--teal)]"
+                  : "bg-gradient-to-br from-[var(--blue)] to-[var(--teal)]",
               )}
             >
               {alert.type === "inactivity" ? (

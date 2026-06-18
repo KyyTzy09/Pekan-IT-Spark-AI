@@ -262,13 +262,10 @@ function SubjectCard({
     [cancelLongPress, menuOpen, router, subject.slug],
   );
 
-  const handleContextMenu = React.useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      setMenuOpen(true);
-    },
-    [],
-  );
+  const handleContextMenu = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(true);
+  }, []);
 
   const handleToggle = React.useCallback(() => {
     startTransition(async () => {

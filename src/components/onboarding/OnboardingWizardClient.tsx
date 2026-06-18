@@ -14,19 +14,19 @@ import {
   type CompleteOnboardingCustomResult,
   completeOnboardingCustom,
 } from "@/server/actions/complete-onboarding-custom";
-import { StepIndicator, type Step } from "./StepIndicator";
-import { WelcomeStep } from "./WelcomeStep";
-import { ProfileStep, type EducationLevel } from "./ProfileStep";
-import { SubjectsStep } from "./SubjectsStep";
-import {
-  SubjectSearchDialog,
-  type GeneratedPretestResult,
-} from "./SubjectSearchDialog";
-import { StyleReminderStep, type LearningStyle } from "./StyleReminderStep";
-import { PretestStep } from "./PretestStep";
-import { CustomSubjectStep } from "./CustomSubjectStep";
-import { CustomPretestStep } from "./CustomPretestStep";
 import { generateCustomSubjectPretest } from "@/server/actions/generate-onboarding-pretest";
+import { CustomPretestStep } from "./CustomPretestStep";
+import { CustomSubjectStep } from "./CustomSubjectStep";
+import { PretestStep } from "./PretestStep";
+import { type EducationLevel, ProfileStep } from "./ProfileStep";
+import { type Step, StepIndicator } from "./StepIndicator";
+import { type LearningStyle, StyleReminderStep } from "./StyleReminderStep";
+import {
+  type GeneratedPretestResult,
+  SubjectSearchDialog,
+} from "./SubjectSearchDialog";
+import { SubjectsStep } from "./SubjectsStep";
+import { WelcomeStep } from "./WelcomeStep";
 
 type Subject = {
   id: string;
@@ -103,11 +103,34 @@ export function OnboardingWizardClient({
   const [generatedQuestions, setGeneratedQuestions] = React.useState<
     GeneratedPretestResult["questions"] | null
   >(null);
-  const [generatedSubjectData, setGeneratedSubjectData] =
-    React.useState<GeneratedPretestResult["subjectData"] | null>(null);
+  const [generatedSubjectData, setGeneratedSubjectData] = React.useState<
+    GeneratedPretestResult["subjectData"] | null
+  >(null);
   const [customPretestAnswers, setCustomPretestAnswers] = React.useState<
     Record<number, string>
   >({});
+
+  // Reset custom generation when custom parameters change
+  const handleCustomNameChange = (val: string) => {
+    setCustomName(val);
+    setGeneratedQuestions(null);
+    setGeneratedSubjectData(null);
+  };
+  const handleCustomContextChange = (val: string) => {
+    setCustomContext(val);
+    setGeneratedQuestions(null);
+    setGeneratedSubjectData(null);
+  };
+  const handleCustomEducationLevelChange = (val: EducationLevel) => {
+    setEducationLevel(val);
+    setGeneratedQuestions(null);
+    setGeneratedSubjectData(null);
+  };
+  const handleCustomGradeChange = (val: number) => {
+    setGrade(val);
+    setGeneratedQuestions(null);
+    setGeneratedSubjectData(null);
+  };
 
   // Search dialog state
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -132,9 +155,7 @@ export function OnboardingWizardClient({
       if (s === 2) {
         return (
           generatedQuestions === null ||
-          generatedQuestions.every((_, qi) =>
-            Boolean(customPretestAnswers[qi]),
-          )
+          generatedQuestions.every((_, qi) => Boolean(customPretestAnswers[qi]))
         );
       }
       return true;
@@ -205,7 +226,10 @@ export function OnboardingWizardClient({
       setGeneratedSubjectData(result.subjectData);
       setIsGenerating(false);
     } catch (err) {
-      console.error("[ONBOARDING_SERVICE] generateCustomSubjectPretest error:", err);
+      console.error(
+        "[ONBOARDING_SERVICE] generateCustomSubjectPretest error:",
+        err,
+      );
       setError("Gagal terhubung ke AI. Coba lagi.");
       setIsGenerating(false);
     }
@@ -253,7 +277,11 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
-    await update();
+    try {
+      await update({});
+    } catch (err) {
+      console.error("Session update error:", err);
+    }
     router.replace("/dashboard");
   };
 
@@ -305,11 +333,16 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
-    await update();
+    try {
+      await update({});
+    } catch (err) {
+      console.error("Session update error:", err);
+    }
     router.replace("/dashboard");
   };
 
-  const handleSubmit = flow === "custom" ? handleCustomSubmit : handleNationalSubmit;
+  const handleSubmit =
+    flow === "custom" ? handleCustomSubmit : handleNationalSubmit;
 
   const stepTitle = () => {
     const currentStepKey = steps[step]?.key;
@@ -404,7 +437,10 @@ export function OnboardingWizardClient({
         <StepIndicator steps={steps as unknown as Step[]} current={step} />
       )}
 
-      <div key={`step-${flow}-${step}`} className="mt-6 flex-1 animate-step-fade-in">
+      <div
+        key={`step-${flow}-${step}`}
+        className="mt-6 flex-1 animate-step-fade-in"
+      >
         {flow === "national" && step === 0 && (
           <WelcomeStep
             userName={userName}
@@ -475,10 +511,10 @@ export function OnboardingWizardClient({
             context={customContext}
             educationLevel={educationLevel}
             grade={grade}
-            onNameChange={setCustomName}
-            onContextChange={setCustomContext}
-            onEducationLevelChange={setEducationLevel}
-            onGradeChange={setGrade}
+            onNameChange={handleCustomNameChange}
+            onContextChange={handleCustomContextChange}
+            onEducationLevelChange={handleCustomEducationLevelChange}
+            onGradeChange={handleCustomGradeChange}
             isGenerating={isGenerating}
             error={error}
           />
@@ -521,8 +557,21 @@ export function OnboardingWizardClient({
           <Button
             type="button"
             size="lg"
-            onClick={flow === "custom" && step === 1 && !isGenerating ? handleCustomGenerate : goNext}
-            disabled={!isStepValid(step) || isGenerating}
+            onClick={
+              flow === "custom" && step === 1 && !isGenerating
+                ? generatedQuestions
+                  ? goNext
+                  : handleCustomGenerate
+                : goNext
+            }
+            disabled={
+              isGenerating ||
+              (flow === "custom" && step === 1
+                ? generatedQuestions
+                  ? false
+                  : customName.trim().length < 2
+                : !isStepValid(step))
+            }
             className="rounded-2xl bg-[var(--coral)] px-5 text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)] hover:bg-[var(--coral)]/90 hover:shadow-[0_10px_24px_rgba(225,29,72,0.5)]"
           >
             {flow === "custom" && step === 1 ? (

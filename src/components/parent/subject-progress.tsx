@@ -21,8 +21,8 @@ export function SubjectProgress({ subjects }: { subjects: Subject[] }) {
           Mata Pelajaran yang Sedang Dipelajari
         </h2>
         <p className="text-[12px] text-muted-foreground">
-          Tingkat penguasaan anak Anda berdasarkan pengerjaan materi dan
-          kuis latihan.
+          Tingkat penguasaan anak Anda berdasarkan pengerjaan materi dan kuis
+          latihan.
         </p>
       </header>
 

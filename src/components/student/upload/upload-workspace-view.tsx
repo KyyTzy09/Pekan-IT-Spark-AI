@@ -105,9 +105,7 @@ export function UploadWorkspaceView({
     setIsGenerating("summary");
     setError(null);
     try {
-      const { getDocumentSummary } = await import(
-        "@/server/actions/documents"
-      );
+      const { getDocumentSummary } = await import("@/server/actions/documents");
       const result = await getDocumentSummary(document.id, {
         forceRegenerate: true,
       });
@@ -166,8 +164,7 @@ export function UploadWorkspaceView({
                   </h1>
                   <p className="mt-1 text-[11.5px] text-muted-foreground">
                     {document.mimeType}
-                    {document.pageCount ? ` · ${document.pageCount} hal` : ""} ·
-                    {" "}
+                    {document.pageCount ? ` · ${document.pageCount} hal` : ""} ·{" "}
                     {formatBytes(document.size)} ·{" "}
                     {document.chunkCount > 0
                       ? `${document.chunkCount} chunks indexed`
@@ -175,7 +172,12 @@ export function UploadWorkspaceView({
                   </p>
                 </div>
               </div>
-              <Button asChild variant="outline" size="sm" className="rounded-full">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+              >
                 <Link href="/upload">
                   <ArrowLeft size={13} />
                   Semua dokumen
@@ -289,13 +291,10 @@ function SummaryTab({
   if (!summary) {
     return (
       <div className="rounded-2xl border border-border/40 bg-card/60 p-6 text-center">
-        <Sparkles
-          size={28}
-          className="mx-auto text-muted-foreground/45"
-        />
+        <Sparkles size={28} className="mx-auto text-muted-foreground/45" />
         <p className="mt-2 text-[13px] text-muted-foreground">
-          Belum ada ringkasan. Spark bisa baca dokumen ini dan bikin
-          ringkasan otomatis.
+          Belum ada ringkasan. Spark bisa baca dokumen ini dan bikin ringkasan
+          otomatis.
         </p>
         <Button
           size="sm"
@@ -491,8 +490,7 @@ function QuizzesTab({
                 {q.title}
               </h4>
               <p className="mt-0.5 text-[10.5px] text-muted-foreground">
-                {q.questionsCount} Soal · {q.attemptsCount}x dikerjakan ·
-                Skor:{" "}
+                {q.questionsCount} Soal · {q.attemptsCount}x dikerjakan · Skor:{" "}
                 {q.lastScore !== null
                   ? `${q.lastScore}/${q.questionsCount}`
                   : "Belum"}{" "}

@@ -84,11 +84,14 @@ ${prompt ? prompt : "(none)"}
     console.log(
       `[AI_SERVICE] generateText attempting model: ${modelName} on client: ${isHeavy ? "openaiHeavy" : "openaiDefault"}`,
     );
-    const response = await client.chat.completions.create({
-      model: modelName,
-      messages,
-      temperature,
-    }, { timeout: AI_TIMEOUT_MS });
+    const response = await client.chat.completions.create(
+      {
+        model: modelName,
+        messages,
+        temperature,
+      },
+      { timeout: AI_TIMEOUT_MS },
+    );
 
     const textResult = response.choices[0]?.message?.content || "";
     console.log(`
@@ -122,11 +125,14 @@ ${system ? system : "(none)"}
 ${prompt ? prompt : "(none)"}
 =========================================
 `);
-        const response = await openaiHeavy.chat.completions.create({
-          model: "glm-5",
-          messages,
-          temperature,
-        }, { timeout: AI_TIMEOUT_MS });
+        const response = await openaiHeavy.chat.completions.create(
+          {
+            model: "glm-5",
+            messages,
+            temperature,
+          },
+          { timeout: AI_TIMEOUT_MS },
+        );
         const textResult = response.choices[0]?.message?.content || "";
         console.log(`
 =========================================
@@ -160,11 +166,14 @@ ${system ? system : "(none)"}
 ${prompt ? prompt : "(none)"}
 =========================================
 `);
-          const response = await openaiDefault.chat.completions.create({
-            model: "deepseek-v4-flash",
-            messages,
-            temperature,
-          }, { timeout: AI_TIMEOUT_MS });
+          const response = await openaiDefault.chat.completions.create(
+            {
+              model: "deepseek-v4-flash",
+              messages,
+              temperature,
+            },
+            { timeout: AI_TIMEOUT_MS },
+          );
           const textResult = response.choices[0]?.message?.content || "";
           console.log(`
 =========================================
@@ -238,11 +247,14 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
 =========================================
 `);
     try {
-      const response = await openaiHeavy.chat.completions.create({
-        model: heavyModelName,
-        messages: apiMessages,
-        temperature,
-      }, { timeout: AI_TIMEOUT_STREAM_MS });
+      const response = await openaiHeavy.chat.completions.create(
+        {
+          model: heavyModelName,
+          messages: apiMessages,
+          temperature,
+        },
+        { timeout: AI_TIMEOUT_STREAM_MS },
+      );
 
       const text = response.choices[0]?.message?.content || "";
       console.log(`
@@ -280,11 +292,14 @@ ${text}
 ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
 =========================================
 `);
-        const response = await openaiDefault.chat.completions.create({
-          model: sumopodModel,
-          messages: apiMessages,
-          temperature,
-        }, { timeout: AI_TIMEOUT_STREAM_MS });
+        const response = await openaiDefault.chat.completions.create(
+          {
+            model: sumopodModel,
+            messages: apiMessages,
+            temperature,
+          },
+          { timeout: AI_TIMEOUT_STREAM_MS },
+        );
 
         const text = response.choices[0]?.message?.content || "";
         console.log(`
@@ -315,11 +330,14 @@ ${text}
 * Endpoint:   ${openaiHeavy.baseURL}
 =========================================
 `);
-          const response = await openaiHeavy.chat.completions.create({
-            model: "glm-5",
-            messages: apiMessages,
-            temperature,
-          }, { timeout: AI_TIMEOUT_STREAM_MS });
+          const response = await openaiHeavy.chat.completions.create(
+            {
+              model: "glm-5",
+              messages: apiMessages,
+              temperature,
+            },
+            { timeout: AI_TIMEOUT_STREAM_MS },
+          );
 
           const text = response.choices[0]?.message?.content || "";
           console.log(`
@@ -361,11 +379,14 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
 =========================================
 `);
     try {
-      const response = await openaiDefault.chat.completions.create({
-        model: modelName,
-        messages: apiMessages,
-        temperature,
-      }, { timeout: AI_TIMEOUT_STREAM_MS });
+      const response = await openaiDefault.chat.completions.create(
+        {
+          model: modelName,
+          messages: apiMessages,
+          temperature,
+        },
+        { timeout: AI_TIMEOUT_STREAM_MS },
+      );
 
       const text = response.choices[0]?.message?.content || "";
       console.log(`
@@ -408,10 +429,13 @@ export async function embed({
 =========================================
 `);
   try {
-    const response = await openaiDefault.embeddings.create({
-      model: modelName,
-      input: value,
-    }, { timeout: AI_TIMEOUT_EMBED_MS });
+    const response = await openaiDefault.embeddings.create(
+      {
+        model: modelName,
+        input: value,
+      },
+      { timeout: AI_TIMEOUT_EMBED_MS },
+    );
     const embedding = response.data[0]?.embedding || [];
     console.log(`
 =========================================
@@ -457,10 +481,13 @@ ${values.length > 10 ? `  ... and ${values.length - 10} more inputs` : ""}
 =========================================
 `);
   try {
-    const response = await openaiDefault.embeddings.create({
-      model: modelName,
-      input: values,
-    }, { timeout: AI_TIMEOUT_EMBED_MS });
+    const response = await openaiDefault.embeddings.create(
+      {
+        model: modelName,
+        input: values,
+      },
+      { timeout: AI_TIMEOUT_EMBED_MS },
+    );
     const embeddings = response.data.map((item) => item.embedding);
     console.log(`
 =========================================

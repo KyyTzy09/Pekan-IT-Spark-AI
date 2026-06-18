@@ -581,7 +581,3 @@ function ContinueLearningCard({
     </article>
   );
 }
-
-
-
-

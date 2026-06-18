@@ -18,7 +18,7 @@ const getPgPool = () => {
       connectionString,
       max: 10,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 15000,
     });
   }
   return globalForPrisma.pgPool;
@@ -36,4 +36,3 @@ export const prisma: PrismaClient =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
-

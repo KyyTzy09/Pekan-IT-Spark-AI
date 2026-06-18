@@ -15,7 +15,12 @@ const STUDENT_ROUTES = [
 
 const PUBLIC_ROUTES = ["/", "/about", "/help", "/courses"];
 
-const AUTH_ROUTES = ["/auth/login", "/auth/register"];
+const AUTH_ROUTES = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/redirect",
+  "/auth/verify-email",
+];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

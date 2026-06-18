@@ -75,15 +75,12 @@ export function UploadQuizPlayerView({
 
   const totalQuestions = quiz.questions.length;
   const answeredCount = Object.keys(selectedAnswers).length;
-  const isAllAnswered =
-    totalQuestions > 0 && answeredCount === totalQuestions;
+  const isAllAnswered = totalQuestions > 0 && answeredCount === totalQuestions;
   const correctCount = quiz.questions.filter(
     (q, idx) => selectedAnswers[idx] === q.correctIndex,
   ).length;
   const calculatedScore =
-    totalQuestions > 0
-      ? Math.round((correctCount / totalQuestions) * 100)
-      : 0;
+    totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   const handleSave = async () => {
     if (isSubmitting || hasSubmitted) return;
@@ -193,9 +190,7 @@ export function UploadQuizPlayerView({
                   {quiz.attempts.length > 0 && (
                     <>
                       <span className="inline-block size-1 rounded-full bg-border" />
-                      <span>
-                        Riwayat: {quiz.attempts.length}x dikerjakan
-                      </span>
+                      <span>Riwayat: {quiz.attempts.length}x dikerjakan</span>
                       <span className="inline-block size-1 rounded-full bg-border" />
                       <span className="font-semibold text-teal-600 dark:text-teal-400">
                         Nilai tertinggi: {bestScore}/100
@@ -221,8 +216,7 @@ export function UploadQuizPlayerView({
             {quiz.questions.map((q, i) => {
               const selected = selectedAnswers[i];
               const isAnswered = selected !== undefined;
-              const isCorrect =
-                isAnswered && selected === q.correctIndex;
+              const isCorrect = isAnswered && selected === q.correctIndex;
               const explanationOpen = showExplanations[i] || false;
 
               return (
@@ -349,10 +343,7 @@ export function UploadQuizPlayerView({
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2
-                          size={13}
-                          className="mr-1.5 animate-spin"
-                        />
+                        <Loader2 size={13} className="mr-1.5 animate-spin" />
                         Menyimpan...
                       </>
                     ) : (
@@ -384,8 +375,8 @@ export function UploadQuizPlayerView({
                   Kurang puas dengan soal yang ada?
                 </h4>
                 <p className="text-[11.5px] text-muted-foreground">
-                  Tambahkan soal baru secara dinamis untuk memperbanyak
-                  variasi soal latihanmu.
+                  Tambahkan soal baru secara dinamis untuk memperbanyak variasi
+                  soal latihanmu.
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -420,7 +411,12 @@ export function UploadQuizPlayerView({
           </div>
 
           <div className="flex justify-end pt-2">
-            <Button asChild variant="outline" size="sm" className="rounded-full">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+            >
               <Link href={`/upload/${document.id}?tab=quizzes`}>
                 Kembali ke daftar latihan
               </Link>

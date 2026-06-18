@@ -8,11 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type LearningStyle =
-  | "VISUAL"
-  | "TEXTUAL"
-  | "EXAMPLE_HEAVY"
-  | "SOCRATIC";
+export type LearningStyle = "VISUAL" | "TEXTUAL" | "EXAMPLE_HEAVY" | "SOCRATIC";
 
 const LEARNING_STYLES: Array<{
   value: LearningStyle;
@@ -216,7 +212,13 @@ export function StyleReminderStep({
   );
 }
 
-function Check({ size = 11, strokeWidth = 3 }: { size?: number; strokeWidth?: number }) {
+function Check({
+  size = 11,
+  strokeWidth = 3,
+}: {
+  size?: number;
+  strokeWidth?: number;
+}) {
   return (
     <svg
       width={size}
