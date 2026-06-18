@@ -1,11 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { ComponentProps } from "react";
 import Markdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { cn } from "@/lib/utils";
+
+const MermaidRenderer = dynamic(() => import("./mermaid-renderer"), {
+  ssr: false,
+});
 
 type MarkdownProps = ComponentProps<typeof Markdown>;
 
@@ -44,26 +49,17 @@ const components: MarkdownProps["components"] = {
     </h1>
   ),
   h2: ({ children, ...props }) => (
-    <h2
-      className="font-heading text-[18px] font-bold leading-snug"
-      {...props}
-    >
+    <h2 className="font-heading text-[18px] font-bold leading-snug" {...props}>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }) => (
-    <h3
-      className="font-heading text-[16px] font-bold leading-snug"
-      {...props}
-    >
+    <h3 className="font-heading text-[16px] font-bold leading-snug" {...props}>
       {children}
     </h3>
   ),
   h4: ({ children, ...props }) => (
-    <h4
-      className="font-heading text-[14px] font-bold leading-snug"
-      {...props}
-    >
+    <h4 className="font-heading text-[14px] font-bold leading-snug" {...props}>
       {children}
     </h4>
   ),
@@ -76,10 +72,7 @@ const components: MarkdownProps["components"] = {
     </h5>
   ),
   h6: ({ children, ...props }) => (
-    <h6
-      className="font-heading text-[13px] font-bold leading-snug"
-      {...props}
-    >
+    <h6 className="font-heading text-[13px] font-bold leading-snug" {...props}>
       {children}
     </h6>
   ),
@@ -139,9 +132,14 @@ const components: MarkdownProps["components"] = {
     </blockquote>
   ),
   code: ({ children, className: codeClassName, ...props }) => {
-    const isBlock = (props as { node?: { position?: unknown } }).node
-      ? false
-      : false;
+    const isBlock = false;
+
+    // Check if this is a Mermaid diagram code block
+    if (codeClassName?.includes("language-mermaid")) {
+      const codeString = String(children).replace(/\n$/, "");
+      return <MermaidRenderer chart={codeString} />;
+    }
+
     if (isBlock || codeClassName?.includes("language-")) {
       return (
         <code
@@ -192,27 +190,19 @@ const components: MarkdownProps["components"] = {
       {children}
     </th>
   ),
-  tbody: ({ children, ...props }) => (
-    <tbody {...props}>{children}</tbody>
-  ),
+  tbody: ({ children, ...props }) => <tbody {...props}>{children}</tbody>,
   tr: ({ children, ...props }) => (
     <tr className="even:bg-foreground/[0.02]" {...props}>
       {children}
     </tr>
   ),
   td: ({ children, ...props }) => (
-    <td
-      className="border-b border-border/30 px-3 py-2 align-top"
-      {...props}
-    >
+    <td className="border-b border-border/30 px-3 py-2 align-top" {...props}>
       {children}
     </td>
   ),
   hr: ({ ...props }) => (
-    <hr
-      className="my-4 border-0 border-t border-border/40"
-      {...props}
-    />
+    <hr className="my-4 border-0 border-t border-border/40" {...props} />
   ),
   img: ({ src, alt, ...props }) => (
     // biome-ignore lint/performance/noImgElement: markdown image source is dynamic
