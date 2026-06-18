@@ -381,8 +381,8 @@ export async function getSubjectDetail(
   subjectSlug: string,
   userId: string,
 ): Promise<SubjectExplorerSummary | null> {
-  const subject = await prisma.subject.findUnique({
-    where: { slug: subjectSlug as SubjectSlug },
+  const subject = await prisma.subject.findFirst({
+    where: { slug: { equals: subjectSlug, mode: "insensitive" } },
     include: {
       topics: {
         orderBy: { order: "asc" },

@@ -13,11 +13,47 @@ const SLUG_MAP: Record<string, string> = {
   "b-inggris": "BAHASA_INGGRIS",
   ipa: "IPA",
   sains: "IPA",
+  sejarah: "SEJARAH",
+  geografi: "GEOGRAFI",
+  ekonomi: "EKONOMI",
+  sosiologi: "SOSIOLOGI",
+  ppkn: "PPKN",
+  "seni-budaya": "SENI_BUDAYA",
+  pjok: "PJOK",
+  prakarya: "PRAKARYA",
+  "bahasa-daerah": "BAHASA_DAERAH",
+  coding: "CODING",
+  custom: "CUSTOM",
 };
+
+const OFFICIAL_SLUGS = new Set<string>([
+  "MATEMATIKA",
+  "BAHASA_INDONESIA",
+  "BAHASA_INGGRIS",
+  "IPA",
+  "SEJARAH",
+  "GEOGRAFI",
+  "EKONOMI",
+  "SOSIOLOGI",
+  "PPKN",
+  "SENI_BUDAYA",
+  "PJOK",
+  "PRAKARYA",
+  "BAHASA_DAERAH",
+  "CODING",
+  "CUSTOM",
+]);
 
 function normalizeSlug(raw: string): string {
   const key = raw.toLowerCase().trim();
-  return SLUG_MAP[key] ?? raw.toUpperCase();
+  if (SLUG_MAP[key]) {
+    return SLUG_MAP[key];
+  }
+  const upperCandidate = key.toUpperCase().replace(/-/g, "_");
+  if (OFFICIAL_SLUGS.has(upperCandidate)) {
+    return upperCandidate;
+  }
+  return raw.trim();
 }
 
 export async function GET(
@@ -30,8 +66,8 @@ export async function GET(
   }
   const { slug } = await params;
   const normalized = normalizeSlug(slug);
-  const subject = await prisma.subject.findUnique({
-    where: { slug: normalized as "MATEMATIKA" },
+  const subject = await prisma.subject.findFirst({
+    where: { slug: { equals: normalized, mode: "insensitive" } },
   });
   if (!subject) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -2,11 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { SubjectDetailView } from "@/components/student/subjects-view";
 import { auth } from "@/lib/auth";
 import { getSubjectDetail } from "@/server/actions/dashboard";
-import type { SubjectSlug } from "../../../../../generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
-const SLUG_MAP: Record<string, SubjectSlug> = {
+const SLUG_MAP: Record<string, string> = {
   matematika: "MATEMATIKA",
   bahasa: "BAHASA_INDONESIA",
   "bahasa-indonesia": "BAHASA_INDONESIA",
@@ -16,11 +15,47 @@ const SLUG_MAP: Record<string, SubjectSlug> = {
   "b-inggris": "BAHASA_INGGRIS",
   ipa: "IPA",
   sains: "IPA",
+  sejarah: "SEJARAH",
+  geografi: "GEOGRAFI",
+  ekonomi: "EKONOMI",
+  sosiologi: "SOSIOLOGI",
+  ppkn: "PPKN",
+  "seni-budaya": "SENI_BUDAYA",
+  pjok: "PJOK",
+  prakarya: "PRAKARYA",
+  "bahasa-daerah": "BAHASA_DAERAH",
+  coding: "CODING",
+  custom: "CUSTOM",
 };
 
-function normalizeSlug(raw: string): SubjectSlug {
+const OFFICIAL_SLUGS = new Set<string>([
+  "MATEMATIKA",
+  "BAHASA_INDONESIA",
+  "BAHASA_INGGRIS",
+  "IPA",
+  "SEJARAH",
+  "GEOGRAFI",
+  "EKONOMI",
+  "SOSIOLOGI",
+  "PPKN",
+  "SENI_BUDAYA",
+  "PJOK",
+  "PRAKARYA",
+  "BAHASA_DAERAH",
+  "CODING",
+  "CUSTOM",
+]);
+
+function normalizeSlug(raw: string): string {
   const key = raw.toLowerCase().trim();
-  return (SLUG_MAP[key] ?? raw.toUpperCase()) as SubjectSlug;
+  if (SLUG_MAP[key]) {
+    return SLUG_MAP[key];
+  }
+  const upperCandidate = key.toUpperCase().replace(/-/g, "_");
+  if (OFFICIAL_SLUGS.has(upperCandidate)) {
+    return upperCandidate;
+  }
+  return raw.trim();
 }
 
 export default async function SubjectDetailPage({
