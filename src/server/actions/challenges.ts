@@ -645,7 +645,7 @@ export async function completeChallengeItem(input: {
     where: { id: parsed.data.itemId, challenge: { userId } },
     include: {
       challenge: true,
-      question: { select: { correctAnswer: true, explanation: true } },
+      question: { select: { correctAnswer: true, explanation: true, options: true } },
       material: { select: { id: true } },
     },
   });
@@ -663,8 +663,19 @@ export async function completeChallengeItem(input: {
       return { ok: false, error: "Soal tidak ditemukan" };
     }
 
-    const isCorrect =
-      parsed.data.answer.trim() === item.question.correctAnswer.trim();
+    const isCorrect = (() => {
+      const normalized = parsed.data.answer.trim().toUpperCase();
+      const correct = item.question.correctAnswer.trim().toUpperCase();
+      if (normalized === correct) return true;
+      const options = item.question.options as string[] | null;
+      if (Array.isArray(options) && options.length > 0) {
+        const letterIndex = normalized.charCodeAt(0) - 65;
+        if (letterIndex >= 0 && letterIndex < options.length) {
+          return options[letterIndex].trim().toUpperCase() === correct;
+        }
+      }
+      return false;
+    })();
 
     await prisma.challengeItem.update({
       where: { id: item.id },

@@ -20,6 +20,27 @@ async function requireStudent() {
   return session.user.id;
 }
 
+function answersMatch(
+  userAnswer: string,
+  correctAnswer: string,
+  options?: unknown,
+): boolean {
+  const normalized = userAnswer.trim().toUpperCase();
+  const correct = correctAnswer.trim().toUpperCase();
+
+  if (normalized === correct) return true;
+
+  if (Array.isArray(options) && options.length > 0) {
+    const letterIndex = normalized.charCodeAt(0) - 65;
+    if (letterIndex >= 0 && letterIndex < options.length) {
+      const resolvedText = String(options[letterIndex]).trim().toUpperCase();
+      if (resolvedText === correct) return true;
+    }
+  }
+
+  return false;
+}
+
 export type PracticeQuestion = {
   id: string;
   conceptId: string;
@@ -726,13 +747,15 @@ export async function submitQuizAnswer(input: {
   }
   const question = await prisma.question.findUnique({
     where: { id: input.questionId },
-    select: { id: true, correctAnswer: true, explanation: true },
+    select: { id: true, correctAnswer: true, explanation: true, options: true },
   });
   if (!question) return { ok: false, error: "Soal tidak ditemukan" };
 
-  const isCorrect =
-    question.correctAnswer.trim().toUpperCase() ===
-    input.answer.trim().toUpperCase();
+  const isCorrect = answersMatch(
+    input.answer,
+    question.correctAnswer,
+    question.options,
+  );
 
   await recordQuestionAttempt({
     questionId: input.questionId,
@@ -901,6 +924,7 @@ export async function submitPracticeAnswer(input: {
       explanation: true,
       hint: true,
       commonMisconceptions: true,
+      options: true,
       concept: { select: { name: true } },
     },
   });
@@ -912,10 +936,11 @@ export async function submitPracticeAnswer(input: {
   });
   const prevStatus: ConceptStatus = prevProfile?.status ?? "NOT_STARTED";
 
-  const isCorrect =
-    typeof question.correctAnswer === "string" &&
-    question.correctAnswer.trim().toUpperCase() ===
-      input.answer.trim().toUpperCase();
+  const isCorrect = answersMatch(
+    input.answer,
+    question.correctAnswer,
+    question.options,
+  );
 
   const result = await recordQuestionAttempt({
     questionId: input.questionId,
