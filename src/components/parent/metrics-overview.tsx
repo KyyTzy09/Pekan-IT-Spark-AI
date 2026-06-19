@@ -1,5 +1,3 @@
-"use client";
-
 import { Award, Flame, Target } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 

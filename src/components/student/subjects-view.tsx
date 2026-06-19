@@ -8,6 +8,7 @@ import {
   Heart,
   Layers,
   Lock,
+  Loader2,
   Sparkles,
   Star,
   Wand2,
@@ -20,7 +21,7 @@ import { Constellation } from "@/components/student/constellation-view";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { toggleSubjectFavorite } from "@/server/actions/subjects";
+import { generateMaterialsForSubject, toggleSubjectFavorite } from "@/server/actions/subjects";
 import type { SubjectExplorerSummary } from "@/server/actions/dashboard";
 
 export type SubjectListItem = {
@@ -105,9 +106,22 @@ export function SubjectsListView({
                   buat rekomendasi, tantangan, dan latihan.
                 </p>
               </div>
-              <span className="rounded-full bg-[var(--coral)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
-                {focused.length} mapel
-              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="rounded-xl text-[11px] font-bold"
+                >
+                  <Link href="/subjects/manage">
+                    <Heart size={12} className="mr-1" />
+                    Kelola
+                  </Link>
+                </Button>
+                <span className="rounded-full bg-[var(--coral)]/8 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.18)]">
+                  {focused.length} mapel
+                </span>
+              </div>
             </header>
             <div className="grid gap-3.5 sm:grid-cols-2">
               {focused.map((s) => (
@@ -211,6 +225,7 @@ function SubjectCard({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
+  const [isGenerating, setIsGenerating] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -275,6 +290,23 @@ function SubjectCard({
       }
     });
   }, [subject.id]);
+
+  const handleGenerateMaterials = React.useCallback(async () => {
+    setIsGenerating(true);
+    setMenuOpen(false);
+    try {
+      const result = await generateMaterialsForSubject(subject.id);
+      if (result.ok) {
+        router.refresh();
+      } else {
+        alert(result.error || "Gagal generate materi");
+      }
+    } catch {
+      alert("Gagal generate materi");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [subject.id, router]);
 
   return (
     <div className="relative">
@@ -385,7 +417,7 @@ function SubjectCard({
       {menuOpen && (
         <div
           ref={menuRef}
-          className="absolute left-1/2 top-1/2 z-20 w-48 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/50 bg-card p-2 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+          className="absolute left-1/2 top-1/2 z-20 w-52 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/50 bg-card p-2 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl"
         >
           <Button
             variant="ghost"
@@ -404,6 +436,22 @@ function SubjectCard({
             />
             {isFocused ? "Hapus dari Favorit" : "Tambah ke Favorit"}
           </Button>
+          {subject.isCustom && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-[12px]"
+              onClick={handleGenerateMaterials}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <Loader2 size={14} className="animate-spin text-[var(--purple)]" />
+              ) : (
+                <Sparkles size={14} className="text-[var(--purple)]" />
+              )}
+              {isGenerating ? "Generating..." : "Generate Materi"}
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,3 @@
-"use client";
-
 import { AlertCircle, Brain, Calendar, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 

@@ -23,7 +23,9 @@ export default async function ParentLayout({
         className="pointer-events-none fixed inset-0 -z-10"
         style={{ background: "var(--hero-bg)" }}
       />
-      <ParentSidebar />
+      <ParentSidebar
+        user={{ name: session.user.name, email: session.user.email }}
+      />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64 lg:pl-72">
         <main
           role="main"

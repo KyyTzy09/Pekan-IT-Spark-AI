@@ -343,6 +343,60 @@ export async function getParentDashboardData(activeStudentId?: string) {
     });
   }
 
+  // 5. Generate AI recommendation using already-fetched data (no duplicate queries)
+  let aiRecommendation = "";
+  const today = new Date().toISOString().split("T")[0];
+  const cachedTip = await prisma.parentTipCache.findUnique({
+    where: { studentId_forDate: { studentId, forDate: today } },
+  });
+
+  if (cachedTip) {
+    aiRecommendation = cachedTip.content;
+  } else {
+    try {
+      const subjectsList = summary.subjects
+        .map((s) => `${s.name} (${s.masteryPct}% dikuasai)`)
+        .join(", ");
+      const strugglingList = struggling
+        .map(
+          (s) =>
+            `'${s.concept.name}' (pelajaran ${s.concept.topic.subject.name})`,
+        )
+        .join(", ");
+
+      const systemPrompt =
+        "Anda adalah Spark, AI konsultan pendidikan anak untuk orang tua. Berikan rekomendasi dukungan belajar yang hangat, ramah, dan positif.";
+      const userPrompt = `
+Nama anak: ${studentName}
+Mata pelajaran saat ini: ${subjectsList || "Belum ada mapel terpilih"}
+Konsep yang sedang dihadapi kesulitan: ${strugglingList || "Tidak ada kesulitan signifikan saat ini"}
+
+Berikan 3 poin rekomendasi dukungan yang konkret, santun, dan positif bagi orang tua untuk mendampingi anak dalam belajar. Pastikan nada bicaranya optimis, tidak menyalahkan anak, dan fokus pada kolaborasi/dukungan psikologis orang tua. Format output langsung berupa 3 paragraf pendek dengan bullet points.
+`;
+
+      const aiRes = await generateText({
+        model: "fast",
+        system: systemPrompt,
+        prompt: userPrompt,
+        temperature: 0.7,
+      });
+      aiRecommendation = aiRes.text.trim();
+
+      await prisma.parentTipCache.upsert({
+        where: { studentId_forDate: { studentId, forDate: today } },
+        update: { content: aiRecommendation },
+        create: { studentId, forDate: today, content: aiRecommendation },
+      });
+    } catch (err) {
+      console.error("Gagal generate AI parent tips:", err);
+      aiRecommendation = `
+• **Ajak Ngobrol Santai**: Tanyakan kepada ${studentName} pelajaran apa yang paling menarik hari ini tanpa memberi tekanan ujian.
+• **Fokus pada Usaha, Bukan Hasil**: Berikan apresiasi pada konsistensi belajar harian ${studentName} dan bantu dia merasa nyaman jika menemui soal yang sulit.
+• **Ciptakan Ruang Kondusif**: Sediakan tempat belajar yang tenang dan bebas gangguan agar ${studentName} bisa lebih fokus menyelesaikan misi belajarnya.
+`.trim();
+    }
+  }
+
   return {
     ok: true,
     children: links.map((l) => ({
@@ -364,7 +418,7 @@ export async function getParentDashboardData(activeStudentId?: string) {
       subjectName: s.concept.topic.subject.name,
       masteryScore: s.masteryScore,
     })),
-    aiRecommendation: "",
+    aiRecommendation,
   };
 }
 

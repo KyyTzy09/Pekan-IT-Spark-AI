@@ -37,6 +37,7 @@ export default async function ParentDashboardPage({
     timeline,
     alerts = [],
     strugglingConcepts = [],
+    aiRecommendation,
   } = result;
 
   // Onboarding state if no child is linked
@@ -283,13 +284,11 @@ export default async function ParentDashboardPage({
         </section>
       </div>
 
-      {/* ── AI SPARK RECOMMENDATION (Asynchronous & Non-blocking) ── */}
-      <Suspense fallback={null}>
-        <ParentAiRecommendation
-          studentId={activeChild.id}
-          studentName={activeChild.name ?? "Anak"}
-        />
-      </Suspense>
+      {/* ── AI SPARK RECOMMENDATION (Server-rendered, no extra fetch) ── */}
+      <ParentAiRecommendation
+        recommendation={aiRecommendation}
+        studentName={activeChild.name ?? "Anak"}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,7 +103,6 @@ function SidebarContent({
         </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Jangan lupa berikan apresiasi kecil atas usaha belajar anak hari ini!
-          🌟
         </p>
       </div>
 
@@ -134,12 +133,13 @@ function SidebarContent({
   );
 }
 
-export function ParentSidebar() {
+export function ParentSidebar({
+  user,
+}: {
+  user: { name?: string | null; email?: string | null };
+}) {
   const pathname = usePathname();
-  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = React.useState(false);
-
-  const user = session?.user ?? { name: null, email: null };
 
   return (
     <>

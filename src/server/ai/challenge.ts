@@ -62,24 +62,16 @@ const reflectionSchema = z.object({
 const challengeItemPlanSchema = z.object({
   kind: z.enum(["QUESTION", "MATERIAL", "REFLECTION"]),
   subjectSlug: z
-    .enum([
-      "MATEMATIKA",
-      "BAHASA_INDONESIA",
-      "BAHASA_INGGRIS",
-      "IPA",
-      "SEJARAH",
-      "GEOGRAFI",
-      "EKONOMI",
-      "SOSIOLOGI",
-      "PPKN",
-      "SENI_BUDAYA",
-      "PJOK",
-      "PRAKARYA",
-      "BAHASA_DAERAH",
-      "CODING",
-      "CUSTOM",
-    ])
-    .describe("Slug mapel (uppercase enum)"),
+    .string()
+    .max(100)
+    .describe(
+      "Slug mapel (uppercase) untuk mapel nasional, atau NAMA MAPEL PERSIS untuk mapel custom. Contoh: 'MATEMATIKA', 'BAHASA_INGGRIS', atau 'Bahasa Jawa' untuk mapel custom.",
+    ),
+  subjectName: z
+    .string()
+    .max(100)
+    .optional()
+    .describe("Nama mapel custom (opsional, untuk mapping ke subject ID)"),
   conceptHint: z
     .string()
     .max(80)
@@ -170,7 +162,7 @@ Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaa
 
 ATURAN WAJIB:
 - Output dalam Bahasa Indonesia.
-- Subjek (subjectSlug) HARUS dari focusedSubjects siswa ATAU subject dari weakConcepts. Gunakan enum subjectSlug uppercase yang tepat: "MATEMATIKA", "BAHASA_INDONESIA", "BAHASA_INGGRIS", "IPA", "SEJARAH", "GEOGRAFI", "EKONOMI", "SOSIOLOGI", "PPKN", "SENI_BUDAYA", "PJOK", "PRAKARYA", "BAHASA_DAERAH", "CODING", "CUSTOM". Jangan disingkat (misal jangan pakai "MAT" atau "BID").
+- Subjek (subjectSlug) HARUS dari focusedSubjects siswa ATAU subject dari weakConcepts. Untuk mapel nasional, gunakan slug uppercase: "MATEMATIKA", "BAHASA_INDONESIA", "BAHASA_INGGRIS", "IPA", "SEJARAH", "GEOGRAFI", "EKONOMI", "SOSIOLOGI", "PPKN", "SENI_BUDAYA", "PJOK", "PRAKARYA", "BAHASA_DAERAH", "CODING". Untuk mapel CUSTOM, gunakan NAMA MAPEL PERSIS seperti yang terdaftar di focusedSubjects (contoh: "Bahasa Jawa", "Coding", "Musik"). JANGAN gunakan "CUSTOM" — gunakan nama asli mapelnya.
 - Jika availableQuestions ada, PLAN QUESTION items dengan subjectSlug + conceptHint yang ada di sana (sistem akan pilih soalnya).
 - Material markdown WAJIB: ada heading (##), minimal 2 section, 400-800 kata, ada keyPoints, ada penutup. Format: intro → konsep inti → contoh → summary → callout "Coba pikirkan".
 - Reflection prompt HARUS terbuka (tidak yes/no) dan memicu siswa berpikir, bukan menjawab fakta.
@@ -369,6 +361,7 @@ Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
 
 function normalizeSubjectSlug(slug: string): string {
   const s = slug.toUpperCase().trim();
+  // National subject abbreviations
   if (s === "MAT" || s === "MATEMATIKA") return "MATEMATIKA";
   if (s === "BID" || s === "BAHASA_INDONESIA" || s === "INDONESIA")
     return "BAHASA_INDONESIA";
@@ -386,8 +379,8 @@ function normalizeSubjectSlug(slug: string): string {
   if (s === "DAE" || s === "BAHASA_DAERAH" || s === "DAERAH")
     return "BAHASA_DAERAH";
   if (s === "COD" || s === "CODING") return "CODING";
-  if (s === "CUS" || s === "CUSTOM") return "CUSTOM";
-  return s;
+  // For custom subjects, return the original slug (preserve case for name matching)
+  return slug.trim();
 }
 
 function getSubjectNameFromSlug(slug: string): string {
@@ -477,10 +470,15 @@ async function tryMapAndRecoverMixPlan(
     }
 
     let subjectSlug = item.subjectSlug as string | undefined;
+    const subjectName = item.subjectName as string | undefined;
     if (typeof subjectSlug === "string") {
       subjectSlug = normalizeSubjectSlug(subjectSlug);
     } else {
       subjectSlug = "MATEMATIKA";
+    }
+    // For custom subjects, use subjectName if available
+    if (subjectSlug === "CUSTOM" && subjectName) {
+      subjectSlug = subjectName;
     }
 
     const difficultyHintInput = (item.difficultyHint || item.difficulty) as

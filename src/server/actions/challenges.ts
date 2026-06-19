@@ -219,12 +219,12 @@ async function generateAndStoreDailyChallenges(
 
   const focusedSubjectIds = profile?.focusedSubjects ?? [];
 
-  // Fetch focused subject details (names)
+  // Fetch focused subject details (id + names)
   const focusedSubjectModels =
     focusedSubjectIds.length > 0
       ? await prisma.subject.findMany({
           where: { id: { in: focusedSubjectIds } },
-          select: { name: true },
+          select: { id: true, name: true },
         })
       : [];
   const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
@@ -416,6 +416,38 @@ async function generateAndStoreDailyChallenges(
       const subjectIdBySlug = new Map(subjects.map((s) => [s.slug, s.id]));
       const subjectNameBySlug = new Map(subjects.map((s) => [s.slug, s.name]));
 
+      // Build a name-based lookup for custom subjects (case-insensitive)
+      const subjectByName = new Map(
+        focusedSubjectModels.map((s) => [s.name.toLowerCase(), s]),
+      );
+
+      // Helper: resolve subject ID by slug or name
+      function resolveSubjectId(slug: string): string | null {
+        // First try exact slug match (national subjects)
+        const bySlug = subjectIdBySlug.get(slug as SubjectSlug);
+        if (bySlug) return bySlug;
+        // Then try name match (custom subjects)
+        const byName = subjectByName.get(slug.toLowerCase());
+        if (byName) return byName.id;
+        // Try normalized slug match
+        const normalized = slug.replace(/_/g, " ").toLowerCase();
+        for (const [name, subj] of subjectByName) {
+          if (name === normalized || normalized.includes(name)) return subj.id;
+        }
+        return null;
+      }
+
+      function resolveSubjectName(slug: string): string {
+        const bySlug = subjectNameBySlug.get(slug as SubjectSlug);
+        if (bySlug) return bySlug;
+        const byName = subjectByName.get(slug.toLowerCase());
+        if (byName) return byName.name;
+        return slug
+          .replace(/_/g, " ")
+          .toLowerCase()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+      }
+
       // Group items by subjectSlug
       const itemsBySubject = new Map<string, typeof plan.items>();
       for (const item of plan.items) {
@@ -425,14 +457,8 @@ async function generateAndStoreDailyChallenges(
       }
 
       for (const [subjectSlug, subjectItems] of itemsBySubject.entries()) {
-        const subjectId =
-          subjectIdBySlug.get(subjectSlug as SubjectSlug) ?? null;
-        const subjectName =
-          subjectNameBySlug.get(subjectSlug as SubjectSlug) ||
-          subjectSlug
-            .replace(/_/g, " ")
-            .toLowerCase()
-            .replace(/\b\w/g, (c) => c.toUpperCase());
+        const subjectId = resolveSubjectId(subjectSlug);
+        const subjectName = resolveSubjectName(subjectSlug);
 
         const firstConcept =
           subjectItems.find((i) => i.conceptHint)?.conceptHint ||
@@ -464,9 +490,14 @@ async function generateAndStoreDailyChallenges(
         for (let idx = 0; idx < subjectItems.length; idx++) {
           const item = subjectItems[idx];
           if (item.kind === "QUESTION") {
-            const candidates = availableQuestions.filter(
-              (q) => q.concept.topic.subject.slug === item.subjectSlug,
-            );
+            // Filter candidates by slug (national) or by subject ID (custom)
+            const candidates = availableQuestions.filter((q) => {
+              if (q.concept.topic.subject.slug === item.subjectSlug) return true;
+              // For custom subjects, match by resolved subject ID
+              if (subjectId && q.concept.topic.subject.slug === subjectId)
+                return true;
+              return false;
+            });
             const picked =
               candidates[idx % candidates.length] ||
               availableQuestions[idx % availableQuestions.length];
@@ -1019,11 +1050,22 @@ export async function generateOnDemand(input: {
 
   // If specific subject is requested
   const subjectSlug = parsed.data.subjectSlug;
-  const subject = subjectSlug
+  // Try slug match first, then name match for custom subjects
+  let subject = subjectSlug
     ? await prisma.subject.findUnique({
         where: { slug: subjectSlug as SubjectSlug },
       })
     : null;
+  // If not found by slug, try name match (for custom subjects)
+  if (!subject && subjectSlug) {
+    const nameMatch = await prisma.subject.findFirst({
+      where: {
+        name: { equals: subjectSlug, mode: "insensitive" },
+        OR: [{ createdById: null }, { createdById: userId }],
+      },
+    });
+    if (nameMatch) subject = nameMatch;
+  }
 
   // Build filter for availableQuestions
   const availableQuestionsFilter: Prisma.QuestionWhereInput = {
@@ -1083,12 +1125,24 @@ export async function generateOnDemand(input: {
 
     const firstItem = plan.items[0];
     const slugToLookup = parsed.data.subjectSlug ?? firstItem.subjectSlug;
-    const subject = slugToLookup
+    // Try slug match first, then name match for custom subjects
+    let subject = slugToLookup
       ? await prisma.subject.findUnique({
           where: { slug: slugToLookup as SubjectSlug },
           select: { id: true, name: true },
         })
       : null;
+    // If not found by slug, try name match (for custom subjects)
+    if (!subject && slugToLookup) {
+      const nameMatch = await prisma.subject.findFirst({
+        where: {
+          name: { equals: slugToLookup, mode: "insensitive" },
+          OR: [{ createdById: null }, { createdById: userId }],
+        },
+        select: { id: true, name: true },
+      });
+      if (nameMatch) subject = nameMatch;
+    }
 
     const challengeMix = {
       questions: plan.items.filter((i) => i.kind === "QUESTION").length,
@@ -1126,11 +1180,13 @@ export async function generateOnDemand(input: {
     for (let idx = 0; idx < plan.items.length; idx++) {
       const item = plan.items[idx];
       if (item.kind === "QUESTION") {
-        const candidates = availableQuestions.filter(
-          (q) =>
-            (q.concept.topic.subject as { slug: SubjectSlug }).slug ===
-            item.subjectSlug,
-        );
+        // Filter by slug (national) or by subject ID (custom)
+        const candidates = availableQuestions.filter((q) => {
+          const qSlug = (q.concept.topic.subject as { slug: SubjectSlug }).slug;
+          if (qSlug === item.subjectSlug) return true;
+          if (subject && q.concept.topic.subject.slug === subject.id) return true;
+          return false;
+        });
         const fallback =
           candidates[idx % candidates.length] ||
           availableQuestions[idx % availableQuestions.length];

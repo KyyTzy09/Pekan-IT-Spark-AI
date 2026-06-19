@@ -212,9 +212,10 @@ export interface TopicConceptsInput {
   topicName: string;
   topicDescription: string;
   concepts: Array<{ name: string; description: string }>;
+  learningStyle?: "VISUAL" | "TEXTUAL" | "EXAMPLE_HEAVY" | "SOCRATIC" | null;
 }
 
-const CONCEPTS_SYSTEM_PROMPT = `Kamu adalah pakar edukasi dan pembuat konten pembelajaran untuk platform tutor AI Spark Ai.
+const CONCEPTS_SYSTEM_PROMPT_BASE = `Kamu adalah pakar edukasi dan pembuat konten pembelajaran untuk platform tutor AI Spark Ai.
 Tugasmu adalah membuat materi belajar Markdown mendalam dan soal latihan pilihan ganda untuk konsep-konsep di bawah suatu topik.
 
 ATURAN WAJIB:
@@ -225,16 +226,40 @@ ATURAN WAJIB:
 5. Berikan hint (petunjuk) berupa pertanyaan panduan/Sokratik singkat yang memicu pemikiran siswa (bukan langsung membocorkan jawaban).
 6. Format output HARUS selalu JSON valid sesuai dengan struktur yang diminta.`;
 
+function getStyleInstructions(learningStyle?: string | null): string {
+  switch (learningStyle) {
+    case "VISUAL":
+      return `
+7. Gaya belajar VISUAL: Wajib sertakan visualisasi konsep menggunakan diagram alir atau peta konsep dengan sintaks Mermaid.js (misal: \`\`\`mermaid\ngraph TD\n...\n\`\`\`). Gunakan analogi visual yang kuat. Materi harus kaya akan representasi visual.`;
+    case "EXAMPLE_HEAVY":
+      return `
+7. Gaya belajar EXAMPLE_HEAVY: Struktur materi wajib dimulai dengan Studi Kasus nyata atau contoh soal konkret, diikuti bedah solusi langkah-demi-langkah (Step-by-Step Walkthrough). Fokus pada contoh praktis.`;
+    case "SOCRATIC":
+      return `
+7. Gaya belajar SOCRATIC: Sajikan materi dalam bentuk dialog tanya-jawab interaktif antara "Siswa" dan "Spark" untuk memandu siswa menemukan konsepnya secara mandiri. Gunakan pertanyaan pemantik.`;
+    case "TEXTUAL":
+      return `
+7. Gaya belajar TEXTUAL: Berikan penjelasan akademis terstruktur yang mendalam dengan glosarium istilah dan referensi teori formal. Materi harus runtut dan komprehensif.`;
+    default:
+      return "";
+  }
+}
+
 export async function generateTopicConceptsContent(
   input: TopicConceptsInput,
 ): Promise<any> {
   console.log("[AI_SERVICE] generateTopicConceptsContent start", {
     topicName: input.topicName,
+    learningStyle: input.learningStyle,
   });
+
+  const styleInstructions = getStyleInstructions(input.learningStyle);
+  const systemPrompt = CONCEPTS_SYSTEM_PROMPT_BASE + styleInstructions;
 
   const userPrompt = `Buat materi belajar dan soal latihan untuk konsep-konsep di dalam topik berikut:
 Topik: ${input.topicName}
 Deskripsi Topik: ${input.topicDescription}
+${input.learningStyle ? `Gaya belajar siswa: ${input.learningStyle}` : ""}
 
 Konsep yang harus dibuatkan kontennya:
 ${input.concepts.map((c, i) => `${i + 1}. ${c.name} (${c.description})`).join("\n")}
@@ -261,7 +286,7 @@ Format output JSON harus persis seperti ini:
 
   const { text } = await generateText({
     model: chatModel,
-    system: CONCEPTS_SYSTEM_PROMPT,
+    system: systemPrompt,
     prompt: userPrompt,
     temperature: 0.5,
   });

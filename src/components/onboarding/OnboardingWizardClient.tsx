@@ -2,7 +2,6 @@
 
 import { ArrowLeft, ArrowRight, Loader2, Sprout } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,6 +13,7 @@ import {
   type CompleteOnboardingCustomResult,
   completeOnboardingCustom,
 } from "@/server/actions/complete-onboarding-custom";
+import { fetchPretestPool } from "@/server/actions/fetch-pretest";
 import { generateCustomSubjectPretest } from "@/server/actions/generate-onboarding-pretest";
 import { CustomPretestStep } from "./CustomPretestStep";
 import { CustomSubjectStep } from "./CustomSubjectStep";
@@ -62,23 +62,32 @@ const CUSTOM_STEPS = [
   { key: "custom-pretest", label: "Pretest" },
 ] as const;
 
+async function updateSession() {
+  try {
+    await fetch("/api/auth/session", { method: "GET" });
+  } catch {
+    // silent
+  }
+}
+
 export function OnboardingWizardClient({
   userName,
   subjects,
-  pretestQuestions,
-  correctAnswers,
 }: {
   userName: string;
   subjects: Subject[];
-  pretestQuestions: PretestQuestion[];
-  correctAnswers: Record<string, string>;
 }) {
   const router = useRouter();
-  const { update } = useSession();
   const [flow, setFlow] = React.useState<Flow>(null);
   const [step, setStep] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Pretest state (lazy loaded)
+  const [pretestQuestions, setPretestQuestions] = React.useState<PretestQuestion[]>([]);
+  const [correctAnswers, setCorrectAnswers] = React.useState<Record<string, string>>({});
+  const [pretestLoading, setPretestLoading] = React.useState(false);
+  const pretestFetched = React.useRef(false);
 
   // Shared profile state
   const [educationLevel, setEducationLevel] =
@@ -138,6 +147,26 @@ export function OnboardingWizardClient({
   const steps = flow === "custom" ? CUSTOM_STEPS : NATIONAL_STEPS;
 
   const showStepIndicator = flow !== null;
+
+  // Lazy fetch pretest when reaching pretest step
+  const loadPretest = React.useCallback(async () => {
+    if (pretestFetched.current || pretestLoading) return;
+    setPretestLoading(true);
+    const result = await fetchPretestPool();
+    if (result.ok) {
+      setPretestQuestions(result.questions);
+      setCorrectAnswers(result.correctAnswers);
+      pretestFetched.current = true;
+    }
+    setPretestLoading(false);
+  }, [pretestLoading]);
+
+  // Fetch pretest when step 4 (pretest) is reached in national flow
+  React.useEffect(() => {
+    if (flow === "national" && step === 4 && !pretestFetched.current) {
+      loadPretest();
+    }
+  }, [flow, step, loadPretest]);
 
   const visiblePretest = React.useMemo(
     () =>
@@ -277,11 +306,7 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
-    try {
-      await update({});
-    } catch (err) {
-      console.error("Session update error:", err);
-    }
+    await updateSession();
     router.replace("/dashboard");
   };
 
@@ -333,11 +358,7 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
-    try {
-      await update({});
-    } catch (err) {
-      console.error("Session update error:", err);
-    }
+    await updateSession();
     router.replace("/dashboard");
   };
 
@@ -441,6 +462,7 @@ export function OnboardingWizardClient({
         key={`step-${flow}-${step}`}
         className="mt-6 flex-1 animate-step-fade-in"
       >
+        {/* National flow - only render current step */}
         {flow === "national" && step === 0 && (
           <WelcomeStep
             userName={userName}
@@ -465,6 +487,7 @@ export function OnboardingWizardClient({
               selected={focusedSubjects}
               onToggle={toggleSubject}
               onOpenSearch={() => setSearchOpen(true)}
+              onContinue={goNext}
             />
             <SubjectSearchDialog
               open={searchOpen}
@@ -489,15 +512,26 @@ export function OnboardingWizardClient({
           />
         )}
         {flow === "national" && step === 4 && (
-          <PretestStep
-            questions={visiblePretest}
-            answers={pretestAnswers}
-            onAnswer={(qid, letter) =>
-              setPretestAnswers((p) => ({ ...p, [qid]: letter }))
-            }
-            selectedCount={focusedSubjects.length}
-          />
+          pretestLoading ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
+              <Loader2 size={28} className="animate-spin text-[var(--coral)]" />
+              <p className="text-[13px] font-semibold text-muted-foreground">
+                Memuat soal pretest...
+              </p>
+            </div>
+          ) : (
+            <PretestStep
+              questions={visiblePretest}
+              answers={pretestAnswers}
+              onAnswer={(qid, letter) =>
+                setPretestAnswers((p) => ({ ...p, [qid]: letter }))
+              }
+              selectedCount={focusedSubjects.length}
+            />
+          )
         )}
+
+        {/* Custom flow - only render current step */}
         {flow === "custom" && step === 0 && (
           <WelcomeStep
             userName={userName}
