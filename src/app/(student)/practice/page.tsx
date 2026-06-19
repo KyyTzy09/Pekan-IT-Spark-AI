@@ -1,7 +1,8 @@
-import { ArrowLeft, Sparkles, Target } from "lucide-react";
+import { ArrowLeft, Target } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
+import { PracticeEmptyState } from "@/components/student/practice-empty-state";
 import { PracticePlayer } from "@/components/student/practice-player";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
@@ -167,25 +168,7 @@ export default async function PracticePage({
       {/* Practice Content */}
       {!nextResult.ok ? (
         <Reveal delay={80}>
-          <div className="rounded-3xl border border-border/40 bg-card/80 p-6 text-center shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl">
-            <Sparkles size={28} className="mx-auto text-[var(--coral)]" />
-            <p className="mt-3 font-heading text-[16px] font-bold">
-              Belum bisa mulai latihan
-            </p>
-            <p className="mt-1 text-[12.5px] text-muted-foreground">
-              {nextResult.error ||
-                "Tambah mapel dulu atau kembali lagi nanti ya."}
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button
-                asChild
-                size="sm"
-                className="rounded-full bg-[var(--coral)] text-white"
-              >
-                <Link href="/subjects">Jelajahi mapel</Link>
-              </Button>
-            </div>
-          </div>
+          <PracticeEmptyState error={nextResult.error} subjects={subjects} />
         </Reveal>
       ) : (
         <Reveal delay={80}>
