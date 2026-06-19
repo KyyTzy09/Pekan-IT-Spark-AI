@@ -32,8 +32,9 @@ import type {
 async function requireStudent() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role !== "STUDENT") throw new Error("FORBIDDEN");
-  return session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user || user.role !== "STUDENT") throw new Error("FORBIDDEN");
+  return user.id;
 }
 
 function startOfToday(): Date {

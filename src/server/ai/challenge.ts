@@ -1141,9 +1141,9 @@ export const weeklyMaterialSchema = z.object({
 export const weeklyContentSchema = z.object({
   questions: z
     .array(weeklyQuestionSchema)
-    .min(8)
+    .min(5)
     .max(15)
-    .describe("8-15 soal HARD"),
+    .describe("5-15 soal HARD"),
   materials: z
     .array(weeklyMaterialSchema)
     .min(1)
@@ -1169,7 +1169,8 @@ ATURAN WAJIB:
 5. Materi harus 600-1000 kata, format Markdown bersih, dengan penjelasan mendalam.
 6. Materi harus menyertakan contoh konkret dan aplikasi di kehidupan nyata.
 7. Bahasa Indonesia yang asyik dan engaging untuk siswa SMA/SMK.
-8. Output HARUS JSON valid sesuai format yang diminta.`;
+8. Output HARUS JSON valid sesuai format yang diminta.
+9. JANGAN bungkus output dalam markdown wrapper (json fence atau sejenisnya). Langsung output JSON murni.`;
 
   const userPrompt = `Buat konten tantangan mingguan untuk siswa:
 - Nama: ${input.userName ?? "Siswa"}
@@ -1190,10 +1191,28 @@ Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang meruju
     const validated = weeklyContentSchema.parse(parsedJson);
     return validated;
   } catch (err) {
-    console.warn("generateWeeklyChallengeContent failed:", err);
-    return {
-      questions: [],
-      materials: [],
-    };
+    console.warn("generateWeeklyChallengeContent primary parse failed:", err);
+    try {
+      const { text: retryText } = await generateText({
+        model: chatModel,
+        system: systemPrompt,
+        prompt: userPrompt,
+        temperature: 0.6,
+      });
+      const parsedJson = safeParseJson(retryText);
+      const partial = parsedJson as Record<string, unknown>;
+      const questions = Array.isArray(partial.questions)
+        ? partial.questions
+        : [];
+      const materials = Array.isArray(partial.materials)
+        ? partial.materials
+        : [];
+      if (questions.length > 0 || materials.length > 0) {
+        return { questions, materials } as WeeklyContent;
+      }
+    } catch {
+      // ignore recovery failure
+    }
+    return { questions: [], materials: [] };
   }
 }
