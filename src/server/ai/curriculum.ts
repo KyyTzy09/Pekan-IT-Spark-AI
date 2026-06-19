@@ -165,6 +165,39 @@ function safeParseJson(text: string): unknown {
   }
 }
 
+export function computeDifficultyDistribution(
+  masteryScore: number,
+  totalCount: number,
+): { easy: number; medium: number; hard: number } {
+  let easyRatio: number;
+  let mediumRatio: number;
+  let hardRatio: number;
+
+  if (masteryScore < 0.4) {
+    easyRatio = 0.6;
+    mediumRatio = 0.3;
+    hardRatio = 0.1;
+  } else if (masteryScore < 0.7) {
+    easyRatio = 0.2;
+    mediumRatio = 0.5;
+    hardRatio = 0.3;
+  } else {
+    easyRatio = 0.1;
+    mediumRatio = 0.3;
+    hardRatio = 0.6;
+  }
+
+  const easy = Math.max(1, Math.ceil(totalCount * easyRatio));
+  const medium = Math.max(1, Math.ceil(totalCount * mediumRatio));
+  const hard = totalCount - easy - medium;
+
+  if (hard < 1) {
+    return { easy: easy - 1, medium, hard: 1 };
+  }
+
+  return { easy, medium, hard };
+}
+
 export async function generateCurriculumOutline(
   input: CurriculumInput,
 ): Promise<CurriculumOutline> {
