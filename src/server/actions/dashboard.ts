@@ -495,6 +495,7 @@ export type TopicDetailSummary = {
     masteryScore: number;
     isLocked: boolean;
     unmetPrerequisites: Array<{ id: string; name: string }>;
+    materials: Array<{ id: string; difficulty: string }>;
   }>;
   totalConcepts: number;
   masteredConcepts: number;
@@ -524,6 +525,12 @@ export async function getTopicDetail(
                   name: true,
                 },
               },
+            },
+          },
+          materials: {
+            select: {
+              id: true,
+              difficulty: true,
             },
           },
         },
@@ -582,6 +589,7 @@ export async function getTopicDetail(
       masteryScore: p?.masteryScore ?? 0,
       isLocked: unmetPrerequisites.length > 0,
       unmetPrerequisites,
+      materials: c.materials.map((m) => ({ id: m.id, difficulty: m.difficulty })),
     };
   });
 

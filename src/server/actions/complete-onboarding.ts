@@ -169,10 +169,13 @@ export async function completeOnboarding(
       await Promise.all(ops);
     });
   } catch (err) {
-    console.error("[ONBOARDING_SERVICE] completeOnboarding transaction failed", {
-      userId,
-      error: err instanceof Error ? err.message : String(err),
-    });
+    console.error(
+      "[ONBOARDING_SERVICE] completeOnboarding transaction failed",
+      {
+        userId,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    );
     return {
       ok: false,
       message: "Gagal menyimpan data onboarding. Coba lagi, ya.",

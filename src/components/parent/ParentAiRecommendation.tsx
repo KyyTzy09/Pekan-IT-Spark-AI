@@ -5,7 +5,8 @@ type Props = {
   studentName: string;
 };
 
-const FALLBACK = (name: string) => `
+const FALLBACK = (name: string) =>
+  `
 • **Ajak Ngobrol Santai**: Tanyakan kepada ${name} pelajaran apa yang paling menarik hari ini tanpa memberi tekanan ujian.
 • **Fokus pada Usaha, Bukan Hasil**: Berikan apresiasi pada konsistensi belajar harian ${name} dan bantu dia merasa nyaman jika menemui soal yang sulit.
 • **Ciptakan Ruang Kondusif**: Sediakan tempat belajar yang tenang dan bebas gangguan agar ${name} bisa lebih fokus menyelesaikan misi belajarnya.

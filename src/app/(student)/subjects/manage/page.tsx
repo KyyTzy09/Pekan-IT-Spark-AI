@@ -83,10 +83,5 @@ export default async function SubjectsManagePage() {
     }),
   );
 
-  return (
-    <SubjectsManageView
-      subjects={subjectItems}
-      focusedIds={focusedIds}
-    />
-  );
+  return <SubjectsManageView subjects={subjectItems} focusedIds={focusedIds} />;
 }

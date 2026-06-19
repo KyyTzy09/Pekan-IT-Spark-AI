@@ -87,9 +87,7 @@ export function SubjectsStep({
               <span
                 className={cn(
                   "text-[10.5px] font-semibold transition-colors",
-                  active
-                    ? "text-[var(--coral)]/70"
-                    : "text-muted-foreground",
+                  active ? "text-[var(--coral)]/70" : "text-muted-foreground",
                 )}
               >
                 {active ? "✓ Dipilih" : "Tap buat pilih"}

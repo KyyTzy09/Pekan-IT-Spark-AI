@@ -15,14 +15,16 @@ type PretestQuestion = {
   subjectName: string;
 };
 
-export type FetchPretestResult = {
-  ok: true;
-  questions: PretestQuestion[];
-  correctAnswers: Record<string, string>;
-} | {
-  ok: false;
-  error: string;
-};
+export type FetchPretestResult =
+  | {
+      ok: true;
+      questions: PretestQuestion[];
+      correctAnswers: Record<string, string>;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 export async function fetchPretestPool(): Promise<FetchPretestResult> {
   try {

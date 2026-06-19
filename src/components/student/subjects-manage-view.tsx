@@ -43,9 +43,7 @@ export function SubjectsManageView({
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   const filtered = query
-    ? subjects.filter((s) =>
-        s.name.toLowerCase().includes(query.toLowerCase()),
-      )
+    ? subjects.filter((s) => s.name.toLowerCase().includes(query.toLowerCase()))
     : subjects;
 
   const favorites = filtered.filter((s) => focusedIds.includes(s.id));
@@ -72,12 +70,7 @@ export function SubjectsManageView({
       {/* Header */}
       <header className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl sm:p-7">
         <div className="flex items-center gap-3 mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            className="rounded-xl"
-          >
+          <Button variant="ghost" size="icon" asChild className="rounded-xl">
             <Link href="/subjects">
               <ChevronLeft size={20} />
             </Link>

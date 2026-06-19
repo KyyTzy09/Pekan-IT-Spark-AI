@@ -42,7 +42,7 @@ export function ActivityView({
       />
 
       <Reveal>
-        <ActivityHeatmap data={activity.heatmap} />
+        <ActivityHeatmap data={activity.heatmap} entries={activity.recent} />
       </Reveal>
 
       <Reveal className="grid gap-6 lg:grid-cols-2">

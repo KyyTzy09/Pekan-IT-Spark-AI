@@ -741,11 +741,17 @@ export async function generateMaterialsForSubject(
   );
 
   if (hasContent) {
-    return { ok: false, error: "Materi sudah ada. Generate ulang akan menimpa materi yang ada." };
+    return {
+      ok: false,
+      error: "Materi sudah ada. Generate ulang akan menimpa materi yang ada.",
+    };
   }
 
   try {
-    console.log("[SUBJECTS] Generating materials for subject", { subjectId, subjectName: subject.name });
+    console.log("[SUBJECTS] Generating materials for subject", {
+      subjectId,
+      subjectName: subject.name,
+    });
 
     // Generate content for all topics in parallel
     const contentPromises = topics.map(async (t) => {
@@ -753,7 +759,10 @@ export async function generateMaterialsForSubject(
         const result = await generateTopicConceptsContent({
           topicName: t.name,
           topicDescription: t.description || "",
-          concepts: t.concepts.map((c) => ({ name: c.name, description: c.description || "" })),
+          concepts: t.concepts.map((c) => ({
+            name: c.name,
+            description: c.description || "",
+          })),
           learningStyle: profile?.learningStyle,
         });
         return { topicName: t.name, ok: true, data: result };
@@ -768,7 +777,17 @@ export async function generateMaterialsForSubject(
     // Build concept details map
     const conceptDetailsMap = new Map<
       string,
-      { contentMd: string; questions: Array<{ questionText: string; options: string[]; correctAnswer: string; explanation: string; hint: string; difficulty: string }> }
+      {
+        contentMd: string;
+        questions: Array<{
+          questionText: string;
+          options: string[];
+          correctAnswer: string;
+          explanation: string;
+          hint: string;
+          difficulty: string;
+        }>;
+      }
     >();
     for (const item of generatedContents) {
       if (item.ok && item.data && Array.isArray(item.data.concepts)) {
@@ -801,7 +820,9 @@ export async function generateMaterialsForSubject(
 
     for (const topic of topics) {
       for (const concept of topic.concepts) {
-        const details = conceptDetailsMap.get(concept.name.toLowerCase().trim());
+        const details = conceptDetailsMap.get(
+          concept.name.toLowerCase().trim(),
+        );
         if (!details) continue;
 
         // Update concept with contentMd
@@ -833,7 +854,9 @@ export async function generateMaterialsForSubject(
     // Bulk insert practice questions
     if (questionsData.length > 0) {
       await prisma.question.createMany({ data: questionsData });
-      console.log(`[SUBJECTS] Created ${questionsData.length} practice questions`);
+      console.log(
+        `[SUBJECTS] Created ${questionsData.length} practice questions`,
+      );
     }
 
     // Generate RAG embeddings
@@ -846,9 +869,13 @@ export async function generateMaterialsForSubject(
 
       if (updatedConcepts.length > 0) {
         const embedTexts = updatedConcepts.map(
-          (c) => `Konsep: ${c.name}. Deskripsi: ${c.description || ""}. Materi: ${c.contentMd || ""}`,
+          (c) =>
+            `Konsep: ${c.name}. Deskripsi: ${c.description || ""}. Materi: ${c.contentMd || ""}`,
         );
-        const { embeddings } = await embedMany({ model: embeddingModel, values: embedTexts });
+        const { embeddings } = await embedMany({
+          model: embeddingModel,
+          values: embedTexts,
+        });
         await prisma.conceptEmbedding.createMany({
           data: updatedConcepts.map((c, idx) => ({
             conceptId: c.id,
@@ -856,13 +883,17 @@ export async function generateMaterialsForSubject(
           })),
           skipDuplicates: true,
         });
-        console.log(`[SUBJECTS] Generated embeddings for ${updatedConcepts.length} concepts`);
+        console.log(
+          `[SUBJECTS] Generated embeddings for ${updatedConcepts.length} concepts`,
+        );
       }
     } catch (err) {
       console.error("[SUBJECTS] Failed to generate embeddings:", err);
     }
 
-    revalidatePath(`/subjects/${subject.name.toLowerCase().replace(/\s+/g, "-")}`);
+    revalidatePath(
+      `/subjects/${subject.name.toLowerCase().replace(/\s+/g, "-")}`,
+    );
     revalidatePath("/subjects");
 
     console.log("[SUBJECTS] Materials generation complete", { subjectId });

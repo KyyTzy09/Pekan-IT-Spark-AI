@@ -84,8 +84,12 @@ export function OnboardingWizardClient({
   const [error, setError] = React.useState<string | null>(null);
 
   // Pretest state (lazy loaded)
-  const [pretestQuestions, setPretestQuestions] = React.useState<PretestQuestion[]>([]);
-  const [correctAnswers, setCorrectAnswers] = React.useState<Record<string, string>>({});
+  const [pretestQuestions, setPretestQuestions] = React.useState<
+    PretestQuestion[]
+  >([]);
+  const [correctAnswers, setCorrectAnswers] = React.useState<
+    Record<string, string>
+  >({});
   const [pretestLoading, setPretestLoading] = React.useState(false);
   const pretestFetched = React.useRef(false);
 
@@ -511,8 +515,9 @@ export function OnboardingWizardClient({
             setReminderTime={setReminderTime}
           />
         )}
-        {flow === "national" && step === 4 && (
-          pretestLoading ? (
+        {flow === "national" &&
+          step === 4 &&
+          (pretestLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16">
               <Loader2 size={28} className="animate-spin text-[var(--coral)]" />
               <p className="text-[13px] font-semibold text-muted-foreground">
@@ -528,8 +533,7 @@ export function OnboardingWizardClient({
               }
               selectedCount={focusedSubjects.length}
             />
-          )
-        )}
+          ))}
 
         {/* Custom flow - only render current step */}
         {flow === "custom" && step === 0 && (

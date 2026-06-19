@@ -1,5 +1,12 @@
+"use client";
+
+import { useState } from "react";
+import { ActivityHeatmapDetail } from "@/components/student/activity/activity-heatmap-detail";
 import { cn } from "@/lib/utils";
-import type { ActivityHeatmapDay } from "@/server/actions/activity";
+import type {
+  ActivityEntry,
+  ActivityHeatmapDay,
+} from "@/server/actions/activity";
 
 const LEVEL_COLORS: Record<0 | 1 | 2 | 3 | 4, string> = {
   0: "fill-muted/40",
@@ -28,6 +35,7 @@ const DAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"] as const;
 
 type Props = {
   data: ActivityHeatmapDay[];
+  entries: ActivityEntry[];
   className?: string;
 };
 
@@ -38,7 +46,9 @@ type Props = {
  * Layout: weekday rows (Sun..Sat) on Y, weeks on X.
  * Month labels appear above the first week of each new month.
  */
-export function ActivityHeatmap({ data, className }: Props) {
+export function ActivityHeatmap({ data, entries, className }: Props) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   if (data.length === 0) {
     return (
       <div className="rounded-2xl border border-border/40 bg-card/40 p-8 text-center text-muted-foreground">
@@ -47,8 +57,12 @@ export function ActivityHeatmap({ data, className }: Props) {
     );
   }
 
-  const firstDate = new Date(data[0]!.date);
-  const lastDate = new Date(data[data.length - 1]!.date);
+  const first = data[0];
+  const last = data[data.length - 1];
+  if (!first || !last) return null;
+
+  const firstDate = new Date(first.date);
+  const lastDate = new Date(last.date);
 
   // Pad the start so the first column is Sunday-aligned
   const firstDow = firstDate.getDay(); // 0 = Sun
@@ -67,7 +81,7 @@ export function ActivityHeatmap({ data, className }: Props) {
 
   const cursor = new Date(paddedStart);
   while (cursor <= lastDate || cursor.getDay() !== 0) {
-    const ymd = cursor.toISOString().split("T")[0]!;
+    const ymd = cursor.toISOString().split("T")[0] ?? "";
     const entry = lookup.get(ymd);
     if (entry && cursor >= firstDate) {
       cells.push({
@@ -164,18 +178,47 @@ export function ActivityHeatmap({ data, className }: Props) {
           {weeks.map((week, colIdx) =>
             week.map((cell, rowIdx) => {
               if (!cell) return null;
+              const clickable = cell.count > 0;
+              if (clickable) {
+                return (
+                  // biome-ignore lint/a11y/useSemanticElements: SVG rect cannot use <button>, role="button" is the correct pattern
+                  <rect
+                    key={cell.date}
+                    x={labelWidth + colIdx * (cellSize + cellGap)}
+                    y={monthLabelHeight + rowIdx * (cellSize + cellGap)}
+                    width={cellSize}
+                    height={cellSize}
+                    rx={2}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${cell.date}: ${cell.count} aktivitas, klik untuk detail`}
+                    className={cn(
+                      LEVEL_COLORS[cell.level],
+                      "cursor-pointer transition-colors hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+                    )}
+                    onClick={() => setSelectedDate(cell.date)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedDate(cell.date);
+                      }
+                    }}
+                  >
+                    <title>
+                      {cell.date}: {cell.count} aktivitas
+                    </title>
+                  </rect>
+                );
+              }
               return (
                 <rect
-                  key={`${colIdx}-${rowIdx}`}
+                  key={cell.date}
                   x={labelWidth + colIdx * (cellSize + cellGap)}
                   y={monthLabelHeight + rowIdx * (cellSize + cellGap)}
                   width={cellSize}
                   height={cellSize}
                   rx={2}
-                  className={cn(
-                    LEVEL_COLORS[cell.level],
-                    "transition-colors hover:opacity-80",
-                  )}
+                  className={cn(LEVEL_COLORS[cell.level], "transition-colors")}
                 >
                   <title>
                     {cell.date}: {cell.count} aktivitas
@@ -185,6 +228,15 @@ export function ActivityHeatmap({ data, className }: Props) {
             }),
           )}
         </svg>
+
+        <ActivityHeatmapDetail
+          date={selectedDate ?? ""}
+          entries={entries}
+          open={selectedDate !== null}
+          onOpenChange={(open) => {
+            if (!open) setSelectedDate(null);
+          }}
+        />
       </div>
     </div>
   );
@@ -197,7 +249,6 @@ function Legend() {
       <div className="flex gap-1">
         {[0, 1, 2, 3, 4].map((lvl) => (
           <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: legend cells are static
             key={lvl}
             className={cn(
               "size-3 rounded-sm",

@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { Constellation } from "@/components/student/constellation-view";
+import { MaterialLevelsView } from "@/components/student/material-levels-view";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -841,16 +842,17 @@ export function TopicDetailView({
     totalConcepts: number;
     masteredConcepts: number;
     averageMastery: number;
-    concepts: Array<{
-      id: string;
-      name: string;
-      slug: string;
-      description: string | null;
-      status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
-      masteryScore: number;
-      isLocked: boolean;
-      unmetPrerequisites: Array<{ id: string; name: string }>;
-    }>;
+      concepts: Array<{
+        id: string;
+        name: string;
+        slug: string;
+        description: string | null;
+        status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
+        masteryScore: number;
+        isLocked: boolean;
+        unmetPrerequisites: Array<{ id: string; name: string }>;
+        materials: Array<{ id: string; difficulty: string }>;
+      }>;
   };
 }) {
   return (
@@ -937,6 +939,45 @@ export function TopicDetailView({
             </span>
           </header>
           <Constellation concepts={topic.concepts} />
+        </section>
+      </Reveal>
+
+      <Reveal delay={120}>
+        <section>
+          <header className="mb-4 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--blue)]">
+                Level Materi
+              </p>
+              <h2 className="mt-1 font-heading text-[20px] font-bold leading-tight text-foreground">
+                Pilih level kesulitan
+              </h2>
+            </div>
+            <span className="text-[10.5px] font-semibold text-muted-foreground">
+              Dasar · Menengah · Lanjutan
+            </span>
+          </header>
+          <div className="space-y-3">
+            {topic.concepts.map((concept) => (
+              <div
+                key={concept.id}
+                className="rounded-2xl border border-border/40 bg-card/85 p-4 shadow-[0_4px_12px_rgba(80,20,50,0.04)]"
+              >
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="font-heading text-[14px] font-bold text-foreground">
+                    {concept.name}
+                  </h3>
+                  <span className="font-heading text-[12px] font-bold tabular-nums text-muted-foreground">
+                    {concept.masteryScore}%
+                  </span>
+                </div>
+                <MaterialLevelsView
+                  conceptId={concept.id}
+                  existingMaterials={concept.materials}
+                />
+              </div>
+            ))}
+          </div>
         </section>
       </Reveal>
     </div>

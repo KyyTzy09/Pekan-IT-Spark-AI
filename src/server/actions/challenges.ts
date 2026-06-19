@@ -492,7 +492,8 @@ async function generateAndStoreDailyChallenges(
           if (item.kind === "QUESTION") {
             // Filter candidates by slug (national) or by subject ID (custom)
             const candidates = availableQuestions.filter((q) => {
-              if (q.concept.topic.subject.slug === item.subjectSlug) return true;
+              if (q.concept.topic.subject.slug === item.subjectSlug)
+                return true;
               // For custom subjects, match by resolved subject ID
               if (subjectId && q.concept.topic.subject.slug === subjectId)
                 return true;
@@ -1184,7 +1185,8 @@ export async function generateOnDemand(input: {
         const candidates = availableQuestions.filter((q) => {
           const qSlug = (q.concept.topic.subject as { slug: SubjectSlug }).slug;
           if (qSlug === item.subjectSlug) return true;
-          if (subject && q.concept.topic.subject.slug === subject.id) return true;
+          if (subject && q.concept.topic.subject.slug === subject.id)
+            return true;
           return false;
         });
         const fallback =

@@ -41,7 +41,10 @@ const profileSchema = z.object({
   school: z.string().min(2).max(80),
   learningStyle: z.enum(["VISUAL", "TEXTUAL", "EXAMPLE_HEAVY", "SOCRATIC"]),
   reminderEnabled: z.boolean(),
-  reminderTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable(),
+  reminderTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .nullable(),
   focusedSubjects: z.array(z.string()).default([]),
 });
 
@@ -93,7 +96,6 @@ export async function completeOnboardingCustom(
   let subjectId: string | null = null;
 
   try {
-
     await prisma.$transaction(async (tx) => {
       const existingSubject = await tx.subject.findFirst({
         where: {
@@ -193,9 +195,7 @@ export async function completeOnboardingCustom(
           const topicId = topicIdByIndex.get(pa.questionIndex);
           if (!topicId) continue;
 
-          const firstConcept = conceptsData.find(
-            (c) => c.topicId === topicId,
-          );
+          const firstConcept = conceptsData.find((c) => c.topicId === topicId);
           if (!firstConcept) continue;
 
           questionsData.push({
@@ -223,10 +223,7 @@ export async function completeOnboardingCustom(
           ? data.profile.reminderTime
           : null;
 
-      const focusedSubjects = [
-        ...data.profile.focusedSubjects,
-        subjectId,
-      ];
+      const focusedSubjects = [...data.profile.focusedSubjects, subjectId];
 
       await tx.studentProfile.upsert({
         where: { userId },
@@ -264,7 +261,12 @@ export async function completeOnboardingCustom(
 
     // Generate materials, practice questions, and embeddings AFTER transaction
     if (subjectId) {
-      await generateMaterialsForSubject(subjectId, data.subjectData.topics, userId, data.profile.learningStyle);
+      await generateMaterialsForSubject(
+        subjectId,
+        data.subjectData.topics,
+        userId,
+        data.profile.learningStyle,
+      );
     }
 
     revalidatePath("/dashboard");
@@ -286,12 +288,19 @@ export async function completeOnboardingCustom(
  */
 async function generateMaterialsForSubject(
   subjectId: string,
-  topics: Array<{ name: string; description: string; concepts: Array<{ name: string; description: string }> }>,
+  topics: Array<{
+    name: string;
+    description: string;
+    concepts: Array<{ name: string; description: string }>;
+  }>,
   userId: string,
   learningStyle?: string | null,
 ) {
   try {
-    console.log("[ONBOARDING_SERVICE] Generating materials for subject", { subjectId, learningStyle });
+    console.log("[ONBOARDING_SERVICE] Generating materials for subject", {
+      subjectId,
+      learningStyle,
+    });
 
     // Generate content for all topics in parallel
     const contentPromises = topics.map(async (t) => {
@@ -300,7 +309,13 @@ async function generateMaterialsForSubject(
           topicName: t.name,
           topicDescription: t.description,
           concepts: t.concepts,
-          learningStyle: learningStyle as "VISUAL" | "TEXTUAL" | "EXAMPLE_HEAVY" | "SOCRATIC" | null | undefined,
+          learningStyle: learningStyle as
+            | "VISUAL"
+            | "TEXTUAL"
+            | "EXAMPLE_HEAVY"
+            | "SOCRATIC"
+            | null
+            | undefined,
         });
         return { topicName: t.name, ok: true, data: result };
       } catch (err) {
@@ -314,7 +329,17 @@ async function generateMaterialsForSubject(
     // Build concept details map
     const conceptDetailsMap = new Map<
       string,
-      { contentMd: string; questions: Array<{ questionText: string; options: string[]; correctAnswer: string; explanation: string; hint: string; difficulty: string }> }
+      {
+        contentMd: string;
+        questions: Array<{
+          questionText: string;
+          options: string[];
+          correctAnswer: string;
+          explanation: string;
+          hint: string;
+          difficulty: string;
+        }>;
+      }
     >();
     for (const item of generatedContents) {
       if (item.ok && item.data && Array.isArray(item.data.concepts)) {
@@ -383,7 +408,9 @@ async function generateMaterialsForSubject(
     // Bulk insert practice questions
     if (questionsData.length > 0) {
       await prisma.question.createMany({ data: questionsData });
-      console.log(`[ONBOARDING_SERVICE] Created ${questionsData.length} practice questions`);
+      console.log(
+        `[ONBOARDING_SERVICE] Created ${questionsData.length} practice questions`,
+      );
     }
 
     // Generate RAG embeddings
@@ -396,9 +423,13 @@ async function generateMaterialsForSubject(
 
       if (updatedConcepts.length > 0) {
         const embedTexts = updatedConcepts.map(
-          (c) => `Konsep: ${c.name}. Deskripsi: ${c.description || ""}. Materi: ${c.contentMd || ""}`,
+          (c) =>
+            `Konsep: ${c.name}. Deskripsi: ${c.description || ""}. Materi: ${c.contentMd || ""}`,
         );
-        const { embeddings } = await embedMany({ model: embeddingModel, values: embedTexts });
+        const { embeddings } = await embedMany({
+          model: embeddingModel,
+          values: embedTexts,
+        });
         await prisma.conceptEmbedding.createMany({
           data: updatedConcepts.map((c, idx) => ({
             conceptId: c.id,
@@ -406,13 +437,17 @@ async function generateMaterialsForSubject(
           })),
           skipDuplicates: true,
         });
-        console.log(`[ONBOARDING_SERVICE] Generated embeddings for ${updatedConcepts.length} concepts`);
+        console.log(
+          `[ONBOARDING_SERVICE] Generated embeddings for ${updatedConcepts.length} concepts`,
+        );
       }
     } catch (err) {
       console.error("[ONBOARDING_SERVICE] Failed to generate embeddings:", err);
     }
 
-    console.log("[ONBOARDING_SERVICE] Materials generation complete", { subjectId });
+    console.log("[ONBOARDING_SERVICE] Materials generation complete", {
+      subjectId,
+    });
   } catch (err) {
     console.error("[ONBOARDING_SERVICE] Materials generation failed:", err);
   }
