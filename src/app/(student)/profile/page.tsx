@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
+import { AvatarUpload } from "@/components/student/avatar-upload";
 import { ProfileForm } from "@/components/student/profile-form";
-import { SparkCharacter } from "@/components/student/spark-character";
 import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -49,18 +49,14 @@ export default async function StudentProfilePage() {
   }
   const userId = session.user.id;
 
-  const [summary, avatarRaw, allBadges, userBadges] = await Promise.all([
+  const [summary, avatarRaw, allBadges, userBadges, userData] = await Promise.all([
     getDashboardSummary(userId),
     prisma.avatarCustomization.findUnique({ where: { userId } }),
     prisma.badge.findMany({ orderBy: { xpReward: "asc" } }),
     prisma.userBadge.findMany({ where: { userId } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { image: true } }),
   ]);
 
-  const avatar = avatarRaw || {
-    color: "default",
-    accessory: "none",
-    background: "default",
-  };
   const ownedBadgeIds = new Set(userBadges.map((ub) => ub.badgeId));
 
   const formattedDate = (date: Date) => {
@@ -86,15 +82,11 @@ export default async function StudentProfilePage() {
           />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              {/* Mascot Big View */}
-              <div className="shrink-0 flex items-center justify-center p-3 rounded-2xl bg-muted/40 border border-border/30 backdrop-blur-md size-24 sm:size-28">
-                <SparkCharacter
-                  size="lg"
-                  color={avatar.color}
-                  accessory={avatar.accessory || "none"}
-                  background={avatar.background || "default"}
-                />
-              </div>
+              {/* Profile Photo */}
+              <AvatarUpload
+                currentImage={userData?.image ?? null}
+                userName={summary.student.name || "Siswa Spark"}
+              />
 
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--coral)_22%,transparent)] bg-[color-mix(in_oklch,var(--coral)_8%,transparent)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--coral)]">

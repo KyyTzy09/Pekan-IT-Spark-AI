@@ -37,7 +37,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
-          image: user.image,
+          image: user.image ?? `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(user.email)}`,
           isOnboarded: user.isOnboarded,
         };
       },
@@ -76,11 +76,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           select: { id: true },
         });
         if (!existing) {
+          const defaultAvatar = `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`;
           await prisma.user.create({
             data: {
               email,
               name: user.name ?? null,
-              image: user.image ?? null,
+              image: user.image ?? defaultAvatar,
               role: "STUDENT",
               studentProfile: { create: {} },
             },
