@@ -11,6 +11,7 @@ import {
   Loader2,
   Sparkles,
   Star,
+  Target,
   Wand2,
 } from "lucide-react";
 import Link from "next/link";
@@ -21,7 +22,12 @@ import { Constellation } from "@/components/student/constellation-view";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { generateMaterialsForSubject, toggleSubjectFavorite } from "@/server/actions/subjects";
+import { GeneratePracticeDialog } from "@/components/student/generate-practice-dialog";
+import {
+  generateMaterialsForSubject,
+  toggleSubjectFavorite,
+} from "@/server/actions/subjects";
+import { generatePracticeQuestionsForSubject } from "@/server/actions/generate-practice-questions";
 import type { SubjectExplorerSummary } from "@/server/actions/dashboard";
 
 export type SubjectListItem = {
@@ -226,6 +232,7 @@ function SubjectCard({
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [practiceDialogOpen, setPracticeDialogOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -445,14 +452,54 @@ function SubjectCard({
               disabled={isGenerating}
             >
               {isGenerating ? (
-                <Loader2 size={14} className="animate-spin text-[var(--purple)]" />
+                <Loader2
+                  size={14}
+                  className="animate-spin text-[var(--purple)]"
+                />
               ) : (
                 <Sparkles size={14} className="text-[var(--purple)]" />
               )}
               {isGenerating ? "Generating..." : "Generate Materi"}
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-[12px]"
+            onClick={() => {
+              setMenuOpen(false);
+              setPracticeDialogOpen(true);
+            }}
+          >
+            <Target size={14} className="text-[var(--blue)]" />
+            Generate Latihan Soal
+          </Button>
         </div>
+      )}
+      {practiceDialogOpen && (
+        <GeneratePracticeDialog
+          open={practiceDialogOpen}
+          onClose={() => setPracticeDialogOpen(false)}
+          subjects={[
+            {
+              id: subject.id,
+              name: subject.name,
+              icon: subject.icon,
+              color: subject.color,
+            },
+          ]}
+          onGenerate={async (subjectId, count) => {
+            const result = await generatePracticeQuestionsForSubject({
+              subjectId,
+              totalCount: count,
+            });
+            if (result.ok) {
+              router.refresh();
+            } else {
+              alert(result.error || "Gagal generate soal");
+            }
+          }}
+        />
       )}
     </div>
   );
