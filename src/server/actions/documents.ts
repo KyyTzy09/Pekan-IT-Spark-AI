@@ -874,33 +874,42 @@ export async function generateDocumentMaterialAction(
   const doc = await loadOwnedDocument(userId, documentId);
   if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
   try {
-    let materialData;
+  const studentProfile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { learningStyle: true },
+  });
+  const learningStyle = studentProfile?.learningStyle ?? "VISUAL";
 
-    if (enhance) {
-      // Find latest material for this document to enhance it
-      const existing = await prisma.material.findFirst({
-        where: { documentId, userId },
-        orderBy: { createdAt: "desc" },
-      });
+  let materialData;
 
-      if (existing) {
-        materialData = await generateEnhancedMaterialFromDocument(
-          doc.content,
-          doc.originalName,
-          existing.content,
-        );
-      } else {
-        materialData = await generateMaterialFromDocument(
-          doc.content,
-          doc.originalName,
-        );
-      }
+  if (enhance) {
+    // Find latest material for this document to enhance it
+    const existing = await prisma.material.findFirst({
+      where: { documentId, userId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existing) {
+      materialData = await generateEnhancedMaterialFromDocument(
+        doc.content,
+        doc.originalName,
+        existing.content,
+        learningStyle,
+      );
     } else {
       materialData = await generateMaterialFromDocument(
         doc.content,
         doc.originalName,
+        learningStyle,
       );
     }
+  } else {
+    materialData = await generateMaterialFromDocument(
+      doc.content,
+      doc.originalName,
+      learningStyle,
+    );
+  }
 
     // Save material to DB
     const m = await prisma.material.create({

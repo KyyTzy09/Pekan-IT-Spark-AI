@@ -1,9 +1,15 @@
-import { ArrowRight, Flame, Lock, Sparkles, Trophy, UserCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Flame,
+  Lock,
+  Sparkles,
+  Trophy,
+  UserCheck,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
-import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 import { AvatarUpload } from "@/components/student/avatar-upload";
 import { ProfileForm } from "@/components/student/profile-form";
 import { auth } from "@/lib/auth";
@@ -49,15 +55,29 @@ export default async function StudentProfilePage() {
   }
   const userId = session.user.id;
 
-  const [summary, avatarRaw, allBadges, userBadges, userData] =
+  const [summary, _avatarRaw, allBadges, userBadges, userData] =
     await Promise.all([
       getDashboardSummary(userId).catch(() => ({
-        student: { id: userId, name: "", grade: null, school: null, learningStyle: null },
+        student: {
+          id: userId,
+          name: "",
+          grade: null,
+          school: null,
+          learningStyle: null,
+        },
         greeting: "Halo!",
         greetingSubtitle: "",
         sparkTip: "",
         streak: { current: 0, longest: 0, freezeAvailable: 0 },
-        level: { level: 1, name: "Pemula", totalXp: 0, currentMinXp: 0, nextMinXp: null, progress: 0, xpToNext: null },
+        level: {
+          level: 1,
+          name: "Pemula",
+          totalXp: 0,
+          currentMinXp: 0,
+          nextMinXp: null,
+          progress: 0,
+          xpToNext: null,
+        },
         subjects: [],
         totalMastered: 0,
         totalConcepts: 0,
@@ -65,13 +85,17 @@ export default async function StudentProfilePage() {
         recommendation: null,
         recentDocuments: 0,
       })),
-      prisma.avatarCustomization.findUnique({ where: { userId } }).catch(() => null),
+      prisma.avatarCustomization
+        .findUnique({ where: { userId } })
+        .catch(() => null),
       prisma.badge.findMany({ orderBy: { xpReward: "asc" } }).catch(() => []),
       prisma.userBadge.findMany({ where: { userId } }).catch(() => []),
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { image: true },
-      }).catch(() => null),
+      prisma.user
+        .findUnique({
+          where: { id: userId },
+          select: { image: true },
+        })
+        .catch(() => null),
     ]);
 
   const ownedBadgeIds = new Set(userBadges.map((ub) => ub.badgeId));
@@ -155,11 +179,6 @@ export default async function StudentProfilePage() {
       <div className="grid gap-6 md:grid-cols-12">
         {/* Left Column: Customizers & Forms */}
         <div className="space-y-6 md:col-span-6">
-          {/* Avatar Customizer */}
-          <Reveal delay={40}>
-            <AvatarCustomizerWidget totalXp={summary.level.totalXp} />
-          </Reveal>
-
           {/* Tree Link Card */}
           <Reveal delay={60}>
             <Link href="/tree">
@@ -176,7 +195,10 @@ export default async function StudentProfilePage() {
                       Lihat pertumbuhan pohonmu dalam 3D
                     </p>
                   </div>
-                  <ArrowRight size={16} className="text-muted-foreground group-hover:text-emerald-500 transition-colors" />
+                  <ArrowRight
+                    size={16}
+                    className="text-muted-foreground group-hover:text-emerald-500 transition-colors"
+                  />
                 </div>
               </div>
             </Link>

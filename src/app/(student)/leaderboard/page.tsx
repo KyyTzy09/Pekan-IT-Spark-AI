@@ -32,6 +32,7 @@ export default async function LeaderboardPage() {
         select: {
           id: true,
           name: true,
+          image: true,
           avatarCustomization: {
             select: {
               color: true,
@@ -72,6 +73,7 @@ export default async function LeaderboardPage() {
     user: {
       id: entry.user.id,
       name: entry.user.name,
+      image: entry.user.image,
       avatarCustomization: entry.user.avatarCustomization,
       streak: entry.user.streak
         ? { current: entry.user.streak.currentStreak }

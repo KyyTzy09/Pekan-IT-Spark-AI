@@ -1,22 +1,8 @@
 "use client";
 
-import {
-  Award,
-  BookOpen,
-  ChevronRight,
-  Flame,
-  Search,
-  Sparkles,
-  Trophy,
-} from "lucide-react";
+import { ChevronRight, Flame, Search, Trophy } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
-import { SparkCharacter } from "@/components/student/spark-character";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type LeaderboardUser = {
@@ -29,6 +15,7 @@ type LeaderboardUser = {
   user: {
     id: string;
     name: string | null;
+    image: string | null;
     avatarCustomization: {
       color: string;
       accessory: string | null;
@@ -49,7 +36,67 @@ type LeaderboardUser = {
   };
 };
 
-const BADGE_MAP: Record<string, { emoji: string; gradient: string }> = {
+function UserAvatar({
+  image,
+  name,
+  size = "md",
+}: {
+  image?: string | null;
+  name?: string | null;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizeClasses = {
+    sm: "size-8 text-xs rounded-xl",
+    md: "size-12 text-sm rounded-2xl",
+    lg: "size-16 text-lg rounded-[20px]",
+  };
+
+  const initial = name ? name.trim().charAt(0).toUpperCase() : "?";
+  const charCodeSum = name
+    ? Array.from(name).reduce((acc, c) => acc + c.charCodeAt(0), 0)
+    : 0;
+  const gradients = [
+    "from-indigo-500 via-purple-500 to-pink-500",
+    "from-cyan-500 via-teal-500 to-emerald-500",
+    "from-amber-500 via-orange-500 to-rose-500",
+    "from-pink-500 via-rose-500 to-red-500",
+    "from-emerald-500 via-teal-500 to-cyan-500",
+    "from-violet-500 via-purple-500 to-indigo-500",
+  ];
+  const gradient = gradients[charCodeSum % gradients.length];
+
+  if (image) {
+    return (
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden border border-border/20 shadow-sm",
+          sizeClasses[size],
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={image}
+          alt={name || "Avatar"}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center font-extrabold text-white shadow-md bg-gradient-to-br border border-white/10 shrink-0",
+        gradient,
+        sizeClasses[size],
+      )}
+    >
+      {initial}
+    </div>
+  );
+}
+
+const _BADGE_MAP: Record<string, { emoji: string; gradient: string }> = {
   "Penakluk Trigonometri": {
     emoji: "📐",
     gradient: "from-blue-500 to-cyan-400",
@@ -83,8 +130,6 @@ export function LeaderboardView({
   currentUserId: string;
 }) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedUser, setSelectedUser] =
-    React.useState<LeaderboardUser | null>(null);
 
   // Filter leaderboard based on search query (name or school)
   const filteredList = React.useMemo(() => {
@@ -138,20 +183,18 @@ export function LeaderboardView({
         <section className="grid gap-6 items-end justify-center py-6 sm:grid-cols-3 max-w-3xl mx-auto">
           {/* Second Place (Left) */}
           {secondPlace && (
-            <button
-              type="button"
-              onClick={() => setSelectedUser(secondPlace)}
+            <Link
+              href={`/profile/${secondPlace.user.id}`}
               className="group flex flex-col items-center p-5 rounded-3xl border border-border/40 bg-card/45 shadow-sm hover:shadow-md backdrop-blur-xl transition-all order-2 sm:order-1 hover:-translate-y-1 w-full text-center cursor-pointer"
             >
               <div className="relative">
-                <span className="absolute -top-3.5 -right-3.5 grid size-7 place-items-center rounded-full bg-slate-300 font-extrabold text-[12px] text-slate-800 border-2 border-background shadow-md">
+                <span className="absolute -top-3.5 -right-3.5 grid size-7 place-items-center rounded-full bg-slate-300 font-extrabold text-[12px] text-slate-800 border-2 border-background shadow-md z-10">
                   2
                 </span>
-                <SparkCharacter
+                <UserAvatar
+                  image={secondPlace.user.image}
+                  name={secondPlace.user.name}
                   size="md"
-                  color={secondPlace.user.avatarCustomization?.color}
-                  accessory={secondPlace.user.avatarCustomization?.accessory}
-                  background={secondPlace.user.avatarCustomization?.background}
                 />
               </div>
               <h3 className="mt-4 font-heading text-[14px] font-bold text-foreground text-center truncate w-full">
@@ -163,25 +206,23 @@ export function LeaderboardView({
               <span className="mt-2 text-[12px] font-extrabold text-slate-500">
                 {secondPlace.totalXp} XP
               </span>
-            </button>
+            </Link>
           )}
 
           {/* First Place (Center - Highlighted) */}
           {firstPlace && (
-            <button
-              type="button"
-              onClick={() => setSelectedUser(firstPlace)}
+            <Link
+              href={`/profile/${firstPlace.user.id}`}
               className="group flex flex-col items-center p-6 rounded-3xl border border-amber-500/25 bg-amber-500/5 shadow-md hover:shadow-lg backdrop-blur-xl transition-all order-1 sm:order-2 sm:scale-105 hover:-translate-y-1.5 w-full text-center cursor-pointer"
             >
               <div className="relative">
-                <span className="absolute -top-4 -right-4 grid size-8 place-items-center rounded-full bg-amber-400 font-extrabold text-[13px] text-amber-950 border-2 border-background shadow-lg animate-bounce">
+                <span className="absolute -top-4 -right-4 grid size-8 place-items-center rounded-full bg-amber-400 font-extrabold text-[13px] text-amber-950 border-2 border-background shadow-lg animate-bounce z-10">
                   👑
                 </span>
-                <SparkCharacter
+                <UserAvatar
+                  image={firstPlace.user.image}
+                  name={firstPlace.user.name}
                   size="lg"
-                  color={firstPlace.user.avatarCustomization?.color}
-                  accessory={firstPlace.user.avatarCustomization?.accessory}
-                  background={firstPlace.user.avatarCustomization?.background}
                 />
               </div>
               <h3 className="mt-4 font-heading text-[16px] font-extrabold text-foreground text-center truncate w-full">
@@ -193,25 +234,23 @@ export function LeaderboardView({
               <span className="mt-2.5 text-[14px] font-extrabold text-amber-600 dark:text-amber-400">
                 {firstPlace.totalXp} XP
               </span>
-            </button>
+            </Link>
           )}
 
           {/* Third Place (Right) */}
           {thirdPlace && (
-            <button
-              type="button"
-              onClick={() => setSelectedUser(thirdPlace)}
+            <Link
+              href={`/profile/${thirdPlace.user.id}`}
               className="group flex flex-col items-center p-5 rounded-3xl border border-border/40 bg-card/45 shadow-sm hover:shadow-md backdrop-blur-xl transition-all order-3 hover:-translate-y-1 w-full text-center cursor-pointer"
             >
               <div className="relative">
-                <span className="absolute -top-3.5 -right-3.5 grid size-7 place-items-center rounded-full bg-amber-700/70 font-extrabold text-[12px] text-white border-2 border-background shadow-md">
+                <span className="absolute -top-3.5 -right-3.5 grid size-7 place-items-center rounded-full bg-amber-700/70 font-extrabold text-[12px] text-white border-2 border-background shadow-md z-10">
                   3
                 </span>
-                <SparkCharacter
+                <UserAvatar
+                  image={thirdPlace.user.image}
+                  name={thirdPlace.user.name}
                   size="md"
-                  color={thirdPlace.user.avatarCustomization?.color}
-                  accessory={thirdPlace.user.avatarCustomization?.accessory}
-                  background={thirdPlace.user.avatarCustomization?.background}
                 />
               </div>
               <h3 className="mt-4 font-heading text-[14px] font-bold text-foreground text-center truncate w-full">
@@ -223,7 +262,7 @@ export function LeaderboardView({
               <span className="mt-2 text-[12px] font-extrabold text-amber-800 dark:text-amber-600">
                 {thirdPlace.totalXp} XP
               </span>
-            </button>
+            </Link>
           )}
         </section>
       )}
@@ -239,10 +278,9 @@ export function LeaderboardView({
             const isSelf = entry.user.id === currentUserId;
 
             return (
-              <button
-                type="button"
+              <Link
                 key={entry.id}
-                onClick={() => setSelectedUser(entry)}
+                href={`/profile/${entry.user.id}`}
                 className={cn(
                   "flex items-center gap-3.5 py-3.5 px-3 rounded-2xl cursor-pointer transition-all hover:bg-muted/40 w-full text-left",
                   isSelf &&
@@ -265,13 +303,12 @@ export function LeaderboardView({
                   {rank}
                 </div>
 
-                {/* Avatar character preview */}
+                {/* Avatar preview */}
                 <div className="shrink-0">
-                  <SparkCharacter
+                  <UserAvatar
+                    image={entry.user.image}
+                    name={entry.user.name}
                     size="sm"
-                    color={entry.user.avatarCustomization?.color}
-                    accessory={entry.user.avatarCustomization?.accessory}
-                    background={entry.user.avatarCustomization?.background}
                   />
                 </div>
 
@@ -323,7 +360,7 @@ export function LeaderboardView({
                   size={14}
                   className="text-muted-foreground/40 shrink-0"
                 />
-              </button>
+              </Link>
             );
           })}
 
@@ -334,109 +371,6 @@ export function LeaderboardView({
           )}
         </div>
       </section>
-
-      {/* ── USER DETAIL MODAL ── */}
-      <Dialog
-        open={!!selectedUser}
-        onOpenChange={(open) => !open && setSelectedUser(null)}
-      >
-        {selectedUser && (
-          <DialogContent className="max-w-md rounded-3xl p-5 overflow-y-auto max-h-[85vh]">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-base font-bold text-center">
-                Profil Teman Spark
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="flex flex-col items-center justify-center py-4 space-y-4">
-              {/* Mascot Portrait glow */}
-              <div className="relative flex items-center justify-center p-4 rounded-3xl bg-muted/20 border border-border/20 backdrop-blur-md size-28 sm:size-32">
-                <SparkCharacter
-                  size="lg"
-                  color={selectedUser.user.avatarCustomization?.color}
-                  accessory={selectedUser.user.avatarCustomization?.accessory}
-                  background={selectedUser.user.avatarCustomization?.background}
-                />
-              </div>
-
-              {/* Student details */}
-              <div className="text-center space-y-1">
-                <h3 className="font-heading text-[18px] font-extrabold text-foreground">
-                  {selectedUser.user.name}
-                </h3>
-                <p className="text-[12.5px] text-muted-foreground font-medium">
-                  {selectedUser.school || "Siswa Spark"}{" "}
-                  {selectedUser.grade && `• Kelas ${selectedUser.grade}`}
-                </p>
-              </div>
-
-              {/* Stats highlights */}
-              <div className="grid grid-cols-2 gap-3 w-full border-t border-b border-border/20 py-4 my-2 text-center">
-                <div className="border-r border-border/20">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Level Belajar
-                  </p>
-                  <p className="font-heading text-[22px] font-extrabold text-foreground mt-1 flex items-center justify-center gap-1">
-                    <Award size={16} className="text-[var(--coral)]" />
-                    Level {selectedUser.level}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Total XP
-                  </p>
-                  <p className="font-heading text-[22px] font-extrabold text-[var(--teal)] mt-1 flex items-center justify-center gap-1">
-                    <Sparkles size={14} />
-                    {selectedUser.totalXp} XP
-                  </p>
-                </div>
-              </div>
-
-              {/* Badges container */}
-              <div className="w-full space-y-3">
-                <h4 className="font-heading text-[12px] font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <BookOpen size={12} className="text-muted-foreground" />
-                  Lencana Diperoleh ({selectedUser.user.userBadges.length})
-                </h4>
-
-                <div className="grid gap-2 max-h-[200px] overflow-y-auto pr-1">
-                  {selectedUser.user.userBadges.map((ub) => {
-                    const meta = BADGE_MAP[ub.badge.name] || {
-                      emoji: "🏆",
-                      gradient: "from-[var(--coral)] to-[var(--orange)]",
-                    };
-                    return (
-                      <div
-                        key={ub.id}
-                        className="flex items-center gap-3 p-2.5 rounded-xl border border-border/30 bg-background/50 text-left"
-                      >
-                        <span
-                          className={`grid size-9 place-items-center rounded-lg text-lg bg-gradient-to-br ${meta.gradient} text-white shadow-sm shrink-0`}
-                        >
-                          {meta.emoji}
-                        </span>
-                        <div className="min-w-0 flex-1 leading-snug">
-                          <p className="text-xs font-bold text-foreground truncate">
-                            {ub.badge.name}
-                          </p>
-                          <p className="text-[9.5px] text-muted-foreground truncate">
-                            {ub.badge.description}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {selectedUser.user.userBadges.length === 0 && (
-                    <p className="text-center text-[11px] text-muted-foreground italic py-4">
-                      Belum ada lencana yang terbuka saat ini.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
     </div>
   );
 }

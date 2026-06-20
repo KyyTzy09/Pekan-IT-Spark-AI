@@ -74,4 +74,3 @@ export async function updateAvatarAction(
   return { ok: true };
 }
 
-export { MAX_FILE_SIZE };

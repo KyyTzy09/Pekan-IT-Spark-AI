@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 import { chatModel, generateText } from "@/lib/ai";
+import { retryOnZodError } from "@/server/utils/ai-retry";
+import { countWords } from "@/server/utils/word-count";
 import type { SubjectSlug } from "../../../generated/prisma/client";
 
 export const CHALLENGE_MIX_DEFAULT = {
@@ -23,21 +25,23 @@ const materialSchema = z.object({
     .describe("Judul materi, singkat dan menarik untuk siswa"),
   content: z
     .string()
-    .min(400)
-    .max(6000)
+    .min(5000)
+    .refine((text) => countWords(text) >= 1000, {
+      message: "Materi terlalu pendek, minimal 1000 kata",
+    })
     .describe(
-      "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 2 section, dan penutup ringkas. Panjang 400-800 kata.",
+      "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 3 section, contoh soal pembahasan, dan penutup ringkas. Panjang 1000-2000 kata.",
     ),
   keyPoints: z
     .array(z.string())
-    .min(2)
-    .max(5)
-    .describe("2-5 poin penting yang harus diingat siswa"),
+    .min(3)
+    .max(8)
+    .describe("3-8 poin penting yang harus diingat siswa"),
   estimatedMinutes: z
     .number()
     .int()
-    .min(3)
-    .max(15)
+    .min(10)
+    .max(45)
     .describe("Estimasi waktu baca dalam menit"),
   difficulty: z
     .enum(["EASY", "MEDIUM", "HARD"])
@@ -921,6 +925,27 @@ export async function generateMaterialMarkdown(args: {
   estimatedMinutes: number;
   difficulty: "EASY" | "MEDIUM" | "HARD";
 }> {
+  return retryOnZodError(() => _generateMaterialMarkdownInner(args));
+}
+
+const materialContentSchema = z.object({
+  content: z
+    .string()
+    .min(5000)
+    .refine((text) => countWords(text) >= 1000, {
+      message: "Materi terlalu pendek, minimal 1000 kata",
+    }),
+});
+
+async function _generateMaterialMarkdownInner(
+  args: Parameters<typeof generateMaterialMarkdown>[0],
+): Promise<{
+  title: string;
+  content: string;
+  keyPoints: string[];
+  estimatedMinutes: number;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+}> {
   console.log("[AI_SERVICE] generateMaterialMarkdown start", {
     conceptName: args.conceptName,
   });
@@ -945,9 +970,12 @@ export async function generateMaterialMarkdown(args: {
 Buat materi bacaan dalam format Markdown. Struktur WAJIB:
 - Heading ## untuk judul
 - Intro 1 paragraf (kaitkan dengan kehidupan siswa / apa yang akan dipelajari)
-- Minimal 2 section dengan subheading (###)
-- Contoh konkret (kalau relevan)
-- Summary / penutup singkat
+- Minimal 3 section dengan subheading (###)
+- Penjelasan konsep utama secara mendalam dan komprehensif
+- Contoh konkret dan studi kasus nyata
+- Contoh soal beserta pembahasan langkah demi langkah
+- Aplikasi konsep di dunia nyata
+- Ringkasan poin-poin penting
 - Callout "💭 Coba pikirkan: <pertanyaan>"
 
 ${styleNote}
@@ -960,7 +988,7 @@ Difficulty: ${difficulty}. ${
         : "Seimbang, definisi + contoh + sedikit insight."
   }
 
-Panjang: 400-800 kata. Output HANYA markdown, jangan ada penjelasan meta.`;
+Panjang: 1000-2000 kata (WAJIB minimal 1000 kata). Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat. Output HANYA markdown, jangan ada penjelasan meta.`;
 
   const userPrompt = `Mapel: ${args.subjectName}
 Topik: ${args.topicName}
@@ -984,6 +1012,8 @@ Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" leb
     text: result.text,
   });
 
+  materialContentSchema.parse({ content: result.text });
+
   const keyPoints = await extractKeyPoints(result.text);
 
   return {
@@ -991,8 +1021,8 @@ Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" leb
     content: result.text,
     keyPoints,
     estimatedMinutes: Math.max(
-      3,
-      Math.min(10, Math.ceil(args.conceptName.length / 20)),
+      10,
+      Math.min(45, Math.ceil(args.conceptName.length / 20)),
     ),
     difficulty,
   };
@@ -1324,15 +1354,31 @@ Buat konten tantangan mingguan untuk mapel di atas. Output JSON.`;
 function learningStyleHint(style?: string): string {
   switch (style) {
     case "VISUAL":
-      return "Style: VISUAL — materi wajib sertakan diagram Mermaid.js + analogi visual.";
+      return `Gaya belajar siswa: VISUAL. WAJIB terapkan:
+- Minimal 2 diagram Mermaid.js (graph TD/LR) untuk memetakan hubungan konsep
+- Analogi visual imajinatif (contoh: "Bayangkan konsep ini seperti...")
+- Tabel perbandingan untuk data numerik
+- Emoji visual (🎯 📊 🔄 💡) sebagai penanda section`;
     case "TEXTUAL":
-      return "Style: TEXTUAL — materi terstruktur akademis dengan glosarium.";
+      return `Gaya belajar siswa: TEXTUAL. WAJIB terapkan:
+- Format akademis terstruktur: heading bertingkat, glosarium istilah
+- Penjelasan runtut: Definisi → Teori → Contoh → Kesimpulan
+- Bullet points dan numbered lists untuk langkah-langkah
+- Bahasa formal tapi mudah dipahami`;
     case "EXAMPLE_HEAVY":
-      return "Style: EXAMPLE_HEAVY — materi wajib dimulai dengan studi kasus nyata + bedah solusi.";
+      return `Gaya belajar siswa: EXAMPLE_HEAVY. WAJIB terapkan:
+- Setiap konsep utama WAJIB diikuti minimal 2 contoh konkret dengan pembahasan lengkap
+- Struktur: Teori singkat → Contoh + pembahasan step-by-step → Ringkasan
+- Prioritaskan "cara mengerjakan" daripada teori murni
+- Studi kasus nyata dari kehidupan sehari-hari`;
     case "SOCRATIC":
-      return "Style: SOCRATIC — materi dalam bentuk dialog tanya-jawab Siswa ↔ Spark.";
+      return `Gaya belajar siswa: SOCRATIC. WAJIB terapkan:
+- Format dialog tanya-jawab antara 'Siswa' dan 'Spark'
+- Jangan langsung kasih jawaban, gunakan pertanyaan retoris untuk menuntun
+- Pertanyaan bertingkat dari mudah ke sulit
+- Akhiri dengan refleksi: "💭 Sekarang coba jelaskan dengan kata-katamu sendiri..."`;
     default:
-      return "Style: BALANCED.";
+      return "Gaya belajar: BALANCED — kombinasi semua format.";
   }
 }
 
@@ -1357,55 +1403,10 @@ export async function generateWeeklyDeepMaterial(input: {
   keyPoints: string[];
   estimatedMinutes: number;
 }> {
-  const styleHint = learningStyleHint(input.learningStyle);
-  const lengthTarget = input.masteryScore < 0.4 ? 1200 : 1100;
-
-  const systemPrompt = `Kamu adalah Spark — tutor AI untuk siswa SMA/SMK Indonesia.
-
-Buat MATERI DEEP DIVE untuk tantangan mingguan.
-
-WAJIB:
-- 1000-${lengthTarget + 200} kata Markdown
-- Heading ## + minimal 3 section ###
-- Contoh konkret + aplikasi dunia nyata
-- 5-8 keyPoints
-- Summary + callout "💭 Tantangan minggu ini: ..."
-- Difficulty HARD (terminologi advanced, dorong berpikir analitis)
-
-${styleHint}
-
-Output JSON: { "title": "...", "content": "Markdown...", "keyPoints": [...], "estimatedMinutes": 30-60 }`;
-
-  const userPrompt = `Mapel: ${input.subjectName}
-Topik: ${input.conceptName}
-
-Buat materi deep dive untuk topik ini. Output JSON.`;
-
   try {
-    const { text } = await generateText({
-      model: chatModel,
-      system: systemPrompt,
-      prompt: userPrompt,
-      temperature: 0.6,
-    });
-
-    const rawJson = safeParseJson(text) as Record<string, unknown>;
-    return {
-      title: String(rawJson.title ?? `${input.conceptName} — Deep Dive`).slice(
-        0,
-        120,
-      ),
-      content: String(rawJson.content ?? "").slice(0, 8000),
-      keyPoints: Array.isArray(rawJson.keyPoints)
-        ? (rawJson.keyPoints as string[]).slice(0, 8)
-        : ["Poin utama konsep", "Aplikasi di kehidupan nyata"],
-      estimatedMinutes:
-        typeof rawJson.estimatedMinutes === "number"
-          ? Math.max(10, Math.min(60, rawJson.estimatedMinutes))
-          : 30,
-    };
+    return await retryOnZodError(() => _generateWeeklyDeepMaterialInner(input));
   } catch (err) {
-    console.warn("generateWeeklyDeepMaterial failed:", err);
+    console.warn("generateWeeklyDeepMaterial failed after retry:", err);
     return {
       title: `${input.conceptName} — Deep Dive`,
       content: `## ${input.conceptName}\n\nMateri ini sedang disiapkan. Coba lagi nanti atau pilih mapel lain.`,
@@ -1413,6 +1414,77 @@ Buat materi deep dive untuk topik ini. Output JSON.`;
       estimatedMinutes: 30,
     };
   }
+}
+
+async function _generateWeeklyDeepMaterialInner(
+  input: Parameters<typeof generateWeeklyDeepMaterial>[0],
+): Promise<{
+  title: string;
+  content: string;
+  keyPoints: string[];
+  estimatedMinutes: number;
+}> {
+  const styleHint = learningStyleHint(input.learningStyle);
+
+  const weeklyMaterialSchema = z.object({
+    title: z.string().max(120),
+    content: z
+      .string()
+      .min(10000)
+      .refine((text) => countWords(text) >= 2000, {
+        message: "Materi weekly terlalu pendek, minimal 2000 kata",
+      }),
+    keyPoints: z.array(z.string()).min(8).max(12),
+    estimatedMinutes: z.number().int().min(30).max(90),
+  });
+
+  const systemPrompt = `Kamu adalah Spark — tutor AI untuk siswa SMA/SMK Indonesia.
+
+Buat MATERI DEEP DIVE untuk tantangan mingguan.
+
+WAJIB:
+- 2000-3500 kata Markdown (WAJIB minimal 2000 kata)
+- Heading ## + minimal 5 section ###
+- Penjelasan konsep sangat mendalam dan komprehensif
+- Contoh konkret + studi kasus dunia nyata + aplikasi praktis
+- Contoh soal kompleks dengan pembahasan detail
+- Perbandingan dengan konsep terkait
+- 8-12 keyPoints
+- Ringkasan menyeluruh + callout "💭 Tantangan minggu ini: ..."
+- Difficulty HARD (terminologi advanced, dorong berpikir analitis)
+
+${styleHint}
+
+Output JSON: { "title": "...", "content": "Markdown...", "keyPoints": [...], "estimatedMinutes": 45-75 }`;
+
+  const userPrompt = `Mapel: ${input.subjectName}
+Topik: ${input.conceptName}
+
+Buat materi deep dive untuk topik ini. Output JSON.`;
+
+  const { text } = await generateText({
+    model: chatModel,
+    system: systemPrompt,
+    prompt: userPrompt,
+    temperature: 0.6,
+  });
+
+  const rawJson = safeParseJson(text) as Record<string, unknown>;
+  const parsed = weeklyMaterialSchema.parse({
+    title: String(rawJson.title ?? `${input.conceptName} — Deep Dive`).slice(
+      0,
+      120,
+    ),
+    content: String(rawJson.content ?? ""),
+    keyPoints: Array.isArray(rawJson.keyPoints)
+      ? (rawJson.keyPoints as string[]).slice(0, 12)
+      : ["Poin utama konsep", "Aplikasi di kehidupan nyata"],
+    estimatedMinutes:
+      typeof rawJson.estimatedMinutes === "number"
+        ? Math.max(30, Math.min(90, rawJson.estimatedMinutes))
+        : 60,
+  });
+  return parsed;
 }
 
 export async function generateWeeklyTitleAI(input: {

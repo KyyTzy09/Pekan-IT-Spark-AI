@@ -40,13 +40,9 @@ export function Reveal({
     return () => observer.disconnect();
   }, [delay]);
 
-  const Comp = as as React.ElementType;
-  return (
-    <Comp
-      ref={ref as React.Ref<HTMLElement>}
-      className={cn("reveal", className)}
-    >
-      {children}
-    </Comp>
+  return React.createElement(
+    as,
+    { ref: ref as React.Ref<HTMLElement>, className: cn("reveal", className) },
+    children,
   );
 }

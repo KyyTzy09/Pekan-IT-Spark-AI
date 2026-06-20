@@ -1,6 +1,6 @@
 import "server-only";
 
-import { embed, embeddingModel, embedMany } from "@/lib/ai";
+import { embed, embeddingModel } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 
 function parseEmbedding(raw: string): number[] {
@@ -48,6 +48,26 @@ export async function retrieveContext(
   console.log("[AI_SERVICE] retrieveContext start", {
     query: options.query,
   });
+
+  try {
+    return await Promise.race([
+      retrieveContextInner(options),
+      new Promise<RetrievedDocument[]>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 2500),
+      ),
+    ]);
+  } catch (e: unknown) {
+    console.warn(
+      "[AI_SERVICE] Vector retrieveContext timed out or failed, falling back to keywordSearch:",
+      e instanceof Error ? e.message : String(e),
+    );
+    return keywordSearch(options);
+  }
+}
+
+async function retrieveContextInner(
+  options: SearchOptions,
+): Promise<RetrievedDocument[]> {
   const { query, userId, subjectId, limit = 3 } = options;
   const results: RetrievedDocument[] = [];
 
@@ -57,15 +77,20 @@ export async function retrieveContext(
       value: query,
     });
 
+    console.log("[AI_SERVICE] retrieveContext: querying concepts...");
     // 1) Search concepts (Prisma + JS cosine similarity, since embedding
     //    column is @db.Text, not pgvector)
     const concepts = await prisma.concept.findMany({
       where: subjectId ? { topic: { subjectId } } : undefined,
+      take: 500,
       include: {
         topic: { select: { subjectId: true } },
         embeddings: { select: { embedding: true } },
       },
     });
+    console.log(
+      `[AI_SERVICE] retrieveContext: got ${concepts.length} concepts`,
+    );
 
     const conceptScored = concepts
       .map((c) => {
@@ -96,45 +121,46 @@ export async function retrieveContext(
       });
     }
 
-    // 2) Search user document chunks
-    const userDocuments = await prisma.document.findMany({
-      where: { userId },
-      select: { id: true, content: true, originalName: true },
+    console.log("[AI_SERVICE] retrieveContext: querying document chunks...");
+    // 2) Search user document chunks directly using the pre-calculated chunk embeddings
+    const chunks = await prisma.documentEmbedding.findMany({
+      where: { document: { userId } },
+      select: {
+        documentId: true,
+        chunkContent: true,
+        embedding: true,
+        document: { select: { originalName: true } },
+      },
     });
+    console.log(
+      `[AI_SERVICE] retrieveContext: got ${chunks.length} total document chunks`,
+    );
 
-    const docEmbeddings = userDocuments.filter((d) => d.content.length > 0);
-    if (docEmbeddings.length > 0) {
-      const texts = docEmbeddings.map((d) => d.content.substring(0, 8000));
-      const { embeddings: docVecs } = await embedMany({
-        model: embeddingModel,
-        values: texts,
-      });
+    if (chunks.length > 0) {
+      const chunkScored = chunks
+        .map((c) => {
+          const chunkVec = parseEmbedding(c.embedding);
+          if (chunkVec.length === 0) return null;
+          const score = cosineSimilarityVectors(queryEmbedding, chunkVec);
+          if (score <= 0.3) return null; // threshold
+          return {
+            id: c.documentId,
+            content: c.chunkContent,
+            title: c.document.originalName,
+            type: "document" as const,
+            score,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
 
-      for (let i = 0; i < docEmbeddings.length; i++) {
-        const docVec = docVecs[i] ?? [];
-        if (docVec.length === 0) continue;
-        const chunks = await prisma.documentEmbedding.findMany({
-          where: { documentId: docEmbeddings[i].id },
-          select: { chunkContent: true, embedding: true },
-        });
-        let bestScore = 0;
-        for (const chunk of chunks) {
-          const chunkVec = parseEmbedding(chunk.embedding);
-          if (chunkVec.length === 0) continue;
-          const s = cosineSimilarityVectors(docVec, chunkVec);
-          if (s > bestScore) bestScore = s;
-        }
-        if (bestScore > 0.3) {
-          results.push({
-            id: docEmbeddings[i].id,
-            content: docEmbeddings[i].content.substring(0, 2000),
-            title: docEmbeddings[i].originalName,
-            type: "document",
-            score: bestScore,
-          });
-        }
-      }
+      results.push(...chunkScored);
     }
+
+    console.log(
+      `[AI_SERVICE] retrieveContext: completed, total context: ${results.length} items`,
+    );
   } catch (e: unknown) {
     console.warn(
       "Vector search failed, falling back to keyword search:",
@@ -210,51 +236,60 @@ async function keywordSearch(
 export async function getRelevantConcepts(query: string, subjectId?: string) {
   console.log("[AI_SERVICE] getRelevantConcepts start", { query });
   try {
-    const { embedding: queryEmbedding } = await embed({
-      model: embeddingModel,
-      value: query,
-    });
-
-    const concepts = await prisma.concept.findMany({
-      where: subjectId ? { topic: { subjectId } } : undefined,
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        topicId: true,
-        embeddings: { select: { embedding: true } },
-      },
-    });
-
-    const scored = concepts
-      .map((c) => {
-        const raw = c.embeddings[0]?.embedding;
-        if (!raw) return null;
-        const docVec = parseEmbedding(raw);
-        const score = cosineSimilarityVectors(queryEmbedding, docVec);
-        if (score <= 0) return null;
-        return {
-          concept: {
-            id: c.id,
-            name: c.name,
-            description: c.description,
-            topicId: c.topicId,
-          },
-          score,
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-
-    return scored;
+    return await Promise.race([
+      getRelevantConceptsInner(query, subjectId),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 2500),
+      ),
+    ]);
   } catch (e: unknown) {
     console.warn(
-      "Vector search failed, falling back to keyword search:",
+      "[AI_SERVICE] getRelevantConcepts timed out or failed, falling back to keyword search:",
       e instanceof Error ? e.message : String(e),
     );
     return keywordRelevantConcepts(query, subjectId);
   }
+}
+
+async function getRelevantConceptsInner(query: string, subjectId?: string) {
+  const { embedding: queryEmbedding } = await embed({
+    model: embeddingModel,
+    value: query,
+  });
+
+  const concepts = await prisma.concept.findMany({
+    where: subjectId ? { topic: { subjectId } } : undefined,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      topicId: true,
+      embeddings: { select: { embedding: true } },
+    },
+  });
+
+  const scored = concepts
+    .map((c) => {
+      const raw = c.embeddings[0]?.embedding;
+      if (!raw) return null;
+      const docVec = parseEmbedding(raw);
+      const score = cosineSimilarityVectors(queryEmbedding, docVec);
+      if (score <= 0) return null;
+      return {
+        concept: {
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          topicId: c.topicId,
+        },
+        score,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  return scored;
 }
 
 async function keywordRelevantConcepts(query: string, subjectId?: string) {

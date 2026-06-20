@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, Settings2, Sparkles, Target, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Settings2,
+  Sparkles,
+  Target,
+  Trophy,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,8 +17,8 @@ import {
   ChallengeCard,
   ChallengeSubjectPicker,
   OnDemandGenerator,
-  WeeklyChallengeCard,
   type SubjectOption,
+  WeeklyChallengeCard,
 } from "@/components/student/challenge";
 import { Button } from "@/components/ui/button";
 import { claimWeeklyChallengeReward } from "@/server/actions/challenges";

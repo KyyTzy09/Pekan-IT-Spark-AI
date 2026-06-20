@@ -241,7 +241,7 @@ export async function generateTutorStream(input: {
     input.messages.filter((m) => m.role === "user").pop()?.content ||
     "";
 
-  if (query.trim()) {
+  if (query.trim().length >= 10) {
     try {
       const retrieved = await retrieveContext({
         userId: input.userId,

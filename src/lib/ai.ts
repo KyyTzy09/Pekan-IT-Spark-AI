@@ -98,16 +98,14 @@ ${prompt ? prompt : "(none)"}
   }
 
   try {
-    console.log(
-      `[AI_SERVICE] generateText attempting model: ${modelName} on client: ${isHeavy ? "openaiHeavy" : "openaiDefault"}`,
-    );
-    const response = await client.chat.completions.create(
+    console.log(`[AI_SERVICE] generateText attempting model: ${modelName}`);
+    const response = await openaiHeavy.chat.completions.create(
       {
         model: modelName,
-        messages,
+        messages: messages,
         temperature,
       },
-      { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
+      { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
     );
 
     const textResult = response.choices[0]?.message?.content || "";
@@ -253,27 +251,44 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
 =========================================
 `);
     try {
-      const response = await openaiHeavy.chat.completions.create(
+      console.log(
+        `[AI_SERVICE] streamText attempting model: ${heavyModelName}`,
+      );
+      const stream = await openaiHeavy.chat.completions.create(
         {
           model: heavyModelName,
           messages: apiMessages,
           temperature,
+          stream: true,
         },
         { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
       );
 
-      const text = response.choices[0]?.message?.content || "";
-      console.log(`
+      console.log(`[AI_SERVICE] streamText streaming started (Groq)`);
+      let chunkCount = 0;
+      let fullText = "";
+
+      return {
+        text: (async () => {
+          for await (const chunk of stream) {
+            chunkCount++;
+            const content = chunk.choices[0]?.delta?.content || "";
+            fullText += content;
+          }
+          console.log(
+            `[AI_SERVICE] streamText streaming completed, chunks: ${chunkCount}`,
+          );
+          console.log(`
 =========================================
 [AI_SERVICE] streamText RESPONSE (Groq)
 -----------------------------------------
-* Model Used: ${response.model || heavyModelName}
+* Model Used: ${heavyModelName}
 * Output Text:
-${text}
+${fullText}
 =========================================
 `);
-      return {
-        text: Promise.resolve(text),
+          return fullText;
+        })(),
       };
     } catch (groqErr) {
       logAIError(
@@ -288,37 +303,44 @@ ${text}
         `[AI_SERVICE] Groq streamText failed. Trying Sumopod (${sumopodModel}) at ${sumopodBaseURL}...`,
       );
       try {
-        console.log(`
-=========================================
-[AI_SERVICE] streamText REQUEST (Fallback 1: Sumopod)
------------------------------------------
-* Model Name: ${sumopodModel}
-* Endpoint:   ${sumopodBaseURL}
-* Messages:
-${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
-=========================================
-`);
-        const response = await openaiDefault.chat.completions.create(
+        console.log(
+          `[AI_SERVICE] streamText attempting model: ${sumopodModel}`,
+        );
+        const stream = await openaiDefault.chat.completions.create(
           {
             model: sumopodModel,
             messages: apiMessages,
             temperature,
+            stream: true,
           },
           { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
         );
 
-        const text = response.choices[0]?.message?.content || "";
-        console.log(`
+        console.log(`[AI_SERVICE] streamText streaming started (Sumopod)`);
+        let chunkCount = 0;
+        let fullText = "";
+
+        return {
+          text: (async () => {
+            for await (const chunk of stream) {
+              chunkCount++;
+              const content = chunk.choices[0]?.delta?.content || "";
+              fullText += content;
+            }
+            console.log(
+              `[AI_SERVICE] streamText streaming completed, chunks: ${chunkCount}`,
+            );
+            console.log(`
 =========================================
 [AI_SERVICE] streamText RESPONSE (Sumopod)
 -----------------------------------------
-* Model Used: ${response.model || sumopodModel}
+* Model Used: ${sumopodModel}
 * Output Text:
-${text}
+${fullText}
 =========================================
 `);
-        return {
-          text: Promise.resolve(text),
+            return fullText;
+          })(),
         };
       } catch (sumopodErr) {
         logAIError(
@@ -328,35 +350,42 @@ ${text}
           sumopodErr,
         );
         try {
-          console.log(`
-=========================================
-[AI_SERVICE] streamText REQUEST (Fallback 2: glm-5)
------------------------------------------
-* Model Name: glm-5
-* Endpoint:   ${openaiHeavy.baseURL}
-=========================================
-`);
-          const response = await openaiHeavy.chat.completions.create(
+          console.log(`[AI_SERVICE] streamText attempting model: glm-5`);
+          const stream = await openaiHeavy.chat.completions.create(
             {
               model: "glm-5",
               messages: apiMessages,
               temperature,
+              stream: true,
             },
             { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
           );
 
-          const text = response.choices[0]?.message?.content || "";
-          console.log(`
+          console.log(`[AI_SERVICE] streamText streaming started (glm-5)`);
+          let chunkCount = 0;
+          let fullText = "";
+
+          return {
+            text: (async () => {
+              for await (const chunk of stream) {
+                chunkCount++;
+                const content = chunk.choices[0]?.delta?.content || "";
+                fullText += content;
+              }
+              console.log(
+                `[AI_SERVICE] streamText streaming completed, chunks: ${chunkCount}`,
+              );
+              console.log(`
 =========================================
 [AI_SERVICE] streamText RESPONSE (glm-5)
 -----------------------------------------
-* Model Used: ${response.model || "glm-5"}
+* Model Used: glm-5
 * Output Text:
-${text}
+${fullText}
 =========================================
 `);
-          return {
-            text: Promise.resolve(text),
+              return fullText;
+            })(),
           };
         } catch (fallbackHeavyErr) {
           logAIError(
@@ -372,45 +401,44 @@ ${text}
   } else {
     // Non-heavy model path (standard OpenAI client)
     const modelName = "deepseek-v4-flash";
-    const baseURL = openaiDefault.baseURL;
-    console.log(`
-=========================================
-[AI_SERVICE] streamText REQUEST (openaiDefault)
------------------------------------------
-* Model Type: ${model}
-* Model Name: ${modelName}
-* Endpoint:   ${baseURL}
-* Messages:
-${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
-=========================================
-`);
-    try {
-      const response = await openaiDefault.chat.completions.create(
-        {
-          model: modelName,
-          messages: apiMessages,
-          temperature,
-        },
-          { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
-        );
+    const _baseURL = openaiDefault.baseURL;
+    console.log(`[AI_SERVICE] streamText attempting model: ${modelName}`);
+    const stream = await openaiDefault.chat.completions.create(
+      {
+        model: modelName,
+        messages: apiMessages,
+        temperature,
+        stream: true,
+      },
+      { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
+    );
 
-        const text = response.choices[0]?.message?.content || "";
+    console.log(`[AI_SERVICE] streamText streaming started (${modelName})`);
+    let chunkCount = 0;
+    let fullText = "";
+
+    return {
+      text: (async () => {
+        for await (const chunk of stream) {
+          chunkCount++;
+          const content = chunk.choices[0]?.delta?.content || "";
+          fullText += content;
+        }
+        console.log(
+          `[AI_SERVICE] streamText streaming completed, chunks: ${chunkCount}`,
+        );
         console.log(`
 =========================================
 [AI_SERVICE] streamText RESPONSE
 -----------------------------------------
-* Model Used: ${response.model || modelName}
+* Model Used: ${modelName}
 * Output Text:
-${text}
+${fullText}
 =========================================
 `);
-      return {
-        text: Promise.resolve(text),
-      };
-    } catch (err) {
-      logAIError("streamText (openaiDefault)", modelName, baseURL, err);
-      throw err;
-    }
+        return fullText;
+      })(),
+    };
   }
 }
 

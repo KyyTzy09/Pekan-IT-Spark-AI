@@ -93,7 +93,7 @@ function StatChip({
   color,
   delay,
 }: {
-  icon: React.ElementType;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   label: string;
   value: string;
   color: string;

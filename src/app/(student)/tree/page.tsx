@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Tree3DView } from "@/components/student/tree-3d-view";
 import { auth } from "@/lib/auth";
 import { getDashboardSummary } from "@/server/actions/dashboard";
 import { getStudyBuddyAction } from "@/server/actions/gamification";
-import { Tree3DView } from "@/components/student/tree-3d-view";
 
 export const metadata: Metadata = {
   title: "Pohon Kehidupan — Spark AI",
@@ -19,7 +19,7 @@ export default async function TreePage() {
 
   const userId = session.user.id;
 
-  const [summary, buddy] = await Promise.all([
+  const [summary, buddyResult] = await Promise.all([
     getDashboardSummary(userId).catch(() => null),
     getStudyBuddyAction().catch(() => null),
   ]);
@@ -31,14 +31,48 @@ export default async function TreePage() {
     (summary.totalMastered / totalConcepts) * 100,
   );
 
+  const buddy =
+    buddyResult && "buddy" in buddyResult ? buddyResult.buddy : null;
+
   return (
     <Tree3DView
+      studentName={summary.student.name}
       level={summary.level.level}
+      levelName={summary.level.name}
       totalXp={summary.level.totalXp}
+      levelProgress={summary.level.progress}
+      xpToNext={summary.level.xpToNext}
       totalMastered={summary.totalMastered}
       totalConcepts={summary.totalConcepts}
       avgMasteryPct={avgMasteryPct}
-      buddyType={buddy?.buddy?.type ?? "bunga"}
+      totalAttempts={summary.totalAttempts}
+      streakCurrent={summary.streak.current}
+      streakLongest={summary.streak.longest}
+      streakFreeze={summary.streak.freezeAvailable}
+      subjects={summary.subjects.map((s) => ({
+        name: s.name,
+        icon: s.icon,
+        color: s.color,
+        masteryPct: s.masteryPct,
+        masteredConcepts: s.masteredConcepts,
+        totalConcepts: s.totalConcepts,
+        learningConcepts: s.learningConcepts,
+        strugglingConcepts: s.strugglingConcepts,
+      }))}
+      recommendation={
+        summary.recommendation
+          ? {
+              conceptName: summary.recommendation.conceptName,
+              subjectName: summary.recommendation.subjectName,
+              reason: summary.recommendation.reason,
+              status: summary.recommendation.status,
+              masteryScore: summary.recommendation.masteryScore,
+            }
+          : null
+      }
+      sparkTip={summary.sparkTip}
+      buddyType={buddy?.type ?? "bunga"}
+      buddyStage={buddy?.stage ?? 1}
     />
   );
 }

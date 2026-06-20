@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 import { fastModel, generateText } from "@/lib/ai";
+import { retryOnZodError } from "@/server/utils/ai-retry";
+import { countWords } from "@/server/utils/word-count";
 import { retrieveDocumentChunks } from "./embeddings";
 
 const MAX_SUMMARY_INPUT = 12_000;
@@ -179,25 +181,63 @@ const materialSchema = z.object({
   title: z.string().max(120).describe("Judul materi belajar"),
   content: z
     .string()
-    .min(300)
+    .min(7500)
+    .refine((text) => countWords(text) >= 1500, {
+      message: "Materi terlalu pendek, minimal 1500 kata",
+    })
     .describe(
       "Materi belajar lengkap yang mendalam, terstruktur, dan mudah dipahami, ditulis dalam format Markdown. Berisi penjelasan konsep, contoh soal, dan pembahasan.",
     ),
   keyPoints: z
     .array(z.string().min(8).max(200))
-    .min(3)
+    .min(5)
     .max(20)
     .describe("Poin-poin penting dari materi ini"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   estimatedMinutes: z
     .number()
     .int()
-    .min(2)
-    .max(60)
+    .min(15)
+    .max(90)
     .describe("Estimasi waktu membaca materi dalam menit"),
 });
 
 export type GeneratedMaterial = z.infer<typeof materialSchema>;
+
+function buildLearningStylePrompt(learningStyle?: string): string {
+  switch (learningStyle) {
+    case "VISUAL":
+      return `
+GAYA BELAJAR SISWA: VISUAL. WAJIB terapkan:
+- Sertakan minimal 2 diagram Mermaid.js (graph TD/LR) untuk memetakan hubungan konsep
+- Gunakan analogi visual imajinatif (contoh: "Bayangkan konsep ini seperti...")
+- Format data numerik atau perbandingan dalam tabel Markdown
+- Gunakan emoji visual (🎯 📊 🔄 💡) sebagai penanda section penting`;
+    case "TEXTUAL":
+      return `
+GAYA BELAJAR SISWA: TEXTUAL. WAJIB terapkan:
+- Format akademis terstruktur: heading bertingkat, glosarium istilah
+- Penjelasan runtut: Definisi → Teori → Contoh → Kesimpulan
+- Bullet points dan numbered lists untuk langkah-langkah
+- Bahasa formal tapi mudah dipahami`;
+    case "EXAMPLE_HEAVY":
+      return `
+GAYA BELAJAR SISWA: EXAMPLE_HEAVY. WAJIB terapkan:
+- Setiap konsep utama WAJIB diikuti minimal 2 contoh konkret dengan pembahasan lengkap
+- Struktur: Teori singkat → Contoh + pembahasan step-by-step → Ringkasan
+- Prioritaskan "cara mengerjakan" daripada teori murni
+- Studi kasus nyata dari kehidupan sehari-hari`;
+    case "SOCRATIC":
+      return `
+GAYA BELAJAR SISWA: SOCRATIC. WAJIB terapkan:
+- Format dialog tanya-jawab antara 'Siswa' dan 'Spark'
+- Jangan langsung kasih jawaban, gunakan pertanyaan retoris untuk menuntun
+- Pertanyaan bertingkat dari mudah ke sulit
+- Akhiri dengan refleksi: "💭 Sekarang coba jelaskan dengan kata-katamu sendiri..."`;
+    default:
+      return "";
+  }
+}
 
 const SYSTEM_MATERIAL = `Kamu adalah Spark, asisten belajar tingkat lanjut untuk siswa SMA/SMK Indonesia.
 Tugas kamu adalah membuat materi pembelajaran (materi edukasi) yang mendalam, komprehensif, dan relevan berdasarkan dokumen soal/latihan/tugas yang diberikan.
@@ -206,8 +246,17 @@ Tugas kamu adalah membuat materi pembelajaran (materi edukasi) yang mendalam, ko
 - Sertakan contoh pembahasan/cara menyelesaikan tipe soal seperti yang ada di dokumen.
 - Gunakan bahasa Indonesia yang bersahabat, jelas, dan mudah dipahami anak SMA/SMK (boleh pakai emoji secukupnya).
 - Gunakan KaTeX ($...$ atau $$...$$) untuk rumus matematika atau fisika/kimia jika ada.
-- PENTING: Batasi jumlah poin penting (keyPoints) antara 3 sampai 15 poin saja.
-- PENTING: Estimasi waktu membaca (estimatedMinutes) harus berkisar antara 5 sampai 45 menit saja.
+- PENTING: Panjang materi WAJIB 1500-3000 kata (minimal 1500 kata). Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat.
+- PENTING: Batasi jumlah poin penting (keyPoints) antara 5 sampai 20 poin saja.
+- PENTING: Estimasi waktu membaca (estimatedMinutes) harus berkisar antara 15 sampai 90 menit saja.
+
+STRUKTUR WAJIB:
+- Judul dan pengantar (kaitkan dengan kehidupan siswa)
+- Penjelasan konsep utama secara mendalam dan komprehensif
+- Contoh soal beserta pembahasan langkah demi langkah
+- Studi kasus atau aplikasi dunia nyata
+- Ringkasan poin-poin penting
+- Callout refleksi: "💭 Coba pikirkan: <pertanyaan>"
 
 Format output harus JSON valid dengan struktur:
 {
@@ -215,17 +264,29 @@ Format output harus JSON valid dengan struktur:
   "content": "Materi pembelajaran lengkap dalam format Markdown...",
   "keyPoints": ["Poin penting 1", "Poin penting 2", "Poin penting 3"],
   "difficulty": "EASY" | "MEDIUM" | "HARD",
-  "estimatedMinutes": 10
+  "estimatedMinutes": 30
 }`;
 
 export async function generateMaterialFromDocument(
   content: string,
   originalName: string,
+  learningStyle?: string,
+): Promise<GeneratedMaterial> {
+  return retryOnZodError(() =>
+    _generateMaterialFromDocumentInner(content, originalName, learningStyle),
+  );
+}
+
+async function _generateMaterialFromDocumentInner(
+  content: string,
+  originalName: string,
+  learningStyle?: string,
 ): Promise<GeneratedMaterial> {
   const truncated = content.slice(0, MAX_QUIZ_INPUT);
+  const stylePrompt = buildLearningStylePrompt(learningStyle);
   const { text } = await generateText({
     model: fastModel,
-    system: SYSTEM_MATERIAL,
+    system: SYSTEM_MATERIAL + stylePrompt,
     prompt: `Judul file: "${originalName}". Buat penjelasan materi teori belajar yang lengkap, mendalam, dan relevan berdasarkan soal-soal/tugas yang ada di dokumen ini.\n\nDokumen Soal/Tugas:\n\n${truncated}`,
   });
 
@@ -265,11 +326,29 @@ export async function generateEnhancedMaterialFromDocument(
   content: string,
   originalName: string,
   existingContent: string,
+  learningStyle?: string,
+): Promise<GeneratedMaterial> {
+  return retryOnZodError(() =>
+    _generateEnhancedMaterialFromDocumentInner(
+      content,
+      originalName,
+      existingContent,
+      learningStyle,
+    ),
+  );
+}
+
+async function _generateEnhancedMaterialFromDocumentInner(
+  content: string,
+  originalName: string,
+  existingContent: string,
+  learningStyle?: string,
 ): Promise<GeneratedMaterial> {
   const truncated = content.slice(0, MAX_QUIZ_INPUT);
+  const stylePrompt = buildLearningStylePrompt(learningStyle);
   const { text } = await generateText({
     model: fastModel,
-    system: SYSTEM_MATERIAL,
+    system: SYSTEM_MATERIAL + stylePrompt,
     prompt: `Judul file: "${originalName}".
 Tugas kamu adalah menulis ulang dan meningkatkan materi belajar teori yang sudah ada di bawah ini agar menjadi JAUH LEBIH BERBOBOT, LEBIH MENDALAM, DAN KOMPREHENSIF.
 - Tambahkan penjelasan konsep-konsep teoritis yang lebih detail dan terperinci.
