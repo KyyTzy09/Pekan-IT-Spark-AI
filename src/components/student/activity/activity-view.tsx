@@ -47,9 +47,7 @@ export function ActivityView({
 
       <Reveal className="grid gap-6 lg:grid-cols-2">
         <ActivityLineChart data={activity.dailySeries} metric={chartMetric} />
-        <div className="lg:max-h-[420px] lg:overflow-y-auto">
-          <ActivityList entries={activity.recent} limit={20} />
-        </div>
+        <ActivityList entries={activity.recent} limit={20} />
       </Reveal>
 
       <div className="flex justify-center">

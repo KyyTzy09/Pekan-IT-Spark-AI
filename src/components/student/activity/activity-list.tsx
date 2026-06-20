@@ -88,66 +88,68 @@ export function ActivityList({ entries, className, limit = 20 }: Props) {
         )}
       </div>
 
-      <ol className="space-y-2">
-        {visible.map((e) => {
-          const meta = KIND_META[e.kind];
-          const Icon = meta.icon;
-          return (
-            <li
-              key={e.id}
-              className="group flex items-start gap-3 rounded-2xl border border-border/40 bg-card/60 p-3 transition-all hover:border-border/70 hover:bg-card/80"
-            >
-              <div
-                className={cn(
-                  "grid size-9 shrink-0 place-items-center rounded-xl",
-                  meta.color,
-                )}
+      <div className="lg:max-h-[360px] lg:overflow-y-auto pr-1 custom-scrollbar">
+        <ol className="space-y-2">
+          {visible.map((e) => {
+            const meta = KIND_META[e.kind];
+            const Icon = meta.icon;
+            return (
+              <li
+                key={e.id}
+                className="group flex items-start gap-3 rounded-2xl border border-border/40 bg-card/60 p-3 transition-all hover:border-border/70 hover:bg-card/80"
               >
-                <Icon size={16} />
-              </div>
+                <div
+                  className={cn(
+                    "grid size-9 shrink-0 place-items-center rounded-xl",
+                    meta.color,
+                  )}
+                >
+                  <Icon size={16} />
+                </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-[12.5px] font-bold text-foreground">
-                    {e.title}
-                  </p>
-                  <time
-                    dateTime={e.timestamp}
-                    className="shrink-0 text-[10px] font-medium text-muted-foreground"
-                  >
-                    {formatDistanceToNow(new Date(e.timestamp))}
-                  </time>
-                </div>
-                {e.description && (
-                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                    {e.description}
-                  </p>
-                )}
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider",
-                      meta.color,
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-[12.5px] font-bold text-foreground">
+                      {e.title}
+                    </p>
+                    <time
+                      dateTime={e.timestamp}
+                      className="shrink-0 text-[10px] font-medium text-muted-foreground"
+                    >
+                      {formatDistanceToNow(new Date(e.timestamp))}
+                    </time>
+                  </div>
+                  {e.description && (
+                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                      {e.description}
+                    </p>
+                  )}
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider",
+                        meta.color,
+                      )}
+                    >
+                      {meta.label}
+                    </span>
+                    {e.subjectName && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {e.subjectName}
+                      </span>
                     )}
-                  >
-                    {meta.label}
-                  </span>
-                  {e.subjectName && (
-                    <span className="text-[10px] text-muted-foreground">
-                      {e.subjectName}
-                    </span>
-                  )}
-                  {e.xp > 0 && (
-                    <span className="ml-auto rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
-                      +{e.xp} XP
-                    </span>
-                  )}
+                    {e.xp > 0 && (
+                      <span className="ml-auto rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
+                        +{e.xp} XP
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </div>
   );
 }
