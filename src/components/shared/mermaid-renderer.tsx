@@ -134,7 +134,8 @@ function preprocessChart(chart: string): string {
         return match;
       }
       const matchPrefix = match.substring(0, match.indexOf(id));
-      return `${matchPrefix}${id}(["${trimmed}"])`;
+      const escaped = trimmed.replace(/"/g, '\\"');
+      return `${matchPrefix}${id}(["${escaped}"])`;
     },
   );
 
@@ -153,7 +154,8 @@ function preprocessChart(chart: string): string {
         return match;
       }
       const matchPrefix = match.substring(0, match.indexOf(id));
-      return `${matchPrefix}${id}["${trimmed}"]`;
+      const escaped = trimmed.replace(/"/g, '\\"');
+      return `${matchPrefix}${id}["${escaped}"]`;
     },
   );
 
@@ -172,7 +174,8 @@ function preprocessChart(chart: string): string {
         return match;
       }
       const matchPrefix = match.substring(0, match.indexOf(id));
-      return `${matchPrefix}${id}{{"${trimmed}"}}`;
+      const escaped = trimmed.replace(/"/g, '\\"');
+      return `${matchPrefix}${id}{{"${escaped}"}}`;
     },
   );
 
@@ -191,7 +194,8 @@ function preprocessChart(chart: string): string {
         return match;
       }
       const matchPrefix = match.substring(0, match.indexOf(id));
-      return `${matchPrefix}${id}{"${trimmed}"}`;
+      const escaped = trimmed.replace(/"/g, '\\"');
+      return `${matchPrefix}${id}{"${escaped}"}`;
     },
   );
 
@@ -210,7 +214,8 @@ function preprocessChart(chart: string): string {
         return match;
       }
       const matchPrefix = match.substring(0, match.indexOf(id));
-      return `${matchPrefix}${id}("${trimmed}")`;
+      const escaped = trimmed.replace(/"/g, '\\"');
+      return `${matchPrefix}${id}("${escaped}")`;
     },
   );
 
