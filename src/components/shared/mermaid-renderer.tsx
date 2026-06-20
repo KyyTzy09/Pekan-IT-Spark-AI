@@ -39,7 +39,7 @@ export default function MermaidRenderer({ chart }: MermaidRendererProps) {
 
         // Generate unique id for the svg
         const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
-        const cleanChart = chart.trim();
+        const cleanChart = preprocessChart(chart.trim());
 
         // Render the diagram
         const { svg } = await mermaid.render(id, cleanChart);
@@ -109,4 +109,110 @@ export default function MermaidRenderer({ chart }: MermaidRendererProps) {
       />
     </div>
   );
+}
+
+function preprocessChart(chart: string): string {
+  let processed = chart;
+
+  // Connector prefix regex pattern that optionally allows connector text like -->|text|
+  const prefix =
+    "(?:^\\s*|-[.-]+>\\s*|={2,}>\\s*|-{3,}\\s*|-\\.-+\\s*)(?:\\|[^|]+\\|\\s*)?";
+
+  // 1. Stadium shape: A([Text]) -> A(["Text"])
+  // Run this first to avoid matching ([...]) in the box pattern
+  processed = processed.replace(
+    new RegExp(
+      `${prefix}\\b([a-zA-Z0-9_-]+)\\s*\\(\\s*\\[(?!["'\\s])([^\\]]+)\\]\\s*\\)`,
+      "gm",
+    ),
+    (match, id, text) => {
+      const trimmed = text.trim();
+      if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ) {
+        return match;
+      }
+      const matchPrefix = match.substring(0, match.indexOf(id));
+      return `${matchPrefix}${id}(["${trimmed}"])`;
+    },
+  );
+
+  // 2. Box shape: A[Text] -> A["Text"]
+  processed = processed.replace(
+    new RegExp(
+      `${prefix}\\b([a-zA-Z0-9_-]+)\\s*\\[(?!["'/\\s\\\\])([^\\]]+)\\]`,
+      "gm",
+    ),
+    (match, id, text) => {
+      const trimmed = text.trim();
+      if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ) {
+        return match;
+      }
+      const matchPrefix = match.substring(0, match.indexOf(id));
+      return `${matchPrefix}${id}["${trimmed}"]`;
+    },
+  );
+
+  // 3. Hexagon shape: A{{Text}} -> A{{"Text"}}
+  processed = processed.replace(
+    new RegExp(
+      `${prefix}\\b([a-zA-Z0-9_-]+)\\s*\\{\\{(?!["'\\s])([^}]+)\\}\\}`,
+      "gm",
+    ),
+    (match, id, text) => {
+      const trimmed = text.trim();
+      if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ) {
+        return match;
+      }
+      const matchPrefix = match.substring(0, match.indexOf(id));
+      return `${matchPrefix}${id}{{"${trimmed}"}}`;
+    },
+  );
+
+  // 4. Rhombus/Decision shape: A{Text} -> A{"Text"}
+  processed = processed.replace(
+    new RegExp(
+      `${prefix}\\b([a-zA-Z0-9_-]+)\\s*\\{(?!["'\\s])([^}]+)\\}`,
+      "gm",
+    ),
+    (match, id, text) => {
+      const trimmed = text.trim();
+      if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ) {
+        return match;
+      }
+      const matchPrefix = match.substring(0, match.indexOf(id));
+      return `${matchPrefix}${id}{"${trimmed}"}`;
+    },
+  );
+
+  // 5. Round shape: A(Text) -> A("Text")
+  processed = processed.replace(
+    new RegExp(
+      `${prefix}\\b([a-zA-Z0-9_-]+)\\s*\\((?!["'\\s])([^)]+)\\)`,
+      "gm",
+    ),
+    (match, id, text) => {
+      const trimmed = text.trim();
+      if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ) {
+        return match;
+      }
+      const matchPrefix = match.substring(0, match.indexOf(id));
+      return `${matchPrefix}${id}("${trimmed}")`;
+    },
+  );
+
+  return processed;
 }
