@@ -1,0 +1,247 @@
+{
+  "communities": {
+    "0": [
+      "action-challenge",
+      "action-practice",
+      "action-weekly",
+      "adaptive",
+      "ai-challenge",
+      "ai-evaluator",
+      "ai-questions",
+      "challenge",
+      "learning",
+      "mix",
+      "model-challenge",
+      "model-knowledge",
+      "model-question",
+      "model-reflection",
+      "practice",
+      "weekly"
+    ],
+    "1": [
+      "action-auth",
+      "auth",
+      "authjs",
+      "biome",
+      "bun",
+      "comp-auth",
+      "model-user",
+      "nextjs",
+      "pgvector",
+      "postgresql",
+      "prisma",
+      "shadcn",
+      "tailwind",
+      "vitest"
+    ],
+    "2": [
+      "action-documents",
+      "ai-extract",
+      "ai-rag",
+      "documents",
+      "embeddings",
+      "mammoth",
+      "model-doc-embedding",
+      "model-document",
+      "model-embedding",
+      "pdf-parse",
+      "rag"
+    ],
+    "3": [
+      "action-activity",
+      "action-gamification",
+      "activity",
+      "gamification",
+      "model-badge",
+      "model-streak",
+      "model-xp",
+      "streak",
+      "xp"
+    ],
+    "4": [
+      "action-chat",
+      "ai-tutor",
+      "chat",
+      "model-chat",
+      "model-concept",
+      "model-topic",
+      "openai",
+      "topics",
+      "vercel-ai"
+    ],
+    "5": [
+      "action-dashboard",
+      "action-onboarding",
+      "comp-landing",
+      "comp-onboarding",
+      "dashboard",
+      "onboarding",
+      "react",
+      "spark-ai",
+      "zod"
+    ],
+    "6": [
+      "action-parent",
+      "comp-admin",
+      "comp-parent",
+      "comp-shared",
+      "comp-student",
+      "comp-ui",
+      "invite",
+      "model-parent-link",
+      "parent"
+    ],
+    "7": [
+      "action-admin",
+      "action-subjects",
+      "admin",
+      "ai-curriculum",
+      "curriculum",
+      "model-admin-log",
+      "model-subject",
+      "subjects"
+    ],
+    "8": [
+      "action-materials",
+      "ai-material",
+      "katex",
+      "materials",
+      "mermaid",
+      "model-material"
+    ],
+    "9": [
+      "avatar",
+      "model-avatar"
+    ],
+    "10": [
+      "model-study-buddy",
+      "study-buddy"
+    ],
+    "11": [
+      "action-avatar"
+    ],
+    "12": [
+      "action-invite"
+    ],
+    "13": [
+      "action-profile"
+    ],
+    "14": [
+      "ai"
+    ],
+    "15": [
+      "badges"
+    ],
+    "16": [
+      "cloudinary"
+    ],
+    "17": [
+      "database"
+    ],
+    "18": [
+      "framer"
+    ],
+    "19": [
+      "leaderboard"
+    ],
+    "20": [
+      "questions"
+    ],
+    "21": [
+      "reflection"
+    ],
+    "22": [
+      "upload"
+    ]
+  },
+  "cohesion": {
+    "0": 0.19166666666666668,
+    "1": 0.16483516483516483,
+    "2": 0.21818181818181817,
+    "3": 0.2222222222222222,
+    "4": 0.25,
+    "5": 0.2222222222222222,
+    "6": 0.2777777777777778,
+    "7": 0.2857142857142857,
+    "8": 0.4,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0
+  },
+  "gods": [],
+  "surprises": [
+    {
+      "source": "Spark AI Platform",
+      "target": "Activity Tracking",
+      "source_files": [
+        "",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "",
+      "note": "Bridges community 5 → community 3"
+    },
+    {
+      "source": "Spark AI Platform",
+      "target": "Admin Panel",
+      "source_files": [
+        "",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "",
+      "note": "Bridges community 5 → community 7"
+    },
+    {
+      "source": "Spark AI Platform",
+      "target": "Authentication System",
+      "source_files": [
+        "",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "",
+      "note": "Bridges community 5 → community 1"
+    },
+    {
+      "source": "Spark AI Platform",
+      "target": "Daily Challenge System",
+      "source_files": [
+        "",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "",
+      "note": "Bridges community 5 → community 0"
+    },
+    {
+      "source": "Spark AI Platform",
+      "target": "AI Tutor Chat (Socratic)",
+      "source_files": [
+        "",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "",
+      "note": "Bridges community 5 → community 4"
+    }
+  ],
+  "questions": [
+    {
+      "type": "no_signal",
+      "question": null,
+      "why": "Not enough signal to generate questions. This usually means the corpus has no AMBIGUOUS edges, no bridge nodes, no INFERRED relationships, and all communities are tightly cohesive. Add more files or run with --mode deep to extract richer edges."
+    }
+  ]
+}
