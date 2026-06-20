@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ChallengeListView } from "@/components/student/challenge/challenge-list-view";
+import { ChallengeListView, type SubjectOption } from "@/components/student/challenge";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -20,54 +20,72 @@ export default async function ChallengePage() {
   }
 
   const userId = session.user.id;
-  const now = new Date();
-  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayEnd = new Date(dayStart);
-  dayEnd.setDate(dayEnd.getDate() + 1);
 
-  // Check if daily challenges for today already exist in database (fast count query)
-  const existingCount = await prisma.challenge.count({
-    where: {
-      userId,
-      scheduledFor: { gte: dayStart, lt: dayEnd },
-    },
-  });
+  const [result, progress, profile, weeklyChallenge] = await Promise.all([
+    getTodayChallenges(),
+    getDailyProgress(),
+    prisma.studentProfile.findUnique({
+      where: { userId },
+      select: {
+        challengeSubjectIds: true,
+        weeklyChallengeSubjectIds: true,
+        focusedSubjects: true,
+      },
+    }),
+    getOrCreateWeeklyChallenge(),
+  ]);
 
-  const [result, progress, focusedSubjectsRaw, weeklyChallenge] =
-    await Promise.all([
-      existingCount > 0
-        ? getTodayChallenges()
-        : Promise.resolve({
-            challenges: [],
-            progress: { total: 0, completed: 0, points: 0 },
-          }),
-      existingCount > 0
-        ? getDailyProgress()
-        : Promise.resolve({
-            date: dayStart.toISOString(),
-            totalActive: 0,
-            totalCompleted: 0,
-            totalPoints: 0,
-            overallScore: 0,
-            masteryScore: 0,
-            challengeScore: 0,
-            materialsScore: 0,
-            reflectionsScore: 0,
-          }),
-      prisma.studentProfile.findUnique({
-        where: { userId },
-        select: { focusedSubjects: true },
-      }),
-      getOrCreateWeeklyChallenge(),
-    ]);
+  const allSubjectIds = Array.from(
+    new Set([
+      ...(profile?.focusedSubjects ?? []),
+      ...(profile?.challengeSubjectIds ?? []),
+      ...(profile?.weeklyChallengeSubjectIds ?? []),
+    ]),
+  );
 
-  const subjects = await prisma.subject.findMany({
-    where: focusedSubjectsRaw?.focusedSubjects.length
-      ? { id: { in: focusedSubjectsRaw.focusedSubjects } }
-      : undefined,
-    select: { slug: true, name: true },
-    orderBy: { order: "asc" },
-  });
+  const subjectRows =
+    allSubjectIds.length > 0
+      ? await prisma.subject.findMany({
+          where: { id: { in: allSubjectIds }, isActive: true },
+          select: { id: true, slug: true, name: true },
+          orderBy: { order: "asc" },
+        })
+      : await prisma.subject.findMany({
+          where: { isActive: true, isCustom: false },
+          select: { id: true, slug: true, name: true },
+          orderBy: { order: "asc" },
+          take: 12,
+        });
+
+  const subjects = subjectRows;
+  const subjectsWithMastery: SubjectOption[] = await Promise.all(
+    subjects.map(async (s) => {
+      const profiles = await prisma.studentKnowledgeProfile.findMany({
+        where: {
+          userId,
+          concept: { topic: { subjectId: s.id } },
+        },
+        select: { masteryScore: true },
+      });
+      const scores = profiles.map((p) => p.masteryScore);
+      const avg =
+        scores.length > 0
+          ? scores.reduce((a, b) => a + b, 0) / scores.length
+          : null;
+      const fullSubject = await prisma.subject.findUnique({
+        where: { id: s.id },
+        select: { icon: true, color: true, isCustom: true },
+      });
+      return {
+        id: s.id,
+        name: s.name,
+        icon: fullSubject?.icon ?? null,
+        color: fullSubject?.color ?? null,
+        avgMastery: avg,
+        isCustom: fullSubject?.isCustom ?? false,
+      };
+    }),
+  );
 
   return (
     <ChallengeListView
@@ -75,7 +93,10 @@ export default async function ChallengePage() {
       progress={result.progress}
       dailyProgress={progress}
       subjectOptions={subjects}
-      initiallyEmpty={existingCount === 0}
+      initialChallengeSubjectIds={profile?.challengeSubjectIds ?? []}
+      initialWeeklySubjectIds={profile?.weeklyChallengeSubjectIds ?? []}
+      availableSubjects={subjectsWithMastery}
+      initiallyEmpty={false}
       weeklyChallenge={weeklyChallenge}
     />
   );

@@ -4,7 +4,7 @@ import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
 import { prisma } from "./prisma";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -37,7 +37,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
-          image: user.image ?? `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(user.email)}`,
+          image:
+            user.image ??
+            `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(user.email)}`,
           isOnboarded: user.isOnboarded,
         };
       },
