@@ -244,7 +244,7 @@ export default async function StudentProfilePage() {
                 </span>
               </header>
 
-              <div className="grid gap-3.5 sm:grid-cols-1">
+              <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1 custom-scrollbar">
                 {allBadges.map((badge) => {
                   const unlocked = ownedBadgeIds.has(badge.id);
                   const meta = BADGE_MAP[badge.name] || {
