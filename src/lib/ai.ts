@@ -72,7 +72,7 @@ export async function generateText({
   const client = isHeavy ? openaiHeavy : openaiDefault;
   const modelName = isHeavy
     ? (process.env.HEAVY_MODEL_NAME ?? "deepseek-3.2")
-    : "gpt-4o-mini";
+    : "deepseek-v4-flash";
   const baseURL = client.baseURL;
 
   console.log(`
@@ -99,7 +99,7 @@ ${prompt ? prompt : "(none)"}
 
   try {
     console.log(`[AI_SERVICE] generateText attempting model: ${modelName}`);
-    const response = await openaiHeavy.chat.completions.create(
+    const response = await client.chat.completions.create(
       {
         model: modelName,
         messages: messages,
@@ -151,27 +151,27 @@ ${textResult}
     if (isHeavy) {
       // Fallback 1: try fast model on Sumopod (different endpoint)
       console.warn(
-        `[AI_SERVICE] Heavy model failed. Trying gpt-4o-mini on Sumopod...`,
+        `[AI_SERVICE] Heavy model failed. Trying deepseek-v4-flash on Sumopod...`,
       );
       try {
         console.log(`
 =========================================
-[AI_SERVICE] generateText FALLBACK REQUEST (gpt-4o-mini)
+[AI_SERVICE] generateText FALLBACK REQUEST (deepseek-v4-flash)
 -----------------------------------------
-* Fallback Model: gpt-4o-mini
+* Fallback Model: deepseek-v4-flash
 * Endpoint:       ${openaiDefault.baseURL}
 =========================================
 `);
         const response = await openaiDefault.chat.completions.create(
-          { model: "gpt-4o-mini", messages, temperature },
+          { model: "deepseek-v4-flash", messages, temperature },
           { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
         );
         const textResult = response.choices[0]?.message?.content || "";
         return { text: textResult };
       } catch (fallbackSumopodErr) {
         logAIError(
-          "generateText (Fallback 1: gpt-4o-mini)",
-          "gpt-4o-mini",
+          "generateText (Fallback 1: deepseek-v4-flash)",
+          "deepseek-v4-flash",
           openaiDefault.baseURL,
           fallbackSumopodErr,
         );
@@ -297,7 +297,7 @@ ${fullText}
         groqBaseURL,
         groqErr,
       );
-      const sumopodModel = "gpt-4o-mini";
+      const sumopodModel = "deepseek-v4-flash";
       const sumopodBaseURL = openaiDefault.baseURL;
       console.warn(
         `[AI_SERVICE] Groq streamText failed. Trying Sumopod (${sumopodModel}) at ${sumopodBaseURL}...`,
@@ -400,7 +400,7 @@ ${fullText}
     }
   } else {
     // Non-heavy model path (standard OpenAI client)
-    const modelName = "gpt-4o-mini";
+    const modelName = "deepseek-v4-flash";
     const _baseURL = openaiDefault.baseURL;
     console.log(`[AI_SERVICE] streamText attempting model: ${modelName}`);
     const stream = await openaiDefault.chat.completions.create(
