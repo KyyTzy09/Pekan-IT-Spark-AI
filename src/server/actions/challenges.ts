@@ -11,14 +11,24 @@ import {
   recordActivity,
 } from "@/server/actions/gamification";
 import { recordQuestionAttempt } from "@/server/actions/subjects";
+import { regenerateWeeklyChallenge } from "@/server/actions/weekly-challenge";
 import {
   analyzeReflection,
   type ChallengeMix,
   generateDailyMix,
+  generateMaterialMarkdown,
   generateOnDemandChallenge,
-  generateWeeklyChallengeAI,
-  generateWeeklyChallengeContent,
 } from "@/server/ai/challenge";
+import { generateQuestionsForConcept } from "@/server/ai/generate-questions";
+import { AI_QUOTA_LIMITS, incrementAiQuota } from "@/server/ai-quota";
+import { computeMixForSubject, type MixResult } from "@/server/learning/mix";
+import {
+  computeGrowthTrend,
+  computeMasteryAverage,
+  distributeChallengeSubjects,
+  MAX_CHALLENGE_SUBJECTS,
+  pickChallengeSubjectIds,
+} from "@/server/learning/strength";
 import type {
   ChallengeItemKind,
   ChallengeItemStatus,
@@ -203,357 +213,489 @@ async function fetchChallengesForDate(
   }));
 }
 
-async function generateAndStoreDailyChallenges(
+export async function generateAndStoreDailyChallenges(
   userId: string,
   date: Date,
 ): Promise<void> {
+  console.log("[DAILY_CHALLENGE] Starting generation", {
+    userId,
+    date: date.toISOString(),
+  });
+
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     select: {
       grade: true,
       school: true,
       learningStyle: true,
+      challengeSubjectIds: true,
       focusedSubjects: true,
       user: { select: { name: true } },
     },
   });
 
-  const focusedSubjectIds = profile?.focusedSubjects ?? [];
+  if (!profile) {
+    console.log("[DAILY_CHALLENGE] No profile found", { userId });
+    return;
+  }
 
-  // Fetch focused subject details (id + names)
-  const focusedSubjectModels =
-    focusedSubjectIds.length > 0
-      ? await prisma.subject.findMany({
-          where: { id: { in: focusedSubjectIds } },
-          select: { id: true, name: true },
-        })
-      : [];
-  const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+  console.log("[DAILY_CHALLENGE] Profile loaded", {
+    grade: profile.grade,
+    learningStyle: profile.learningStyle,
+    challengeSubjectIds: profile.challengeSubjectIds.length,
+    focusedSubjects: profile.focusedSubjects.length,
+  });
 
-  const [weakConcepts, strongConcepts, recentChallenges, availableQuestions] =
-    await Promise.all([
-      prisma.studentKnowledgeProfile.findMany({
-        where: {
-          userId,
-          masteryScore: { lt: 0.7 },
-          ...(focusedSubjectIds.length > 0 && {
-            concept: {
-              topic: {
-                subjectId: { in: focusedSubjectIds },
-              },
-            },
-          }),
-        },
-        orderBy: { masteryScore: "asc" },
-        take: 8,
-        include: {
-          concept: {
-            select: {
-              id: true,
-              name: true,
-              topic: { select: { subject: { select: { name: true } } } },
-            },
+  const nationalFallbacks = await prisma.subject.findMany({
+    where: { isActive: true, isCustom: false },
+    select: { id: true },
+    orderBy: { order: "asc" },
+    take: MAX_CHALLENGE_SUBJECTS,
+  });
+
+  const subjectIds = pickChallengeSubjectIds(
+    {
+      challengeSubjectIds: profile?.challengeSubjectIds ?? [],
+      focusedSubjects: profile?.focusedSubjects ?? [],
+    },
+    nationalFallbacks.map((s) => s.id),
+  );
+
+  console.log("[DAILY_CHALLENGE] Subject selection", {
+    picked: subjectIds.length,
+    subjectIds,
+  });
+
+  if (subjectIds.length === 0) {
+    console.log("[DAILY_CHALLENGE] No subjects to generate", { userId });
+    return;
+  }
+
+  const now = new Date();
+  const distributedSubjects = distributeChallengeSubjects(
+    subjectIds,
+    MAX_CHALLENGE_SUBJECTS,
+  );
+
+  console.log("[DAILY_CHALLENGE] Distribution result", {
+    total: distributedSubjects.length,
+    distributedSubjects,
+  });
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const subjectId of distributedSubjects) {
+    try {
+      console.log("[DAILY_CHALLENGE] Generating for subject", { subjectId });
+      await generateOneDailyChallenge(userId, date, subjectId, profile, now);
+      successCount++;
+      console.log("[DAILY_CHALLENGE] ✓ Success", { subjectId });
+    } catch (err) {
+      failCount++;
+      console.error(`[DAILY_CHALLENGE] ✗ Failed for subject ${subjectId}`, err);
+    }
+  }
+
+  console.log("[DAILY_CHALLENGE] Generation complete", {
+    userId,
+    successCount,
+    failCount,
+    total: distributedSubjects.length,
+  });
+}
+
+async function generateOneDailyChallenge(
+  userId: string,
+  date: Date,
+  subjectId: string,
+  profile: {
+    grade: number | null;
+    school: string | null;
+    learningStyle: "VISUAL" | "TEXTUAL" | "EXAMPLE_HEAVY" | "SOCRATIC" | null;
+    user: { name: string | null } | null;
+  } | null,
+  now: Date,
+): Promise<void> {
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      isActive: true,
+      isCustom: true,
+    },
+  });
+  if (!subject || !subject.isActive) return;
+
+  const strength = await computeSubjectStrength(userId, subjectId, now);
+  const mix = computeMixForSubject({
+    avgMastery: strength.avgMastery,
+    growthTrend: strength.growthTrend,
+    hasAttempts: strength.hasAttempts,
+  });
+
+  const recentChallenges = await prisma.challenge.findMany({
+    where: {
+      userId,
+      scheduledFor: {
+        gte: new Date(date.getTime() - 5 * 86_400_000),
+        lt: date,
+      },
+    },
+    orderBy: { scheduledFor: "desc" },
+    take: 5,
+    include: { items: { select: { kind: true } } },
+  });
+
+  const availableQuestions = await prisma.question.findMany({
+    where: {
+      isActive: true,
+      concept: { topic: { subjectId: subject.id } },
+    },
+    take: 60,
+    select: {
+      id: true,
+      conceptId: true,
+      difficulty: true,
+      concept: {
+        select: {
+          name: true,
+          topic: {
+            select: { name: true, subject: { select: { slug: true } } },
           },
         },
-      }),
-      prisma.studentKnowledgeProfile.findMany({
-        where: {
-          userId,
-          masteryScore: { gte: 0.8 },
-          ...(focusedSubjectIds.length > 0 && {
-            concept: {
-              topic: {
-                subjectId: { in: focusedSubjectIds },
-              },
-            },
-          }),
-        },
-        orderBy: { masteryScore: "desc" },
-        take: 5,
-        include: {
-          concept: {
-            select: {
-              id: true,
-              name: true,
-              topic: { select: { subject: { select: { name: true } } } },
-            },
-          },
-        },
-      }),
-      prisma.challenge.findMany({
-        where: {
-          userId,
-          scheduledFor: {
-            gte: new Date(date.getTime() - 5 * 24 * 60 * 60 * 1000),
-            lt: date,
-          },
-        },
-        orderBy: { scheduledFor: "desc" },
-        take: 5,
-        include: { items: { select: { kind: true } } },
-      }),
-      prisma.question.findMany({
-        where: {
-          isActive: true,
-          ...(focusedSubjectIds.length > 0 && {
-            concept: {
-              topic: {
-                subjectId: { in: focusedSubjectIds },
-              },
-            },
-          }),
-        },
-        take: 60,
+      },
+    },
+  });
+
+  const weakConcepts = await prisma.studentKnowledgeProfile.findMany({
+    where: {
+      userId,
+      masteryScore: { lt: 0.7 },
+      concept: { topic: { subjectId: subject.id } },
+    },
+    orderBy: { masteryScore: "asc" },
+    take: 5,
+    include: {
+      concept: {
         select: {
           id: true,
-          conceptId: true,
-          difficulty: true,
-          concept: {
-            select: {
-              name: true,
-              topic: {
-                select: {
-                  name: true,
-                  subject: { select: { slug: true } },
-                },
-              },
-            },
-          },
+          name: true,
+          topic: { select: { subject: { select: { name: true } } } },
         },
-      }),
-    ]);
+      },
+    },
+  });
 
-  const focusedSubjects = focusedSubjectNames;
+  const plan = await generateDailyMix({
+    userId,
+    userName: profile?.user?.name ?? undefined,
+    grade: profile?.grade,
+    school: profile?.school,
+    learningStyle: profile?.learningStyle,
+    focusedSubjects: [subject.name],
+    weakConcepts: weakConcepts.map((w) => ({
+      id: w.concept.id,
+      name: w.concept.name,
+      masteryScore: w.masteryScore,
+      subjectName: w.concept.topic.subject.name,
+    })),
+    strongConcepts: [],
+    recentChallenges: recentChallenges.map((c) => ({
+      title: c.title,
+      kinds: Array.from(new Set(c.items.map((i) => i.kind))),
+    })),
+    availableQuestions: availableQuestions.map((q) => ({
+      id: q.id,
+      conceptId: q.conceptId,
+      conceptName: q.concept.name,
+      topicName: q.concept.topic.name,
+      subjectSlug: q.concept.topic.subject.slug,
+      difficulty: q.difficulty,
+    })),
+    mix: {
+      questions: mix.questions,
+      materials: mix.materials,
+      reflections: mix.reflections,
+    },
+  });
 
-  // Adaptive learning: dynamically compute challenge composition based on student's ability/performance & learning style
-  let mixConfig = { questions: 4, materials: 2, reflections: 2 }; // Default balanced: 8 items
-  const style = profile?.learningStyle;
+  type PlanItemWithAll = (typeof plan.items)[number];
+  const normalizeDifficulty = (
+    d: string | undefined,
+  ): "EASY" | "MEDIUM" | "HARD" =>
+    d === "MEDIUM" || d === "HARD" ? d : "EASY";
+  const normalizedItems = plan.items.map((it: PlanItemWithAll) => ({
+    ...it,
+    difficultyHint: normalizeDifficulty(it.difficultyHint),
+  }));
 
-  if (style === "EXAMPLE_HEAVY") {
-    if (weakConcepts.length > 3) {
-      mixConfig = { questions: 4, materials: 2, reflections: 1 }; // 7 items
-    } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
-      mixConfig = { questions: 5, materials: 1, reflections: 2 }; // 8 items
-    } else {
-      mixConfig = { questions: 5, materials: 1, reflections: 1 }; // 7 items
-    }
-  } else if (style === "TEXTUAL") {
-    if (weakConcepts.length > 3) {
-      mixConfig = { questions: 1, materials: 5, reflections: 1 }; // 7 items
-    } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
-      mixConfig = { questions: 2, materials: 3, reflections: 2 }; // 7 items
-    } else {
-      mixConfig = { questions: 2, materials: 4, reflections: 1 }; // 7 items
-    }
-  } else {
-    // VISUAL, SOCRATIC, or null (Balanced)
-    if (weakConcepts.length > 3) {
-      // User has multiple weaknesses: focus on explanation/review (more materials)
-      mixConfig = {
-        questions: 3,
-        materials: 3,
-        reflections: 2, // Total: 8 items
+  await prisma.$transaction(async (tx) => {
+    const firstConcept =
+      plan.items.find((i) => i.conceptHint)?.conceptHint ||
+      "Pembelajaran Adaptif";
+    const title = `Tantangan ${subject.name}: ${firstConcept}`;
+    const description = `Paket belajar harian untuk ${subject.name}: ${mix.questions} soal, ${mix.materials} materi, ${mix.reflections} refleksi. Difficulty: ${mix.questionDifficulty}.`;
+
+    const challengeMix: ChallengeMix = {
+      questions: plan.items.filter((i) => i.kind === "QUESTION").length,
+      materials: plan.items.filter((i) => i.kind === "MATERIAL").length,
+      reflections: plan.items.filter((i) => i.kind === "REFLECTION").length,
+    };
+
+    type NormalizedItem = {
+      kind: "QUESTION" | "MATERIAL" | "REFLECTION";
+      subjectSlug: string;
+      conceptHint?: string;
+      topicHint?: string;
+      difficultyHint: "EASY" | "MEDIUM" | "HARD";
+      rationale: string;
+      material?: {
+        title: string;
+        content: string;
+        keyPoints: string[];
+        estimatedMinutes: number;
+        difficulty: "EASY" | "MEDIUM" | "HARD";
       };
-    } else if (weakConcepts.length === 0 && strongConcepts.length > 5) {
-      // Advanced user: focus heavily on application and critical thinking (more questions/reflections)
-      mixConfig = {
-        questions: 4,
-        materials: 1,
-        reflections: 3, // Total: 8 items
-      };
-    } else {
-      // Balanced profile
-      mixConfig = {
-        questions: 4,
-        materials: 2,
-        reflections: 2, // Total: 8 items
-      };
-    }
-  }
+      reflection?: { prompt: string; context: string };
+    };
+    const normalizedItems: NormalizedItem[] = plan.items.map((it) => ({
+      kind: it.kind,
+      subjectSlug: it.subjectSlug,
+      conceptHint: it.conceptHint,
+      topicHint: it.topicHint,
+      difficultyHint:
+        it.difficultyHint === "MEDIUM" || it.difficultyHint === "HARD"
+          ? it.difficultyHint
+          : "EASY",
+      rationale: it.rationale,
+      material: it.material,
+      reflection: it.reflection,
+    }));
 
-  try {
-    const plan = await generateDailyMix({
-      userId,
-      userName: profile?.user.name ?? undefined,
-      grade: profile?.grade,
-      school: profile?.school,
-      learningStyle: profile?.learningStyle,
-      focusedSubjects,
-      weakConcepts: weakConcepts.map((w) => ({
-        id: w.concept.id,
-        name: w.concept.name,
-        masteryScore: w.masteryScore,
-        subjectName: w.concept.topic.subject.name,
-      })),
-      strongConcepts: strongConcepts.map((s) => ({
-        id: s.concept.id,
-        name: s.concept.name,
-        masteryScore: s.masteryScore,
-        subjectName: s.concept.topic.subject.name,
-      })),
-      recentChallenges: recentChallenges.map((c) => ({
-        title: c.title,
-        kinds: Array.from(new Set(c.items.map((i) => i.kind))),
-      })),
-      availableQuestions: availableQuestions.map((q) => ({
-        id: q.id,
-        conceptId: q.conceptId,
-        conceptName: q.concept.name,
-        topicName: q.concept.topic.name,
-        subjectSlug: q.concept.topic.subject.slug,
-        difficulty: q.difficulty,
-      })),
-      mix: mixConfig,
+    const challenge = await tx.challenge.create({
+      data: {
+        userId,
+        subjectId: subject.id,
+        title,
+        description,
+        type: "DAILY",
+        status: "ACTIVE",
+        source: "AUTO_DAILY",
+        scheduledFor: toDateOnly(date),
+        mixConfig: challengeMix,
+      },
     });
 
-    await prisma.$transaction(async (tx) => {
-      const uniqueSlugs = Array.from(
-        new Set(plan.items.map((i) => i.subjectSlug)),
-      );
-      const subjects = await tx.subject.findMany({
-        where: { slug: { in: uniqueSlugs as never[] } },
-        select: { id: true, slug: true, name: true },
-      });
-      const subjectIdBySlug = new Map(subjects.map((s) => [s.slug, s.id]));
-      const subjectNameBySlug = new Map(subjects.map((s) => [s.slug, s.name]));
-
-      // Build a name-based lookup for custom subjects (case-insensitive)
-      const subjectByName = new Map(
-        focusedSubjectModels.map((s) => [s.name.toLowerCase(), s]),
-      );
-
-      // Helper: resolve subject ID by slug or name
-      function resolveSubjectId(slug: string): string | null {
-        // First try exact slug match (national subjects)
-        const bySlug = subjectIdBySlug.get(slug as SubjectSlug);
-        if (bySlug) return bySlug;
-        // Then try name match (custom subjects)
-        const byName = subjectByName.get(slug.toLowerCase());
-        if (byName) return byName.id;
-        // Try normalized slug match
-        const normalized = slug.replace(/_/g, " ").toLowerCase();
-        for (const [name, subj] of subjectByName) {
-          if (name === normalized || normalized.includes(name)) return subj.id;
+    for (let idx = 0; idx < normalizedItems.length; idx++) {
+      const item = normalizedItems[idx];
+      if (item.kind === "QUESTION") {
+        const resolved = await resolveQuestionForSubject(
+          tx,
+          userId,
+          subject,
+          availableQuestions,
+          item,
+          mix,
+        );
+        if (resolved.questionId) {
+          await tx.challengeItem.create({
+            data: {
+              challengeId: challenge.id,
+              order: idx,
+              kind: "QUESTION",
+              questionId: resolved.questionId,
+              points: 10,
+            },
+          });
+        } else if (resolved.materialId) {
+          await tx.challengeItem.create({
+            data: {
+              challengeId: challenge.id,
+              order: idx,
+              kind: "MATERIAL",
+              materialId: resolved.materialId,
+              points: 5,
+            },
+          });
         }
-        return null;
-      }
-
-      function resolveSubjectName(slug: string): string {
-        const bySlug = subjectNameBySlug.get(slug as SubjectSlug);
-        if (bySlug) return bySlug;
-        const byName = subjectByName.get(slug.toLowerCase());
-        if (byName) return byName.name;
-        return slug
-          .replace(/_/g, " ")
-          .toLowerCase()
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-      }
-
-      // Group items by subjectSlug
-      const itemsBySubject = new Map<string, typeof plan.items>();
-      for (const item of plan.items) {
-        const list = itemsBySubject.get(item.subjectSlug) || [];
-        list.push(item);
-        itemsBySubject.set(item.subjectSlug, list);
-      }
-
-      for (const [subjectSlug, subjectItems] of itemsBySubject.entries()) {
-        const subjectId = resolveSubjectId(subjectSlug);
-        const subjectName = resolveSubjectName(subjectSlug);
-
-        const firstConcept =
-          subjectItems.find((i) => i.conceptHint)?.conceptHint ||
-          "Pembelajaran Adaptif";
-        const title = `Tantangan ${subjectName}: ${firstConcept}`;
-        const description = `Paket belajar harian: baca materi, selesaikan latihan soal, dan tulis refleksi untuk meningkatkan penguasaan konsep.`;
-
-        const challengeMix = {
-          questions: subjectItems.filter((i) => i.kind === "QUESTION").length,
-          materials: subjectItems.filter((i) => i.kind === "MATERIAL").length,
-          reflections: subjectItems.filter((i) => i.kind === "REFLECTION")
-            .length,
-        };
-
-        const challenge = await tx.challenge.create({
+      } else if (item.kind === "MATERIAL" && item.material) {
+        const mat = await tx.material.create({
           data: {
             userId,
-            subjectId,
-            title,
-            description,
-            type: "DAILY",
-            status: "ACTIVE",
-            source: "AUTO_DAILY",
-            scheduledFor: toDateOnly(date),
-            mixConfig: challengeMix,
+            subjectId: subject.id,
+            title: item.material.title,
+            content: item.material.content,
+            keyPoints: item.material.keyPoints,
+            estimatedMinutes: item.material.estimatedMinutes,
+            difficulty: item.material.difficulty,
+            source: "CHALLENGE",
           },
         });
-
-        for (let idx = 0; idx < subjectItems.length; idx++) {
-          const item = subjectItems[idx];
-          if (item.kind === "QUESTION") {
-            // Filter candidates by slug (national) or by subject ID (custom)
-            const candidates = availableQuestions.filter((q) => {
-              if (q.concept.topic.subject.slug === item.subjectSlug)
-                return true;
-              // For custom subjects, match by resolved subject ID
-              if (subjectId && q.concept.topic.subject.slug === subjectId)
-                return true;
-              return false;
-            });
-            const picked =
-              candidates[idx % candidates.length] ||
-              availableQuestions[idx % availableQuestions.length];
-            if (picked) {
-              await tx.challengeItem.create({
-                data: {
-                  challengeId: challenge.id,
-                  order: idx,
-                  kind: "QUESTION",
-                  questionId: picked.id,
-                  points: 10,
-                },
-              });
-            }
-          } else if (item.kind === "MATERIAL" && item.material) {
-            const mat = await tx.material.create({
-              data: {
-                userId,
-                subjectId: subjectId,
-                title: item.material.title,
-                content: item.material.content,
-                keyPoints: item.material.keyPoints,
-                estimatedMinutes: item.material.estimatedMinutes,
-                difficulty: item.material.difficulty,
-                source: "CHALLENGE",
-              },
-            });
-            await tx.challengeItem.create({
-              data: {
-                challengeId: challenge.id,
-                order: idx,
-                kind: "MATERIAL",
-                materialId: mat.id,
-                points: 5,
-              },
-            });
-          } else if (item.kind === "REFLECTION" && item.reflection) {
-            await tx.challengeItem.create({
-              data: {
-                challengeId: challenge.id,
-                order: idx,
-                kind: "REFLECTION",
-                prompt: `${item.reflection.prompt}\n\nKonteks: ${item.reflection.context}`,
-                points: 15,
-              },
-            });
-          }
-        }
+        await tx.challengeItem.create({
+          data: {
+            challengeId: challenge.id,
+            order: idx,
+            kind: "MATERIAL",
+            materialId: mat.id,
+            points: 5,
+          },
+        });
+      } else if (item.kind === "REFLECTION" && item.reflection) {
+        await tx.challengeItem.create({
+          data: {
+            challengeId: challenge.id,
+            order: idx,
+            kind: "REFLECTION",
+            prompt: `${item.reflection.prompt}\n\nKonteks: ${item.reflection.context}`,
+            points: 15,
+          },
+        });
       }
-    });
-  } catch (err) {
-    console.error("generateAndStoreDailyChallenges failed:", err);
-    throw err;
+    }
+  });
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+async function resolveQuestionForSubject(
+  tx: Tx,
+  userId: string,
+  subject: { id: string; name: string; slug: string; isCustom: boolean },
+  availableQuestions: Array<{
+    id: string;
+    conceptId: string;
+    difficulty: string;
+    concept: {
+      name: string;
+      topic: { name: string; subject: { slug: string } };
+    };
+  }>,
+  item: {
+    subjectSlug: string;
+    conceptHint?: string;
+    difficultyHint: "EASY" | "MEDIUM" | "HARD";
+  },
+  mix: MixResult,
+): Promise<{ questionId?: string; materialId?: string }> {
+  const sameSubjectQuestions = availableQuestions.filter(
+    (q) => q.concept.topic.subject.slug === item.subjectSlug,
+  );
+  const picked = sameSubjectQuestions[0];
+  if (picked) {
+    return { questionId: picked.id };
   }
+
+  const quota = await incrementAiQuota(userId, "questions", 1);
+  if (quota.allowed) {
+    const concept = await tx.concept.findFirst({
+      where: { topic: { subjectId: subject.id } },
+      include: { topic: { select: { name: true } } },
+      orderBy: { order: "asc" },
+    });
+    if (concept) {
+      try {
+        const generated = await generateQuestionsForConcept({
+          conceptName: concept.name,
+          conceptDescription: concept.description ?? "",
+          contentMd: concept.contentMd ?? "",
+          learningStyle: "VISUAL",
+          easyCount: mix.questionDifficulty === "EASY" ? 1 : 0,
+          mediumCount: mix.questionDifficulty === "MEDIUM" ? 1 : 0,
+          hardCount: mix.questionDifficulty === "HARD" ? 1 : 0,
+        });
+        const q = generated[0];
+        if (q) {
+          const newQuestion = await tx.question.create({
+            data: {
+              conceptId: concept.id,
+              type: "MULTIPLE_CHOICE",
+              difficulty: q.difficulty,
+              bloomTaxonomy: "UNDERSTAND",
+              questionText: q.questionText,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              explanation: q.explanation,
+              tags: ["ai-generated", "fallback", "challenge"],
+              isActive: true,
+            },
+          });
+          return { questionId: newQuestion.id };
+        }
+      } catch (err) {
+        console.error("AI question fallback failed:", err);
+      }
+    }
+  }
+
+  const matQuota = await incrementAiQuota(userId, "materials", 1);
+  if (matQuota.allowed) {
+    try {
+      const material = await generateMaterialMarkdown({
+        userName: undefined,
+        subjectName: subject.name,
+        topicName: item.conceptHint ?? subject.name,
+        conceptName: item.conceptHint ?? subject.name,
+        masteryScore: mix.questionDifficulty === "HARD" ? 0.8 : 0.3,
+        learningStyle: "VISUAL",
+      });
+      const mat = await tx.material.create({
+        data: {
+          userId,
+          subjectId: subject.id,
+          title: material.title,
+          content: material.content,
+          keyPoints: material.keyPoints,
+          estimatedMinutes: material.estimatedMinutes,
+          difficulty: material.difficulty,
+          source: "ADAPTIVE",
+        },
+      });
+      return { materialId: mat.id };
+    } catch (err) {
+      console.error("Material fallback failed:", err);
+    }
+  }
+
+  return {};
+}
+
+async function computeSubjectStrength(
+  userId: string,
+  subjectId: string,
+  now: Date,
+): Promise<{ avgMastery: number; growthTrend: number; hasAttempts: boolean }> {
+  const [recentProfiles, prevProfiles] = await Promise.all([
+    prisma.studentKnowledgeProfile.findMany({
+      where: {
+        userId,
+        updatedAt: { gte: new Date(now.getTime() - 7 * 86_400_000) },
+        concept: { topic: { subjectId } },
+      },
+      select: { masteryScore: true },
+    }),
+    prisma.studentKnowledgeProfile.findMany({
+      where: {
+        userId,
+        updatedAt: {
+          gte: new Date(now.getTime() - 14 * 86_400_000),
+          lt: new Date(now.getTime() - 7 * 86_400_000),
+        },
+        concept: { topic: { subjectId } },
+      },
+      select: { masteryScore: true },
+    }),
+  ]);
+  const recent = recentProfiles.map((p) => p.masteryScore);
+  const prev = prevProfiles.map((p) => p.masteryScore);
+  const all = [...recent, ...prev];
+  return {
+    avgMastery: computeMasteryAverage(all),
+    growthTrend: computeGrowthTrend(recent, prev),
+    hasAttempts: all.length > 0,
+  };
 }
 
 export async function getChallengeDetail(
@@ -1025,11 +1167,11 @@ export async function generateOnDemand(input: {
       scheduledFor: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
     },
   });
-  if (todayCount >= 10) {
+  if (todayCount >= 7) {
     return {
       ok: false,
       error:
-        "Batas tantangan tambahan hari ini sudah tercapai (10x). Coba lagi besok ya!",
+        "Batas tantangan tambahan hari ini sudah tercapai (7x). Coba lagi besok ya!",
     };
   }
 
@@ -2196,7 +2338,7 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
       where: {
         challenge: {
           userId,
-          type: "DAILY",
+          type: "WEEKLY",
           scheduledFor: { gte: monday, lt: sunday },
         },
         status: "COMPLETED",
@@ -2220,159 +2362,20 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
     };
   }
 
-  const profile = await prisma.studentProfile.findUnique({
-    where: { userId },
-    select: {
-      grade: true,
-      focusedSubjects: true,
-      user: { select: { name: true } },
-    },
+  const regen = await regenerateWeeklyChallenge(userId);
+  if (!regen.ok || !regen.weeklyChallengeId) {
+    throw new Error(regen.error ?? "Gagal membuat tantangan mingguan");
+  }
+
+  const created = await prisma.weeklyChallenge.findUnique({
+    where: { id: regen.weeklyChallengeId },
   });
-
-  const focusedSubjectIds = profile?.focusedSubjects ?? [];
-  const focusedSubjectModels =
-    focusedSubjectIds.length > 0
-      ? await prisma.subject.findMany({
-          where: { id: { in: focusedSubjectIds } },
-          select: { id: true, name: true },
-        })
-      : [];
-  const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
-
-  const aiPlan = await generateWeeklyChallengeAI({
-    userName: profile?.user.name ?? undefined,
-    grade: profile?.grade,
-    focusedSubjects: focusedSubjectNames,
-  }).catch((err) => {
-    console.error("AI weekly challenge generation failed:", err);
-    return {
-      title: "Misi Mingguan: Pemburu Ilmu",
-      description:
-        "Selesaikan 8 item tantangan belajar harian minggu ini untuk mengklaim reward 100 XP!",
-      goal: 8,
-    };
-  });
-
-  const weeklyContent = await generateWeeklyChallengeContent({
-    userName: profile?.user.name ?? undefined,
-    grade: profile?.grade,
-    focusedSubjects: focusedSubjectNames,
-  }).catch((err) => {
-    console.error("AI weekly content generation failed:", err);
-    return { questions: [], materials: [] };
-  });
-
-  const challenge = await prisma.$transaction(async (tx) => {
-    const c = await tx.challenge.create({
-      data: {
-        userId,
-        title: aiPlan.title,
-        description: aiPlan.description,
-        type: "WEEKLY",
-        status: "ACTIVE",
-        source: "AUTO_WEEKLY",
-        scheduledFor: monday,
-        mixConfig: {
-          questions: weeklyContent.questions.length,
-          materials: weeklyContent.materials.length,
-          reflections: 0,
-        },
-      },
-    });
-
-    let order = 0;
-
-    for (const q of weeklyContent.questions) {
-      const subject = focusedSubjectModels.find(
-        (s) => s.name.toLowerCase() === q.subjectName.toLowerCase(),
-      );
-      let conceptId: string | null = null;
-      if (subject) {
-        const concept = await tx.concept.findFirst({
-          where: { topic: { subjectId: subject.id } },
-          select: { id: true },
-          orderBy: { order: "asc" },
-        });
-        if (concept) conceptId = concept.id;
-      }
-      if (!conceptId) continue;
-
-      const questionRecord = await tx.question.create({
-        data: {
-          conceptId,
-          type: "MULTIPLE_CHOICE",
-          difficulty: "HARD",
-          bloomTaxonomy: "ANALYZE",
-          questionText: q.questionText,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-          hint: q.hint,
-          tags: ["weekly-challenge", "ai-generated"],
-          isActive: true,
-        },
-      });
-
-      await tx.challengeItem.create({
-        data: {
-          challengeId: c.id,
-          order: order++,
-          kind: "QUESTION",
-          questionId: questionRecord.id,
-          points: 20,
-        },
-      });
-    }
-
-    for (const m of weeklyContent.materials) {
-      const subject = focusedSubjectModels.find(
-        (s) => s.name.toLowerCase() === m.subjectName.toLowerCase(),
-      );
-      const materialRecord = await tx.material.create({
-        data: {
-          userId,
-          subjectId: subject?.id ?? null,
-          title: m.title,
-          content: m.content,
-          keyPoints: m.keyPoints,
-          difficulty: "HARD",
-          estimatedMinutes: m.estimatedMinutes,
-          source: "CHALLENGE",
-        },
-      });
-
-      await tx.challengeItem.create({
-        data: {
-          challengeId: c.id,
-          order: order++,
-          kind: "MATERIAL",
-          materialId: materialRecord.id,
-          points: 15,
-        },
-      });
-    }
-
-    return c;
-  });
-
-  const weekly = await prisma.weeklyChallenge.create({
-    data: {
-      userId,
-      weekStart: monday,
-      title: aiPlan.title,
-      description: aiPlan.description,
-      goal: aiPlan.goal,
-      progress: 0,
-      completed: false,
-      xpRewarded: false,
-      challengeId: challenge.id,
-    },
-  });
+  if (!created) throw new Error("Weekly challenge hilang setelah dibuat");
 
   return {
-    ...weekly,
-    weekStart: weekly.weekStart.toISOString(),
-    createdAt: weekly.createdAt.toISOString(),
+    ...created,
+    weekStart: created.weekStart.toISOString(),
+    createdAt: created.createdAt.toISOString(),
   };
 }
 
@@ -2388,7 +2391,7 @@ export async function updateWeeklyChallengeProgress(userId: string) {
     where: {
       challenge: {
         userId,
-        type: "DAILY",
+        type: "WEEKLY",
         scheduledFor: { gte: monday, lt: sunday },
       },
       status: "COMPLETED",
@@ -2424,7 +2427,7 @@ export async function claimWeeklyChallengeReward(): Promise<{
       where: { id: weekly.id },
       data: { xpRewarded: true },
     });
-    await addXp(userId, 100, "WEEKLY_CHALLENGE", {
+    await addXp(userId, 200, "WEEKLY_CHALLENGE", {
       weeklyChallengeId: weekly.id,
     });
   });

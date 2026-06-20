@@ -62,14 +62,6 @@ const CUSTOM_STEPS = [
   { key: "custom-pretest", label: "Pretest" },
 ] as const;
 
-async function updateSession() {
-  try {
-    await fetch("/api/auth/session", { method: "GET" });
-  } catch {
-    // silent
-  }
-}
-
 export function OnboardingWizardClient({
   userName,
   subjects,
@@ -310,7 +302,6 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
-    await updateSession();
     router.replace("/dashboard");
   };
 
@@ -362,7 +353,6 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
-    await updateSession();
     router.replace("/dashboard");
   };
 

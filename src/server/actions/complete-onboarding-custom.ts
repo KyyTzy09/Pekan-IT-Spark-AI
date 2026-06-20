@@ -1,10 +1,11 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { unstable_update } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateTopicConceptsContent } from "@/server/ai/curriculum";
 import type {
@@ -253,6 +254,8 @@ export async function completeOnboardingCustom(
         data: { isOnboarded: true },
       });
     });
+
+    await unstable_update({});
 
     console.log("[ONBOARDING_SERVICE] completeOnboardingCustom success", {
       userId,

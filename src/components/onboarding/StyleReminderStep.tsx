@@ -14,36 +14,46 @@ const LEARNING_STYLES: Array<{
   value: LearningStyle;
   label: string;
   description: string;
+  emoji: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  accent: string;
+  gradient: string;
+  shadow: string;
 }> = [
   {
     value: "VISUAL",
     label: "Visual",
-    description: "Gambar & diagram",
+    description: "Diagram & gambar",
+    emoji: "🎨",
     icon: Sparkles,
-    accent: "from-[var(--coral)] to-[var(--orange)]",
+    gradient: "from-[var(--coral)] to-[var(--orange)]",
+    shadow: "0_4px_12px_rgba(225,29,72,0.2)",
   },
   {
     value: "TEXTUAL",
     label: "Teks",
-    description: "Bacaan tertulis",
+    description: "Penjelasan tertulis",
+    emoji: "📖",
     icon: BookOpen,
-    accent: "from-[var(--blue)] to-[var(--teal)]",
+    gradient: "from-[var(--blue)] to-[var(--teal)]",
+    shadow: "0_4px_12px_rgba(14,165,233,0.2)",
   },
   {
     value: "EXAMPLE_HEAVY",
     label: "Contoh",
-    description: "Contoh soal",
+    description: "Studi kasus nyata",
+    emoji: "💡",
     icon: Target,
-    accent: "from-[var(--purple)] to-[var(--pink)]",
+    gradient: "from-[var(--purple)] to-[var(--pink)]",
+    shadow: "0_4px_12px_rgba(139,92,246,0.2)",
   },
   {
     value: "SOCRATIC",
     label: "Socratic",
     description: "Dipandu pertanyaan",
+    emoji: "🗣️",
     icon: MessageSquareQuote,
-    accent: "from-[var(--yellow)] to-[var(--orange)]",
+    gradient: "from-[var(--yellow)] to-[var(--orange)]",
+    shadow: "0_4px_12px_rgba(245,158,11,0.2)",
   },
 ];
 
@@ -71,9 +81,10 @@ export function StyleReminderStep({
 }) {
   return (
     <div className="space-y-5">
+      {/* Learning style - large visual cards */}
       <div>
         <p className="mb-2 text-[12px] font-semibold text-foreground/80">
-          Gaya belajar
+          Gaya belajar kamu
         </p>
         <div className="grid grid-cols-2 gap-2.5">
           {LEARNING_STYLES.map((s) => {
@@ -83,104 +94,150 @@ export function StyleReminderStep({
               <button
                 key={s.value}
                 type="button"
-                role="radio"
-                aria-checked={active}
                 onClick={() => setLearningStyle(s.value)}
                 className={cn(
-                  "group/style relative flex flex-col items-start gap-1.5 rounded-2xl border bg-card/40 p-3.5 text-left transition-all",
+                  "group/style relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 active:scale-[0.97]",
                   active
-                    ? "border-transparent shadow-[0_8px_24px_rgba(80,20,50,0.12)] ring-2 ring-[var(--coral)]/40"
-                    : "border-border/40 hover:border-border/70 hover:bg-card/60",
+                    ? "border-transparent shadow-lg ring-2 ring-[var(--coral)]/40"
+                    : "border-border/40 bg-card/60 hover:border-border/60 hover:bg-card/80",
                 )}
+                style={
+                  active
+                    ? {
+                        background: `linear-gradient(135deg, oklch(0.97 0.03 350), oklch(0.98 0.02 80))`,
+                        boxShadow: `0 0 20px oklch(0.85 0.1 350 / 0.15)`,
+                      }
+                    : undefined
+                }
               >
-                <div className="flex w-full items-center justify-between">
+                <div className="flex items-start gap-3">
+                  {/* Icon */}
                   <span
                     className={cn(
-                      "grid size-9 place-items-center rounded-xl bg-gradient-to-br text-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-transform group-hover/style:-translate-y-0.5",
-                      s.accent,
+                      "grid size-10 place-items-center rounded-xl text-white shadow transition-all duration-300 group-hover/style:-translate-y-0.5 group-hover/style:scale-110",
+                      active
+                        ? `bg-gradient-to-br ${s.gradient} shadow-[0_6px_16px_rgba(225,29,72,0.3)]`
+                        : `bg-gradient-to-br ${s.gradient} opacity-70`,
                     )}
                   >
-                    <Icon size={16} strokeWidth={2.5} />
+                    <Icon size={18} strokeWidth={2.5} />
                   </span>
-                  {active && (
-                    <span
-                      aria-hidden
-                      className="grid size-5 place-items-center rounded-full bg-[var(--coral)] text-white"
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[16px]">{s.emoji}</span>
+                      <p
+                        className={cn(
+                          "font-heading text-[14px] font-bold transition-colors",
+                          active ? "text-[var(--coral)]" : "text-foreground/90",
+                        )}
+                      >
+                        {s.label}
+                      </p>
+                    </div>
+                    <p
+                      className={cn(
+                        "mt-0.5 text-[10.5px] transition-colors",
+                        active
+                          ? "text-[var(--coral)]/70"
+                          : "text-muted-foreground",
+                      )}
                     >
-                      <Check size={11} strokeWidth={3} />
+                      {s.description}
+                    </p>
+                  </div>
+
+                  {/* Active indicator */}
+                  {active && (
+                    <span className="grid size-5 place-items-center rounded-full bg-[var(--coral)] text-white">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     </span>
                   )}
                 </div>
-                <span className="font-heading text-[14px] font-bold text-foreground">
-                  {s.label}
-                </span>
-                <span className="text-[10.5px] text-muted-foreground">
-                  {s.description}
-                </span>
               </button>
             );
           })}
         </div>
       </div>
 
+      {/* Reminder section */}
       <div>
-        <p className="mb-2 flex items-center justify-between gap-2 text-[12px] font-semibold text-foreground/80">
-          <span>Reminder (opsional)</span>
-          <span className="text-[10.5px] font-normal text-muted-foreground">
-            Boleh di-skip
-          </span>
-        </p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[12px] font-semibold text-foreground/80">
+            Reminder belajar
+          </p>
+          <span className="text-[10px] text-muted-foreground/70">Opsional</span>
+        </div>
+
         <div
           className={cn(
-            "flex items-center gap-3 rounded-2xl border p-3.5 transition-colors",
+            "flex items-center gap-3 rounded-2xl border p-4 transition-all duration-300",
             reminderEnabled
-              ? "border-[var(--coral)]/40 bg-[var(--coral)]/5"
+              ? "border-[var(--coral)]/40 bg-gradient-to-r from-[var(--coral)]/5 to-transparent"
               : "border-border/40 bg-card/60",
           )}
         >
+          {/* Bell icon */}
           <span
             className={cn(
-              "grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-[0_4px_14px_rgba(0,0,0,0.08)] transition-all",
+              "grid size-11 shrink-0 place-items-center rounded-xl text-white shadow transition-all duration-300",
               reminderEnabled
-                ? "bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] shadow-[0_8px_20px_rgba(225,29,72,0.35)]"
-                : "bg-muted text-muted-foreground",
+                ? "bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] shadow-[0_6px_16px_rgba(225,29,72,0.35)]"
+                : "bg-muted text-muted-foreground/60",
             )}
           >
             {reminderEnabled ? (
-              <Bell size={15} strokeWidth={2.5} />
+              <Bell size={16} strokeWidth={2.5} />
             ) : (
-              <BellOff size={15} strokeWidth={2.5} />
+              <BellOff size={16} strokeWidth={2.5} />
             )}
           </span>
+
           <div className="flex-1">
-            <p className="font-heading text-[13px] font-bold text-foreground">
-              {reminderEnabled ? `Aktif jam ${reminderTime}` : "Reminder mati"}
+            <p className="font-heading text-[14px] font-bold text-foreground">
+              {reminderEnabled ? `Aktif · ${reminderTime}` : "Belum aktif"}
             </p>
             <p className="mt-0.5 text-[10.5px] text-muted-foreground">
-              Maks 1 per hari, cuma kamu yang bisa aktifin
+              {reminderEnabled
+                ? "Spark bakal ingetin kamu tiap hari"
+                : "Tap switch buat aktifin"}
             </p>
           </div>
+
+          {/* Toggle switch */}
           <button
             type="button"
             role="switch"
             aria-checked={reminderEnabled}
             onClick={() => setReminderEnabled(!reminderEnabled)}
             className={cn(
-              "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+              "relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300",
               reminderEnabled ? "bg-[var(--coral)]" : "bg-muted",
             )}
           >
             <span
               className={cn(
-                "absolute top-0.5 size-5 rounded-full bg-white shadow-md transition-transform",
-                reminderEnabled ? "translate-x-[22px]" : "translate-x-0.5",
+                "absolute top-1 size-5 rounded-full bg-white shadow-md transition-transform duration-300",
+                reminderEnabled ? "translate-x-[26px]" : "translate-x-1",
               )}
             />
           </button>
         </div>
 
+        {/* Time presets */}
         {reminderEnabled && (
-          <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+          <div className="mt-3 grid grid-cols-4 gap-2">
             {PRESET_TIMES.map((p) => {
               const active = reminderTime === p.value;
               return (
@@ -189,18 +246,30 @@ export function StyleReminderStep({
                   type="button"
                   onClick={() => setReminderTime(p.value)}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-2xl border p-2 text-left transition-colors",
+                    "flex flex-col items-center gap-1 rounded-2xl border py-3 transition-all duration-300 active:scale-95",
                     active
-                      ? "border-transparent bg-[var(--coral)]/8 ring-2 ring-[var(--coral)]/40"
-                      : "border-border/40 bg-card/40 hover:border-border/70",
+                      ? "border-transparent bg-gradient-to-b from-[var(--coral)]/10 to-[var(--coral)]/5 ring-2 ring-[var(--coral)]/40"
+                      : "border-border/40 bg-card/60 hover:bg-card/80",
                   )}
                 >
-                  <span className="text-[14px]">{p.emoji}</span>
-                  <span className="text-[9.5px] font-semibold text-foreground/80">
-                    {p.label}
-                  </span>
-                  <span className="font-heading text-[11.5px] font-bold text-foreground">
+                  <span className="text-[16px]">{p.emoji}</span>
+                  <span
+                    className={cn(
+                      "font-heading text-[12px] font-bold transition-colors",
+                      active ? "text-[var(--coral)]" : "text-foreground/80",
+                    )}
+                  >
                     {p.value}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[9px] transition-colors",
+                      active
+                        ? "text-[var(--coral)]/60"
+                        : "text-muted-foreground/60",
+                    )}
+                  >
+                    {p.label}
                   </span>
                 </button>
               );
@@ -209,28 +278,5 @@ export function StyleReminderStep({
         )}
       </div>
     </div>
-  );
-}
-
-function Check({
-  size = 11,
-  strokeWidth = 3,
-}: {
-  size?: number;
-  strokeWidth?: number;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
   );
 }

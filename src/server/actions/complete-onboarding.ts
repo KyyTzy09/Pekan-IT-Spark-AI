@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
+import { unstable_update } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "../../../generated/prisma/client";
 
@@ -181,6 +182,8 @@ export async function completeOnboarding(
       message: "Gagal menyimpan data onboarding. Coba lagi, ya.",
     };
   }
+
+  await unstable_update({});
 
   return {
     ok: true,

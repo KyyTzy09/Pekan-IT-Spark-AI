@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BookOpen, Library } from "lucide-react";
+import { ArrowLeft, BookOpen, Library, Sparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
@@ -65,6 +65,17 @@ export function MaterialsLibraryView({
   const [loading, setLoading] = React.useState(false);
   const [offset, setOffset] = React.useState(50);
 
+  // Generate material state
+  const [generateOpen, setGenerateOpen] = React.useState(false);
+  const [genSubject, setGenSubject] = React.useState(
+    subjectOptions[0]?.id ?? "",
+  );
+  const [genDifficulty, setGenDifficulty] = React.useState<
+    "EASY" | "MEDIUM" | "HARD"
+  >("MEDIUM");
+  const [generating, setGenerating] = React.useState(false);
+  const [genError, setGenError] = React.useState<string | null>(null);
+
   const filtered = React.useMemo(() => {
     let list = result.items;
     if (subjectId) list = list.filter((m) => m.subject?.id === subjectId);
@@ -90,6 +101,33 @@ export function MaterialsLibraryView({
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGenerate() {
+    if (!genSubject) return;
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await fetch("/api/materials/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId: genSubject,
+          difficulty: genDifficulty,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && data.materialId) {
+        setGenerateOpen(false);
+        window.location.href = `/materials/${data.materialId}`;
+      } else {
+        setGenError(data.error ?? "Gagal generate materi");
+      }
+    } catch {
+      setGenError("Network error");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -119,17 +157,29 @@ export function MaterialsLibraryView({
                 konsepnya.
               </p>
             </div>
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-            >
-              <Link href="/challenge">
-                <ArrowLeft size={13} />
-                Tantangan
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setGenerateOpen(true)}
+              >
+                <Sparkles size={13} />
+                Generate Materi
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+              >
+                <Link href="/challenge">
+                  <ArrowLeft size={13} />
+                  Tantangan
+                </Link>
+              </Button>
+            </div>
           </div>
         </header>
       </Reveal>
@@ -208,6 +258,100 @@ export function MaterialsLibraryView({
           >
             {loading ? "Memuat..." : "Muat lebih banyak"}
           </Button>
+        </div>
+      )}
+
+      {/* Generate Material Dialog */}
+      {generateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-border/40 bg-card p-5 shadow-xl">
+            <h2 className="font-heading text-[16px] font-bold">
+              Generate Materi
+            </h2>
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              Pilih mapel dan tingkat kesulitan. Limit 7x per hari.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label
+                  htmlFor="gen-subject"
+                  className="text-[11px] font-bold text-muted-foreground"
+                >
+                  Mapel
+                </label>
+                <select
+                  id="gen-subject"
+                  value={genSubject}
+                  onChange={(e) => setGenSubject(e.target.value)}
+                  className="mt-1 h-9 w-full rounded-lg border border-border/40 bg-background px-3 text-[12px] outline-none"
+                >
+                  {subjectOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.icon ? `${s.icon} ` : ""}
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-muted-foreground">
+                  Kesulitan
+                </span>
+                <div className="mt-1 flex gap-1.5">
+                  {(["EASY", "MEDIUM", "HARD"] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setGenDifficulty(d)}
+                      className={cn(
+                        "flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all",
+                        genDifficulty === d
+                          ? "bg-[var(--teal)] text-white"
+                          : "border border-border/40 text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {d === "EASY"
+                        ? "Mudah"
+                        : d === "MEDIUM"
+                          ? "Sedang"
+                          : "Sulit"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {genError && (
+                <p className="text-[11px] text-red-500">{genError}</p>
+              )}
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 rounded-lg"
+                onClick={() => {
+                  setGenerateOpen(false);
+                  setGenError(null);
+                }}
+                disabled={generating}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="flex-1 rounded-lg"
+                onClick={handleGenerate}
+                disabled={generating || !genSubject}
+              >
+                {generating ? "Generating..." : "Generate"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
