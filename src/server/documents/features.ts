@@ -210,6 +210,7 @@ function buildLearningStylePrompt(learningStyle?: string): string {
       return `
 GAYA BELAJAR SISWA: VISUAL. WAJIB terapkan:
 - Sertakan minimal 2 diagram Mermaid.js (graph TD/LR) untuk memetakan hubungan konsep
+- PENTING: Saat membuat diagram Mermaid.js, pastikan semua label teks di dalam node yang memiliki karakter khusus (seperti tanda kurung (), garis miring /, koma, tanda petik, tanda tanya, atau spasi) WAJIB dibungkus dengan tanda kutip ganda (contoh: A["Verb 1 (Base Form)"], bukan A[Verb 1 (Base Form)]). Jangan gunakan tag HTML di dalam label diagram.
 - Gunakan analogi visual imajinatif (contoh: "Bayangkan konsep ini seperti...")
 - Format data numerik atau perbandingan dalam tabel Markdown
 - Gunakan emoji visual (🎯 📊 🔄 💡) sebagai penanda section penting`;

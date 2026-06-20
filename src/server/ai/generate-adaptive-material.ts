@@ -62,6 +62,7 @@ async function _generateAdaptiveMaterialInner(
   const styleInstructions: Record<string, string> = {
     VISUAL: `Gaya belajar siswa adalah VISUAL. WAJIB terapkan format berikut:
 - Sertakan minimal 2 diagram Mermaid.js (graph TD/LR) untuk memetakan hubungan konsep, hierarki, atau alur proses
+- PENTING: Saat membuat diagram Mermaid.js, pastikan semua label teks di dalam node yang memiliki karakter khusus (seperti tanda kurung (), garis miring /, koma, tanda petik, tanda tanya, atau spasi) WAJIB dibungkus dengan tanda kutip ganda (contoh: A["Verb 1 (Base Form)"], bukan A[Verb 1 (Base Form)]). Jangan gunakan tag HTML di dalam label diagram.
 - Gunakan analogi visual yang imajinatif (contoh: "Bayangkan konsep ini seperti pohon, di mana akar adalah...")
 - Format data numerik atau perbandingan dalam tabel Markdown
 - Gunakan emoji visual (🎯 📊 🔄 💡) sebagai penanda section penting
