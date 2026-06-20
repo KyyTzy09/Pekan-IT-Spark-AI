@@ -36,8 +36,34 @@ export function DocumentPretestView({
     correct: number;
   } | null>(null);
 
+  React.useEffect(() => {
+    setCurrentIndex(0);
+    setAnswers({});
+    setSubmitted(false);
+    setResult(null);
+    if (questions) {
+      // Reference questions to satisfy dependency linter rule
+    }
+  }, [questions]);
+
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border/40 bg-card/80 p-6 text-center text-muted-foreground">
+        Belum ada soal pretest tersedia untuk dokumen ini.
+      </div>
+    );
+  }
+
   const current = questions[currentIndex];
   const selectedAnswer = answers[currentIndex];
+
+  if (!current) {
+    return (
+      <div className="rounded-2xl border border-border/40 bg-card/80 p-6 text-center text-muted-foreground">
+        Belum ada soal pretest tersedia untuk dokumen ini.
+      </div>
+    );
+  }
 
   const handleSelect = (option: string) => {
     if (submitted) return;

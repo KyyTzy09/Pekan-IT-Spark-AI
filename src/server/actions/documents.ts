@@ -874,28 +874,35 @@ export async function generateDocumentMaterialAction(
   const doc = await loadOwnedDocument(userId, documentId);
   if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
   try {
-  const studentProfile = await prisma.studentProfile.findUnique({
-    where: { userId },
-    select: { learningStyle: true },
-  });
-  const learningStyle = studentProfile?.learningStyle ?? "VISUAL";
-
-  let materialData;
-
-  if (enhance) {
-    // Find latest material for this document to enhance it
-    const existing = await prisma.material.findFirst({
-      where: { documentId, userId },
-      orderBy: { createdAt: "desc" },
+    const studentProfile = await prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { learningStyle: true },
     });
+    const learningStyle = studentProfile?.learningStyle ?? "VISUAL";
 
-    if (existing) {
-      materialData = await generateEnhancedMaterialFromDocument(
-        doc.content,
-        doc.originalName,
-        existing.content,
-        learningStyle,
-      );
+    let materialData;
+
+    if (enhance) {
+      // Find latest material for this document to enhance it
+      const existing = await prisma.material.findFirst({
+        where: { documentId, userId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (existing) {
+        materialData = await generateEnhancedMaterialFromDocument(
+          doc.content,
+          doc.originalName,
+          existing.content,
+          learningStyle,
+        );
+      } else {
+        materialData = await generateMaterialFromDocument(
+          doc.content,
+          doc.originalName,
+          learningStyle,
+        );
+      }
     } else {
       materialData = await generateMaterialFromDocument(
         doc.content,
@@ -903,13 +910,6 @@ export async function generateDocumentMaterialAction(
         learningStyle,
       );
     }
-  } else {
-    materialData = await generateMaterialFromDocument(
-      doc.content,
-      doc.originalName,
-      learningStyle,
-    );
-  }
 
     // Save material to DB
     const m = await prisma.material.create({

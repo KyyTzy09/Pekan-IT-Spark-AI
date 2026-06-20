@@ -122,15 +122,30 @@ describe("distributeChallengeSubjects", () => {
   });
 
   it("round-robins 2 subjects evenly", () => {
-    expect(distributeChallengeSubjects(["A", "B"], 4)).toEqual(["A", "B", "A", "B"]);
+    expect(distributeChallengeSubjects(["A", "B"], 4)).toEqual([
+      "A",
+      "B",
+      "A",
+      "B",
+    ]);
   });
 
   it("round-robins 3 subjects with wrap", () => {
-    expect(distributeChallengeSubjects(["A", "B", "C"], 4)).toEqual(["A", "B", "C", "A"]);
+    expect(distributeChallengeSubjects(["A", "B", "C"], 4)).toEqual([
+      "A",
+      "B",
+      "C",
+      "A",
+    ]);
   });
 
   it("returns exact match for 4 subjects", () => {
-    expect(distributeChallengeSubjects(["A", "B", "C", "D"], 4)).toEqual(["A", "B", "C", "D"]);
+    expect(distributeChallengeSubjects(["A", "B", "C", "D"], 4)).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+    ]);
   });
 
   it("returns empty when total is 0", () => {

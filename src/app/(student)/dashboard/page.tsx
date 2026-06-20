@@ -25,12 +25,26 @@ export default async function DashboardPage() {
 
   const [summary, todayChallenges, timeline] = await Promise.all([
     getDashboardSummary(userId).catch(() => ({
-      student: { id: userId, name: "", grade: null, school: null, learningStyle: null },
+      student: {
+        id: userId,
+        name: "",
+        grade: null,
+        school: null,
+        learningStyle: null,
+      },
       greeting: "Halo!",
       greetingSubtitle: "",
       sparkTip: "",
       streak: { current: 0, longest: 0, freezeAvailable: 0 },
-      level: { level: 1, name: "Pemula", totalXp: 0, currentMinXp: 0, nextMinXp: null, progress: 0, xpToNext: null },
+      level: {
+        level: 1,
+        name: "Pemula",
+        totalXp: 0,
+        currentMinXp: 0,
+        nextMinXp: null,
+        progress: 0,
+        xpToNext: null,
+      },
       subjects: [],
       totalMastered: 0,
       totalConcepts: 0,
@@ -38,8 +52,12 @@ export default async function DashboardPage() {
       recommendation: null,
       recentDocuments: 0,
     })),
-    getTodayChallenges().then((r) => r.challenges).catch(() => []),
-    getProgressTimeline(userId, 7).then((r) => r.points).catch(() => []),
+    getTodayChallenges()
+      .then((r) => r.challenges)
+      .catch(() => []),
+    getProgressTimeline(userId, 7)
+      .then((r) => r.points)
+      .catch(() => []),
   ]);
 
   return (

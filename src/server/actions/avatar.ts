@@ -73,4 +73,3 @@ export async function updateAvatarAction(
 
   return { ok: true };
 }
-

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { fastModel, generateText } from "@/lib/ai";
+import { fastModel, generateText, safeParseJson } from "@/lib/ai";
 
 const extractedConceptSchema = z.object({
   name: z.string(),
@@ -50,7 +50,7 @@ Output JSON:
 
   let json: unknown;
   try {
-    json = JSON.parse(text);
+    json = safeParseJson(text);
   } catch {
     throw new Error("AI returned invalid JSON for concepts");
   }

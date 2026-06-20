@@ -538,3 +538,81 @@ ${values.length > 10 ? `  ... and ${values.length - 10} more inputs` : ""}
     throw err;
   }
 }
+
+export function safeParseJson(text: string): unknown {
+  // 1. Try to find content within ```json and ```
+  const jsonBlocks: string[] = [];
+  const jsonRegex = /```json\s*([\s\S]*?)\s*```/gi;
+  let match = jsonRegex.exec(text);
+  while (match !== null) {
+    if (match[1]) jsonBlocks.push(match[1].trim());
+    match = jsonRegex.exec(text);
+  }
+
+  // Also try general code blocks if no json blocks found
+  if (jsonBlocks.length === 0) {
+    const codeRegex = /```\s*([\s\S]*?)\s*```/gi;
+    let codeMatch = codeRegex.exec(text);
+    while (codeMatch !== null) {
+      if (codeMatch[1]) jsonBlocks.push(codeMatch[1].trim());
+      codeMatch = codeRegex.exec(text);
+    }
+  }
+
+  // Try to parse any extracted blocks
+  for (const block of jsonBlocks) {
+    try {
+      return parseCleanedJson(block);
+    } catch (_e) {}
+  }
+
+  // 2. If no code blocks parsed successfully, look for braces/brackets in the whole text
+  try {
+    return parseCleanedJson(text);
+  } catch (err) {
+    // Try to find the first '{' and last '}'
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return parseCleanedJson(text.slice(firstBrace, lastBrace + 1));
+      } catch (_e) {}
+    }
+
+    // Try to find the first '[' and last ']'
+    const firstBracket = text.indexOf("[");
+    const lastBracket = text.lastIndexOf("]");
+    if (
+      firstBracket !== -1 &&
+      lastBracket !== -1 &&
+      lastBracket > firstBracket
+    ) {
+      try {
+        return parseCleanedJson(text.slice(firstBracket, lastBracket + 1));
+      } catch (_e) {}
+    }
+
+    throw err;
+  }
+}
+
+function parseCleanedJson(str: string): unknown {
+  let cleaned = str.trim();
+
+  // Try direct parse first
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // Remove trailing commas in objects/arrays, single-line/multi-line comments
+    cleaned = cleaned
+      .replace(/,\s*([\]}])/g, "$1")
+      .replace(/^\s*\/\/.*$/gm, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (_e) {
+      throw err;
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { chatModel, generateText } from "@/lib/ai";
+import { chatModel, generateText, safeParseJson } from "@/lib/ai";
 import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 
@@ -66,7 +66,7 @@ async function _generateAdaptiveMaterialInner(
 - Format data numerik atau perbandingan dalam tabel Markdown
 - Gunakan emoji visual (🎯 📊 🔄 💡) sebagai penanda section penting
 - Struktur materi dengan heading bertingkat dan bullet points yang jelas`,
-    
+
     TEXTUAL: `Gaya belajar siswa adalah TEXTUAL. WAJIB terapkan format akademis terstruktur:
 - Gunakan heading bertingkat (## untuk section utama, ### untuk subsection)
 - Sertakan glosarium istilah teknis di awal atau akhir materi (format: **Istilah**: definisi)
@@ -74,14 +74,14 @@ async function _generateAdaptiveMaterialInner(
 - Gunakan bullet points dan numbered lists untuk langkah-langkah
 - Sertakan referensi silang antar konsep jika relevan
 - Bahasa formal tapi tetap mudah dipahami`,
-    
+
     EXAMPLE_HEAVY: `Gaya belajar siswa adalah EXAMPLE_HEAVY. WAJIB fokus pada studi kasus dan contoh:
 - Setiap konsep utama WAJIB diikuti minimal 2 contoh konkret dengan pembahasan lengkap
 - Struktur: Teori singkat → Contoh 1 + pembahasan step-by-step → Contoh 2 + pembahasan → Ringkasan
 - Prioritaskan "cara mengerjakan" atau "cara menerapkan" daripada teori murni
 - Gunakan studi kasus nyata dari kehidupan sehari-hari siswa SMA/SMK
 - Sertakan perhitungan detail jika ada rumus atau angka`,
-    
+
     SOCRATIC: `Gaya belajar siswa adalah SOCRATIC. WAJIB sajikan materi dalam bentuk dialog:
 - Format: Dialog tanya-jawab antara 'Siswa' dan 'Spark'
 - Jangan langsung kasih jawaban lengkap, gunakan pertanyaan retoris untuk menuntun pemahaman
@@ -141,7 +141,7 @@ Output JSON:
 
   let json: unknown;
   try {
-    json = JSON.parse(text);
+    json = safeParseJson(text);
   } catch {
     throw new Error("AI returned invalid JSON for material");
   }

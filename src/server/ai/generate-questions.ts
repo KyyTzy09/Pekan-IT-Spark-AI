@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { chatModel, generateText } from "@/lib/ai";
+import { chatModel, generateText, safeParseJson } from "@/lib/ai";
 
 const generatedQuestionSchema = z.object({
   questionText: z.string(),
@@ -76,7 +76,7 @@ Output JSON:
 
   let json: unknown;
   try {
-    json = JSON.parse(text);
+    json = safeParseJson(text);
   } catch {
     throw new Error("AI returned invalid JSON for questions");
   }
