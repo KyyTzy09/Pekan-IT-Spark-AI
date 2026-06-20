@@ -35,6 +35,24 @@ function logAIError(
   );
 }
 
+function isRateLimitError(err: unknown): boolean {
+  if (err && typeof err === "object" && "status" in err) {
+    return (err as { status: number }).status === 429;
+  }
+  return false;
+}
+
+function getRetryAfter(err: unknown): number {
+  if (err && typeof err === "object" && "headers" in err) {
+    const h = (err as { headers: Headers }).headers;
+    if (h && typeof h.get === "function") {
+      const val = h.get("retry-after");
+      if (val) return parseInt(val, 10) || 5;
+    }
+  }
+  return 5;
+}
+
 const AI_TIMEOUT_MS = 30_000;
 const AI_TIMEOUT_STREAM_MS = 60_000;
 const AI_TIMEOUT_EMBED_MS = 15_000;
@@ -49,7 +67,6 @@ export async function generateText({
   system?: string;
   prompt?: string;
   temperature?: number;
-  maxRetries?: number;
 }) {
   const isHeavy = model === "heavy";
   const client = isHeavy ? openaiHeavy : openaiDefault;
@@ -90,7 +107,7 @@ ${prompt ? prompt : "(none)"}
         messages,
         temperature,
       },
-      { timeout: AI_TIMEOUT_MS },
+      { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
     );
 
     const textResult = response.choices[0]?.message?.content || "";
@@ -108,94 +125,84 @@ ${textResult}
     };
   } catch (err) {
     logAIError("generateText (Primary)", modelName, baseURL, err);
-    if (isHeavy) {
+
+    // Handle 429 rate limit: wait retry-after then try again
+    if (isRateLimitError(err)) {
+      const retryAfter = getRetryAfter(err) || 5;
       console.warn(
-        `[AI_SERVICE] Heavy model generateText failed. Attempting glm-5 fallback...`,
+        `[AI_SERVICE] Rate limited. Retrying after ${retryAfter}s...`,
+      );
+      await new Promise((r) => setTimeout(r, retryAfter * 1000));
+      try {
+        const response = await client.chat.completions.create(
+          { model: modelName, messages, temperature },
+          { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
+        );
+        const textResult = response.choices[0]?.message?.content || "";
+        return { text: textResult };
+      } catch (retryErr) {
+        logAIError(
+          "generateText (Primary retry)",
+          modelName,
+          baseURL,
+          retryErr,
+        );
+      }
+    }
+
+    if (isHeavy) {
+      // Fallback 1: try fast model on Sumopod (different endpoint)
+      console.warn(
+        `[AI_SERVICE] Heavy model failed. Trying deepseek-v4-flash on Sumopod...`,
       );
       try {
         console.log(`
 =========================================
-[AI_SERVICE] generateText FALLBACK REQUEST (glm-5)
------------------------------------------
-* Fallback Model: glm-5
-* Endpoint:       ${openaiHeavy.baseURL}
-* System:
-${system ? system : "(none)"}
-* Prompt:
-${prompt ? prompt : "(none)"}
-=========================================
-`);
-        const response = await openaiHeavy.chat.completions.create(
-          {
-            model: "glm-5",
-            messages,
-            temperature,
-          },
-          { timeout: AI_TIMEOUT_MS },
-        );
-        const textResult = response.choices[0]?.message?.content || "";
-        console.log(`
-=========================================
-[AI_SERVICE] generateText FALLBACK RESPONSE (glm-5)
------------------------------------------
-* Model Used: ${response.model || "glm-5"}
-* Output Text:
-${textResult}
-=========================================
-`);
-        return {
-          text: textResult,
-        };
-      } catch (fallbackHeavyErr) {
-        logAIError(
-          "generateText (Fallback 1: glm-5)",
-          "glm-5",
-          openaiHeavy.baseURL,
-          fallbackHeavyErr,
-        );
-        try {
-          console.log(`
-=========================================
-[AI_SERVICE] generateText FALLBACK REQUEST 2 (deepseek-v4-flash)
+[AI_SERVICE] generateText FALLBACK REQUEST (deepseek-v4-flash)
 -----------------------------------------
 * Fallback Model: deepseek-v4-flash
 * Endpoint:       ${openaiDefault.baseURL}
-* System:
-${system ? system : "(none)"}
-* Prompt:
-${prompt ? prompt : "(none)"}
 =========================================
 `);
-          const response = await openaiDefault.chat.completions.create(
-            {
-              model: "deepseek-v4-flash",
-              messages,
-              temperature,
-            },
-            { timeout: AI_TIMEOUT_MS },
-          );
-          const textResult = response.choices[0]?.message?.content || "";
-          console.log(`
+        const response = await openaiDefault.chat.completions.create(
+          { model: "deepseek-v4-flash", messages, temperature },
+          { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
+        );
+        const textResult = response.choices[0]?.message?.content || "";
+        return { text: textResult };
+      } catch (fallbackSumopodErr) {
+        logAIError(
+          "generateText (Fallback 1: deepseek-v4-flash)",
+          "deepseek-v4-flash",
+          openaiDefault.baseURL,
+          fallbackSumopodErr,
+        );
+      }
+
+      // Fallback 2: last resort - glm-5 on same heavy endpoint
+      try {
+        console.log(`
 =========================================
-[AI_SERVICE] generateText FALLBACK RESPONSE 2 (deepseek-v4-flash)
+[AI_SERVICE] generateText FALLBACK REQUEST 2 (glm-5)
 -----------------------------------------
-* Model Used: ${response.model || "deepseek-v4-flash"}
-* Output Text:
-${textResult}
+* Fallback Model: glm-5
+* Endpoint:       ${openaiHeavy.baseURL}
 =========================================
 `);
-          return {
-            text: textResult,
-          };
-        } catch (fallbackErr) {
-          logAIError(
-            "generateText (Fallback 2: deepseek-v4-flash)",
-            "deepseek-v4-flash",
-            openaiDefault.baseURL,
-            fallbackErr,
-          );
-          throw err;
-        }
+        const response = await openaiHeavy.chat.completions.create(
+          { model: "glm-5", messages, temperature },
+          { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
+        );
+        const textResult = response.choices[0]?.message?.content || "";
+        return { text: textResult };
+      } catch (fallbackGlmErr) {
+        logAIError(
+          "generateText (Fallback 2: glm-5)",
+          "glm-5",
+          openaiHeavy.baseURL,
+          fallbackGlmErr,
+        );
+        throw err;
       }
     }
     throw err;
@@ -212,7 +219,6 @@ export async function streamText({
   system?: string;
   messages: Array<{ role: string; content: string }>;
   temperature?: number;
-  maxRetries?: number;
 }) {
   const isHeavy = model === "heavy";
 
@@ -253,7 +259,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
           messages: apiMessages,
           temperature,
         },
-        { timeout: AI_TIMEOUT_STREAM_MS },
+        { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
       );
 
       const text = response.choices[0]?.message?.content || "";
@@ -298,7 +304,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
             messages: apiMessages,
             temperature,
           },
-          { timeout: AI_TIMEOUT_STREAM_MS },
+          { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
         );
 
         const text = response.choices[0]?.message?.content || "";
@@ -336,7 +342,7 @@ ${text}
               messages: apiMessages,
               temperature,
             },
-            { timeout: AI_TIMEOUT_STREAM_MS },
+            { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
           );
 
           const text = response.choices[0]?.message?.content || "";
@@ -385,11 +391,11 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n")}
           messages: apiMessages,
           temperature,
         },
-        { timeout: AI_TIMEOUT_STREAM_MS },
-      );
+          { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
+        );
 
-      const text = response.choices[0]?.message?.content || "";
-      console.log(`
+        const text = response.choices[0]?.message?.content || "";
+        console.log(`
 =========================================
 [AI_SERVICE] streamText RESPONSE
 -----------------------------------------
@@ -414,7 +420,6 @@ export async function embed({
 }: {
   model: "heavy" | "fast" | "embedding";
   value: string;
-  maxRetries?: number;
 }) {
   const modelName = "text-embedding-3-small";
   const baseURL = openaiDefault.baseURL;
@@ -434,7 +439,7 @@ export async function embed({
         model: modelName,
         input: value,
       },
-      { timeout: AI_TIMEOUT_EMBED_MS },
+      { timeout: AI_TIMEOUT_EMBED_MS, maxRetries: 0 },
     );
     const embedding = response.data[0]?.embedding || [];
     console.log(`
@@ -460,7 +465,6 @@ export async function embedMany({
 }: {
   model: "heavy" | "fast" | "embedding";
   values: string[];
-  maxRetries?: number;
 }) {
   const modelName = "text-embedding-3-small";
   const baseURL = openaiDefault.baseURL;
@@ -486,7 +490,7 @@ ${values.length > 10 ? `  ... and ${values.length - 10} more inputs` : ""}
         model: modelName,
         input: values,
       },
-      { timeout: AI_TIMEOUT_EMBED_MS },
+      { timeout: AI_TIMEOUT_EMBED_MS, maxRetries: 0 },
     );
     const embeddings = response.data.map((item) => item.embedding);
     console.log(`

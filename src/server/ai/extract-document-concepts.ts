@@ -48,7 +48,13 @@ Output JSON:
     temperature: 0.3,
   });
 
-  const parsed = extractedConceptsSchema.safeParse(JSON.parse(text));
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("AI returned invalid JSON for concepts");
+  }
+  const parsed = extractedConceptsSchema.safeParse(json);
   if (!parsed.success) {
     throw new Error(
       `Failed to parse extracted concepts: ${parsed.error.message}`,

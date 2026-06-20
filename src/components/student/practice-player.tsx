@@ -227,6 +227,18 @@ export function PracticePlayer({
     DIFFICULTY_META[session.currentDifficulty] ?? DIFFICULTY_META.EASY;
   const correctIndex = result?.ok ? letterToIndex(result.correctAnswer) : -1;
   const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
+  const bgHue = difficultyHue(session.currentDifficulty);
+  const bgRadial = React.useMemo(
+    () =>
+      `radial-gradient(circle, oklch(0.72 0.18 ${bgHue} / 0.5), transparent 70%)`,
+    [bgHue],
+  );
+  const handleOptionClick = React.useCallback(
+    (letter: string) => {
+      if (!isAnswered && !submitting) setSelected(letter);
+    },
+    [isAnswered, submitting],
+  );
 
   return (
     <div className="space-y-5 sm:space-y-7">
@@ -250,9 +262,7 @@ export function PracticePlayer({
           <div
             aria-hidden
             className="pointer-events-none absolute -right-20 -top-20 size-52 rounded-full opacity-30 blur-3xl"
-            style={{
-              background: `radial-gradient(circle, oklch(0.72 0.18 ${difficultyHue(session.currentDifficulty)} / 0.5), transparent 70%)`,
-            }}
+            style={{ background: bgRadial }}
           />
           <div className="relative flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
             <span
@@ -293,7 +303,7 @@ export function PracticePlayer({
                   <button
                     type="button"
                     disabled={isAnswered || submitting}
-                    onClick={() => setSelected(letter)}
+                    onClick={() => handleOptionClick(letter)}
                     className={cn(
                       "group flex w-full items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition-all",
                       "border-border/40 bg-background/60 hover:border-[var(--coral)]/40 hover:bg-[var(--coral)]/5",

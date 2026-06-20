@@ -3,43 +3,46 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
-	generateWeeklyPerSubjectAI,
-	generateWeeklyDeepMaterial,
-	generateWeeklyTitleAI,
+  generateWeeklyDeepMaterial,
+  generateWeeklyPerSubjectAI,
+  generateWeeklyTitleAI,
 } from "@/server/ai/challenge";
-import {
-	computeMasteryAverage,
-	computeGrowthTrend,
-	pickChallengeSubjectIds,
-	MAX_CHALLENGE_SUBJECTS,
-	distributeChallengeSubjects,
-} from "@/server/learning/strength";
-import { computeWeeklyItemCounts, type WeeklyItemCounts } from "@/server/learning/weekly";
 import { incrementAiQuota } from "@/server/ai-quota";
+import {
+  computeGrowthTrend,
+  computeMasteryAverage,
+  distributeChallengeSubjects,
+  MAX_CHALLENGE_SUBJECTS,
+  pickChallengeSubjectIds,
+} from "@/server/learning/strength";
+import {
+  computeWeeklyItemCounts,
+  type WeeklyItemCounts,
+} from "@/server/learning/weekly";
 import type { SubjectSlug } from "../../../generated/prisma/client";
 
 function startOfWeek(d: Date): Date {
-	const date = new Date(d);
-	const day = date.getDay();
-	const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-	date.setDate(diff);
-	date.setHours(0, 0, 0, 0);
-	return date;
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
 }
 
 export type WeeklySubjectInput = {
-	subjectId: string;
-	subjectName: string;
-	subjectSlug: SubjectSlug;
-	avgMastery: number;
-	growthTrend: number;
-	hasAttempts: boolean;
+  subjectId: string;
+  subjectName: string;
+  subjectSlug: SubjectSlug;
+  avgMastery: number;
+  growthTrend: number;
+  hasAttempts: boolean;
 };
 
 function classifyStrength(avgMastery: number): "weak" | "balanced" | "strong" {
-	if (avgMastery < 0.4) return "weak";
-	if (avgMastery <= 0.7) return "balanced";
-	return "strong";
+  if (avgMastery < 0.4) return "weak";
+  if (avgMastery <= 0.7) return "balanced";
+  return "strong";
 }
 
 async function buildWeeklySubjectInput(
@@ -99,7 +102,9 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   console.log("[WEEKLY_CHALLENGE] Starting regeneration", { userId });
 
   const monday = startOfWeek(new Date());
-  console.log("[WEEKLY_CHALLENGE] Week start", { monday: monday.toISOString() });
+  console.log("[WEEKLY_CHALLENGE] Week start", {
+    monday: monday.toISOString(),
+  });
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
@@ -166,7 +171,7 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   }).catch(() => ({
     title: `Misi Mingguan: ${subjectInputs[0]?.subjectName ?? "Pemburu Ilmu"}`,
     description:
-      "Selesaikan semua item tantangan mingguan untuk klaim reward 200 XP!",
+      "Selesaikan semua item tantangan mingguan untuk klaim reward 100 XP!",
   }));
 
   let totalGoal = 0;
@@ -199,11 +204,14 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
 
   for (let idx = 0; idx < MAX_CHALLENGE_SUBJECTS; idx++) {
     const input = subjectInputs[idx % subjectInputs.length];
-    console.log(`[WEEKLY_CHALLENGE] Processing challenge ${idx + 1}/${MAX_CHALLENGE_SUBJECTS}`, {
-      subjectId: input.subjectId,
-      subjectName: input.subjectName,
-      avgMastery: input.avgMastery,
-    });
+    console.log(
+      `[WEEKLY_CHALLENGE] Processing challenge ${idx + 1}/${MAX_CHALLENGE_SUBJECTS}`,
+      {
+        subjectId: input.subjectId,
+        subjectName: input.subjectName,
+        avgMastery: input.avgMastery,
+      },
+    );
 
     const strength = classifyStrength(input.avgMastery);
     const counts = computeWeeklyItemCounts(strength);
@@ -316,6 +324,7 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   });
 
   const challengesCreated: string[] = [];
+  let weeklyId: string | null = null;
   await prisma.$transaction(async (tx) => {
     for (let blockIdx = 0; blockIdx < allContent.length; blockIdx++) {
       const block = allContent[blockIdx];
@@ -410,6 +419,23 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
         });
       }
     }
+
+    if (challengesCreated.length > 0) {
+      const weekly = await tx.weeklyChallenge.create({
+        data: {
+          userId,
+          weekStart: monday,
+          title: aiTitle.title,
+          description: aiTitle.description,
+          goal: totalGoal,
+          progress: 0,
+          completed: false,
+          xpRewarded: false,
+          challengeId: challengesCreated[0],
+        },
+      });
+      weeklyId = weekly.id;
+    }
   });
 
   if (challengesCreated.length === 0) {
@@ -423,28 +449,14 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     challengeIds: challengesCreated,
   });
 
-  const weekly = await prisma.weeklyChallenge.create({
-    data: {
-      userId,
-      weekStart: monday,
-      title: aiTitle.title,
-      description: aiTitle.description,
-      goal: totalGoal,
-      progress: 0,
-      completed: false,
-      xpRewarded: false,
-      challengeId: challengesCreated[0],
-    },
-  });
-
   revalidatePath("/challenge", "layout");
   revalidatePath("/dashboard", "layout");
 
   console.log("[WEEKLY_CHALLENGE] ✓ Complete", {
     userId,
-    weeklyChallengeId: weekly.id,
+    weeklyChallengeId: weeklyId,
     totalChallenges: challengesCreated.length,
   });
 
-  return { ok: true, weeklyChallengeId: weekly.id };
+  return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
 }

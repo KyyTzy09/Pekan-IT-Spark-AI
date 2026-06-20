@@ -48,6 +48,10 @@ export function InviteManager({
   );
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const handleGenerate = async () => {
     setWorking("generate");
@@ -90,7 +94,7 @@ export function InviteManager({
       await navigator.clipboard.writeText(activeInvite.inviteCode);
       setCopied(true);
       gooeyToast.success("Kode undangan disalin ke clipboard!");
-      setTimeout(() => setCopied(false), 2000);
+      timerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       const errMsg = "Gagal menyalin. Coba salin manual, ya.";
       setError(errMsg);

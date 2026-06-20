@@ -270,6 +270,28 @@ function SubjectCard({
     }
   }, []);
 
+  const bgGradient = React.useMemo(
+    () =>
+      subject.color
+        ? `linear-gradient(135deg, ${subject.color}, transparent)`
+        : "linear-gradient(135deg, var(--coral), transparent)",
+    [subject.color],
+  );
+  const iconGradient = React.useMemo(
+    () =>
+      subject.color
+        ? `linear-gradient(135deg, ${subject.color}, oklch(0.65 0.15 60))`
+        : "linear-gradient(135deg, var(--coral), var(--orange))",
+    [subject.color],
+  );
+  const barGradient = React.useMemo(
+    () =>
+      subject.color
+        ? `linear-gradient(90deg, ${subject.color}, oklch(0.7 0.15 60))`
+        : "linear-gradient(90deg, var(--coral), var(--orange))",
+    [subject.color],
+  );
+
   const handlePointerUp = React.useCallback(
     (e: React.PointerEvent) => {
       cancelLongPress();
@@ -339,20 +361,12 @@ function SubjectCard({
         <div
           aria-hidden
           className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full opacity-25 blur-3xl transition-opacity group-hover/sub:opacity-50"
-          style={{
-            background: subject.color
-              ? `linear-gradient(135deg, ${subject.color}, transparent)`
-              : "linear-gradient(135deg, var(--coral), transparent)",
-          }}
+          style={{ background: bgGradient }}
         />
         <div className="relative flex items-start gap-4">
           <span
             className="grid size-12 shrink-0 place-items-center rounded-2xl text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]"
-            style={{
-              background: subject.color
-                ? `linear-gradient(135deg, ${subject.color}, oklch(0.65 0.15 60))`
-                : "linear-gradient(135deg, var(--coral), var(--orange))",
-            }}
+            style={{ background: iconGradient }}
           >
             <span className="text-[20px]">{subject.icon ?? "📚"}</span>
           </span>
@@ -395,9 +409,7 @@ function SubjectCard({
                 className="h-full rounded-full transition-all duration-700"
                 style={{
                   width: `${subject.averageMastery}%`,
-                  background: subject.color
-                    ? `linear-gradient(90deg, ${subject.color}, oklch(0.7 0.15 60))`
-                    : "linear-gradient(90deg, var(--coral), var(--orange))",
+                  background: barGradient,
                 }}
               />
             </div>
@@ -757,6 +769,20 @@ function TopicCard({
   topic: SubjectExplorerSummary["topics"][number];
   subjectColor: string | null;
 }) {
+  const topicIconGradient = React.useMemo(
+    () =>
+      subjectColor
+        ? `linear-gradient(135deg, ${subjectColor}, oklch(0.65 0.15 60))`
+        : "linear-gradient(135deg, var(--coral), var(--orange))",
+    [subjectColor],
+  );
+  const topicBarGradient = React.useMemo(
+    () =>
+      subjectColor
+        ? `linear-gradient(90deg, ${subjectColor}, oklch(0.7 0.15 60))`
+        : "linear-gradient(90deg, var(--coral), var(--orange))",
+    [subjectColor],
+  );
   return (
     <Link
       href={`/topics/${topic.id}`}
@@ -765,11 +791,7 @@ function TopicCard({
       <div className="flex items-start gap-3">
         <span
           className="grid size-10 shrink-0 place-items-center rounded-xl text-white shadow-[0_6px_14px_rgba(0,0,0,0.1)]"
-          style={{
-            background: subjectColor
-              ? `linear-gradient(135deg, ${subjectColor}, oklch(0.65 0.15 60))`
-              : "linear-gradient(135deg, var(--coral), var(--orange))",
-          }}
+          style={{ background: topicIconGradient }}
         >
           <Layers size={16} strokeWidth={2.5} />
         </span>
@@ -790,9 +812,7 @@ function TopicCard({
               className="h-full rounded-full transition-all duration-700"
               style={{
                 width: `${topic.averageMastery}%`,
-                background: subjectColor
-                  ? `linear-gradient(90deg, ${subjectColor}, oklch(0.7 0.15 60))`
-                  : "linear-gradient(90deg, var(--coral), var(--orange))",
+                background: topicBarGradient,
               }}
             />
           </div>

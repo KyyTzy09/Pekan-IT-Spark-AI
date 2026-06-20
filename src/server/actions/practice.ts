@@ -475,46 +475,6 @@ export type QuizResult =
     }
   | { ok: false; error: string };
 
-const QUIZ_TTL_MS = 2 * 60 * 60 * 1000;
-const QUIZ_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-
-const QUIZ_BATCH_STORE = new Map<
-  string,
-  {
-    userId: string;
-    topicId: string;
-    questionIds: string[];
-    answers: Map<
-      number,
-      {
-        questionId: string;
-        answer: string;
-        isCorrect: boolean;
-        timeSpent: number;
-      }
-    >;
-    startedAt: number;
-    timeLimitSec: number;
-  }
->();
-
-function cleanupExpiredQuizzes() {
-  const now = Date.now();
-  for (const [id, session] of QUIZ_BATCH_STORE) {
-    const elapsed = now - session.startedAt;
-    const maxAge = Math.max(session.timeLimitSec * 1000 + 60_000, QUIZ_TTL_MS);
-    if (elapsed > maxAge) {
-      QUIZ_BATCH_STORE.delete(id);
-    }
-  }
-}
-
-const cleanupTimer = setInterval(
-  cleanupExpiredQuizzes,
-  QUIZ_CLEANUP_INTERVAL_MS,
-);
-cleanupTimer.unref?.();
-
 function newQuizId(): string {
   return `qz_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -566,13 +526,15 @@ export async function startQuizSession(input: {
   const picked = shuffled.slice(0, Math.min(numQ, shuffled.length));
 
   const quizSessionId = newQuizId();
-  QUIZ_BATCH_STORE.set(quizSessionId, {
-    userId,
-    topicId: input.topicId,
-    questionIds: picked.map((q) => q.id),
-    answers: new Map(),
-    startedAt: Date.now(),
-    timeLimitSec,
+  await prisma.quizSession.create({
+    data: {
+      id: quizSessionId,
+      userId,
+      topicId: input.topicId,
+      questionIds: picked.map((q) => q.id),
+      startedAt: new Date(),
+      timeLimitSec,
+    },
   });
 
   const questions: QuizQuestion[] = picked.map((q) => ({
@@ -687,13 +649,15 @@ export async function startPretestSession(input: {
   const timeLimitSec = Math.max(120, numQ * 60);
 
   const quizSessionId = newQuizId();
-  QUIZ_BATCH_STORE.set(quizSessionId, {
-    userId,
-    topicId: firstTopic.id,
-    questionIds: picked.map((q) => q.id),
-    answers: new Map(),
-    startedAt: Date.now(),
-    timeLimitSec,
+  await prisma.quizSession.create({
+    data: {
+      id: quizSessionId,
+      userId,
+      topicId: firstTopic.id,
+      questionIds: picked.map((q) => q.id),
+      startedAt: new Date(),
+      timeLimitSec,
+    },
   });
 
   const questions: QuizQuestion[] = picked.map((q) => ({
@@ -737,14 +701,18 @@ export async function submitQuizAnswer(input: {
   } catch {
     return { ok: false, error: "Login dulu ya" };
   }
-  const store = QUIZ_BATCH_STORE.get(input.sessionId);
+  const store = await prisma.quizSession.findUnique({
+    where: { id: input.sessionId },
+  });
   if (!store || store.userId !== userId) {
     return { ok: false, error: "Sesi quiz udah expired. Mulai ulang ya." };
   }
-  if (!store.questionIds.includes(input.questionId)) {
+  const questionIds = store.questionIds as string[];
+  if (!questionIds.includes(input.questionId)) {
     return { ok: false, error: "Soal ini ga ada di sesi quiz kamu." };
   }
-  const elapsedSec = (Date.now() - store.startedAt) / 1000;
+  const elapsedMs = Date.now() - store.startedAt.getTime();
+  const elapsedSec = elapsedMs / 1000;
   if (elapsedSec > store.timeLimitSec + 30) {
     return { ok: false, error: "Waktu udah lewat. Sesi di-close." };
   }
@@ -767,20 +735,12 @@ export async function submitQuizAnswer(input: {
     timeSpent: Math.round(input.timeSpentSec),
   });
 
-  const questionIndex = store.questionIds.indexOf(input.questionId);
-  store.answers.set(questionIndex, {
-    questionId: input.questionId,
-    answer: input.answer,
-    isCorrect,
-    timeSpent: input.timeSpentSec,
-  });
-
   return {
     ok: true,
     isCorrect,
     correctAnswer: question.correctAnswer,
     explanation: question.explanation,
-    questionIndex,
+    questionIndex: questionIds.indexOf(input.questionId),
   };
 }
 
@@ -796,7 +756,9 @@ export async function getQuizResult(input: {
       error: "Login dulu ya",
     } as unknown as QuizResult;
   }
-  const store = QUIZ_BATCH_STORE.get(input.sessionId);
+  const store = await prisma.quizSession.findUnique({
+    where: { id: input.sessionId },
+  });
   if (!store || store.userId !== userId) {
     return {
       ok: false,
@@ -804,14 +766,16 @@ export async function getQuizResult(input: {
     } as unknown as QuizResult;
   }
 
-  const timeUsedSec = (Date.now() - store.startedAt) / 1000;
+  const timeUsedSec = (Date.now() - store.startedAt.getTime()) / 1000;
+
+  const questionIds = store.questionIds as string[];
 
   // Read the just-recorded attempts to get correct counts per concept
   const allAttempts = await prisma.questionAttempt.findMany({
     where: {
       userId,
-      questionId: { in: store.questionIds },
-      createdAt: { gte: new Date(store.startedAt - 5_000) },
+      questionId: { in: questionIds },
+      createdAt: { gte: new Date(store.startedAt.getTime() - 5_000) },
     },
     select: {
       questionId: true,
@@ -875,12 +839,15 @@ export async function getQuizResult(input: {
   const scorePct = totalQ === 0 ? 0 : Math.round((correctCount / totalQ) * 100);
 
   // cleanup
-  QUIZ_BATCH_STORE.delete(input.sessionId);
+  await prisma.quizSession.update({
+    where: { id: input.sessionId },
+    data: { status: "COMPLETED" },
+  });
 
   return {
     ok: true,
     sessionId: input.sessionId,
-    totalQuestions: store.questionIds.length,
+    totalQuestions: questionIds.length,
     correctCount,
     scorePct,
     timeUsedSec: Math.round(timeUsedSec),
@@ -899,10 +866,15 @@ export async function abortQuizSession(input: {
   } catch {
     return { ok: false, error: "Login dulu ya" };
   }
-  const store = QUIZ_BATCH_STORE.get(input.sessionId);
+  const store = await prisma.quizSession.findUnique({
+    where: { id: input.sessionId },
+  });
   if (!store || store.userId !== userId)
     return { ok: false, error: "Ga ada sesi" };
-  QUIZ_BATCH_STORE.delete(input.sessionId);
+  await prisma.quizSession.update({
+    where: { id: input.sessionId },
+    data: { status: "ABORTED" },
+  });
   return { ok: true };
 }
 

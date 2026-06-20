@@ -29,6 +29,10 @@ export function UploadShareView({
   const [confirming, setConfirming] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [doneId, setDoneId] = React.useState<string | null>(null);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const handleConfirm = async (chatSessionId: string) => {
     setConfirming(chatSessionId);
@@ -44,7 +48,7 @@ export function UploadShareView({
         return;
       }
       setDoneId(chatSessionId);
-      window.setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         router.push(`/chat/${chatSessionId}`);
       }, 800);
     } catch (err) {

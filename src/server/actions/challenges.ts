@@ -145,12 +145,7 @@ export async function getTodayChallenges(): Promise<{
   const userId = await requireStudent();
   const today = startOfToday();
 
-  let challenges = await fetchChallengesForDate(userId, today);
-
-  if (challenges.length === 0) {
-    await generateAndStoreDailyChallenges(userId, today);
-    challenges = await fetchChallengesForDate(userId, today);
-  }
+  const challenges = await fetchChallengesForDate(userId, today);
 
   await aggregateDailyProgress(userId, today);
 
@@ -2362,21 +2357,8 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
     };
   }
 
-  const regen = await regenerateWeeklyChallenge(userId);
-  if (!regen.ok || !regen.weeklyChallengeId) {
-    throw new Error(regen.error ?? "Gagal membuat tantangan mingguan");
-  }
-
-  const created = await prisma.weeklyChallenge.findUnique({
-    where: { id: regen.weeklyChallengeId },
-  });
-  if (!created) throw new Error("Weekly challenge hilang setelah dibuat");
-
-  return {
-    ...created,
-    weekStart: created.weekStart.toISOString(),
-    createdAt: created.createdAt.toISOString(),
-  };
+  regenerateWeeklyChallenge(userId).catch(console.error);
+  return null;
 }
 
 export async function updateWeeklyChallengeProgress(userId: string) {

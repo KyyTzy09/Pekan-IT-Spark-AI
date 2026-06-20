@@ -1448,7 +1448,7 @@ Format JSON: { "title": "max 80 char", "description": "max 200 char" }`;
     console.warn("generateWeeklyTitleAI failed:", err);
     return {
       title: `Misi Mingguan: ${input.subjectNames[0] ?? "Pemburu Ilmu"}`,
-      description: `Selesaikan tantangan mingguan untuk klaim 200 XP!`,
+      description: `Selesaikan tantangan mingguan untuk klaim 100 XP!`,
     };
   }
 }

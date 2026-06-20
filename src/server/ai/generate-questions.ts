@@ -74,7 +74,13 @@ Output JSON:
     temperature: 0.5,
   });
 
-  const parsed = generatedQuestionsSchema.safeParse(JSON.parse(text));
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("AI returned invalid JSON for questions");
+  }
+  const parsed = generatedQuestionsSchema.safeParse(json);
   if (!parsed.success) {
     throw new Error(
       `Failed to parse generated questions: ${parsed.error.message}`,

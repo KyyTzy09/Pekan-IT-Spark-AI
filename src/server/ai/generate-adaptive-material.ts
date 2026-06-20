@@ -92,7 +92,13 @@ Output JSON:
     temperature: 0.5,
   });
 
-  const parsed = generatedMaterialSchema.safeParse(JSON.parse(text));
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("AI returned invalid JSON for material");
+  }
+  const parsed = generatedMaterialSchema.safeParse(json);
   if (!parsed.success) {
     throw new Error(
       `Failed to parse generated material: ${parsed.error.message}`,

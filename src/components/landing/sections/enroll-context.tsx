@@ -12,8 +12,9 @@ export function EnrollProvider({ children }: { children: React.ReactNode }) {
   const open = React.useCallback(() => {
     window.location.href = "/auth/register";
   }, []);
+  const ctx = React.useMemo(() => ({ open }), [open]);
   return (
-    <EnrollContext.Provider value={{ open }}>{children}</EnrollContext.Provider>
+    <EnrollContext.Provider value={ctx}>{children}</EnrollContext.Provider>
   );
 }
 

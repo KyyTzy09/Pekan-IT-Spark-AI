@@ -409,6 +409,19 @@ model QuizAttempt {
   @@map("quiz_attempts")
 }
 
+model QuizSession {
+  id           String   @id
+  userId       String
+  topicId      String
+  questionIds  Json
+  startedAt    DateTime
+  timeLimitSec Int
+  status       String   @default("ACTIVE")
+
+  @@index([userId])
+  @@map("quiz_sessions")
+}
+
 model ChatSession {
   id        String   @id @default(cuid())
   userId    String

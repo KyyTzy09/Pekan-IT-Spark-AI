@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { DailyChallengeSummary } from "@/components/student/challenge/daily-challenge-summary";
 import { DashboardView } from "@/components/student/dashboard-view";
@@ -36,6 +36,9 @@ type TimelinePoint = {
   reflectionsScore: number;
 };
 
+const POLL_INTERVAL = 5000;
+const MAX_POLLS = 12;
+
 export function DashboardWithChallengesView({
   summary,
   todayChallenges: initialChallenges,
@@ -48,37 +51,52 @@ export function DashboardWithChallengesView({
   const [challenges, setChallenges] =
     useState<ChallengeListItem[]>(initialChallenges);
   const [loading, setLoading] = useState(initialChallenges.length === 0);
+  const pollCount = useRef(0);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
-    // If challenges are already generated on the server, skip client-side fetch
     if (initialChallenges.length > 0) {
       setLoading(false);
       return;
     }
 
     let active = true;
-    setLoading(true);
+    pollCount.current = 0;
 
-    fetch("/api/challenge/today")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch today's challenges");
-        return res.json();
-      })
-      .then((json) => {
-        if (active) {
-          setChallenges(json.challenges || []);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.warn("Failed to fetch today's challenges client-side:", err);
-        if (active) {
-          setLoading(false);
-        }
-      });
+    const poll = () => {
+      fetch("/api/challenge/today")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch today's challenges");
+          return res.json();
+        })
+        .then((json) => {
+          if (!active) return;
+          if (json.challenges?.length > 0) {
+            setChallenges(json.challenges);
+            setLoading(false);
+          } else if (pollCount.current < MAX_POLLS) {
+            pollCount.current++;
+            pollTimerRef.current = setTimeout(poll, POLL_INTERVAL);
+          } else {
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.warn("Failed to fetch today's challenges client-side:", err);
+          if (active) {
+            setLoading(false);
+          }
+        });
+    };
+
+    setLoading(true);
+    poll();
 
     return () => {
       active = false;
+      clearTimeout(pollTimerRef.current);
     };
   }, [initialChallenges]);
 

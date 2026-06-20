@@ -108,7 +108,6 @@ export async function retrieveContext(
       const { embeddings: docVecs } = await embedMany({
         model: embeddingModel,
         values: texts,
-        maxRetries: 0,
       });
 
       for (let i = 0; i < docEmbeddings.length; i++) {

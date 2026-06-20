@@ -61,8 +61,9 @@ export function BadgeUnlockProvider({
     }
   }, [current]);
 
+  const ctx = React.useMemo(() => ({ showBadges }), [showBadges]);
   return (
-    <BadgeUnlockContext.Provider value={{ showBadges }}>
+    <BadgeUnlockContext.Provider value={ctx}>
       {children}
 
       <AnimatePresence>

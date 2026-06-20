@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import { levelFromXp } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
@@ -121,236 +122,237 @@ function pickSparkTip(): string {
   return SPARK_TIPS[idx] ?? SPARK_TIPS[0] ?? "";
 }
 
-export async function getDashboardSummary(
-  userId: string,
-): Promise<DashboardSummary> {
-  const [profile, user] = await Promise.all([
-    prisma.studentProfile.findUnique({
-      where: { userId },
-      select: {
-        grade: true,
-        school: true,
-        learningStyle: true,
-        focusedSubjects: true,
-        totalXp: true,
-        level: true,
-      },
-    }),
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true },
-    }),
-  ]);
-  const focusedIds = profile?.focusedSubjects ?? [];
-
-  const [streak, levels, allSubjects, knowledgeProfiles, attempts, docs] =
-    await Promise.all([
-      prisma.streak.findUnique({
+export const getDashboardSummary = cache(
+  async (userId: string): Promise<DashboardSummary> => {
+    const [profile, user] = await Promise.all([
+      prisma.studentProfile.findUnique({
         where: { userId },
         select: {
-          currentStreak: true,
-          longestStreak: true,
-          freezeAvailable: true,
+          grade: true,
+          school: true,
+          learningStyle: true,
+          focusedSubjects: true,
+          totalXp: true,
+          level: true,
         },
       }),
-      prisma.level.findMany({
-        orderBy: { level: "asc" },
-        select: { level: true, name: true, minXp: true, maxXp: true },
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true },
       }),
-      prisma.subject.findMany({
-        where: focusedIds.length > 0 ? { id: { in: focusedIds } } : undefined,
-        orderBy: { order: "asc" },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          icon: true,
-          color: true,
-          order: true,
-        },
-      }),
-      prisma.studentKnowledgeProfile.findMany({
-        where: { userId },
-        select: {
-          conceptId: true,
-          masteryScore: true,
-          status: true,
-          lastAttemptAt: true,
-          attemptCount: true,
-        },
-      }),
-      prisma.questionAttempt.count({ where: { userId } }),
-      prisma.document.count({ where: { userId } }),
     ]);
+    const focusedIds = profile?.focusedSubjects ?? [];
 
-  const totalXp = profile?.totalXp ?? 0;
-  const computed = levelFromXp(totalXp, levels);
-  const levelInfo: DashboardLevelInfo = {
-    ...computed,
-    totalXp,
-  };
-
-  const allConcepts = await prisma.concept.findMany({
-    where:
-      focusedIds.length > 0
-        ? { topic: { subjectId: { in: focusedIds } } }
-        : undefined,
-    select: { id: true, topic: { select: { subjectId: true } } },
-  });
-  const conceptsBySubject = new Map<string, number>();
-  for (const c of allConcepts) {
-    conceptsBySubject.set(
-      c.topic.subjectId,
-      (conceptsBySubject.get(c.topic.subjectId) ?? 0) + 1,
-    );
-  }
-
-  const profilesByConcept = new Map(
-    knowledgeProfiles.map((p) => [p.conceptId, p]),
-  );
-
-  const subjects: DashboardSubjectProgress[] = allSubjects.map((s) => {
-    const totalConcepts = conceptsBySubject.get(s.id) ?? 0;
-    const subjectConcepts = allConcepts
-      .filter((c) => c.topic.subjectId === s.id)
-      .map((c) => c.id);
-    const profiles = subjectConcepts
-      .map((id) => profilesByConcept.get(id))
-      .filter((p): p is NonNullable<typeof p> => Boolean(p));
-    const mastered = profiles.filter((p) => p.status === "MASTERED").length;
-    const learning = profiles.filter((p) => p.status === "LEARNING").length;
-    const struggling = profiles.filter((p) => p.status === "STRUGGLING").length;
-    const notStarted = Math.max(0, totalConcepts - profiles.length);
-    const totalScore = profiles.reduce((acc, p) => acc + p.masteryScore, 0);
-    const masteryPct =
-      profiles.length > 0
-        ? Math.round((totalScore / profiles.length) * 100)
-        : 0;
-    return {
-      id: s.id,
-      slug: s.slug,
-      name: s.name,
-      icon: s.icon,
-      color: s.color,
-      order: s.order,
-      totalConcepts,
-      masteredConcepts: mastered,
-      learningConcepts: learning,
-      strugglingConcepts: struggling,
-      notStartedConcepts: notStarted,
-      masteryPct,
-      attemptCount: profiles.reduce((acc, p) => acc + p.attemptCount, 0),
-    };
-  });
-
-  let recommendation: DashboardRecommendation | null = null;
-  const lastProfile = knowledgeProfiles
-    .filter((p) => p.lastAttemptAt)
-    .sort(
-      (a, b) =>
-        (b.lastAttemptAt?.getTime() ?? 0) - (a.lastAttemptAt?.getTime() ?? 0),
-    )[0];
-  const focusConceptId = lastProfile?.conceptId ?? null;
-
-  if (focusConceptId) {
-    const concept = await prisma.concept.findUnique({
-      where: { id: focusConceptId },
-      include: { topic: { include: { subject: true } } },
-    });
-    const profile = profilesByConcept.get(focusConceptId);
-    if (concept && profile) {
-      const status = profile.status as
-        | "NOT_STARTED"
-        | "LEARNING"
-        | "MASTERED"
-        | "STRUGGLING";
-      const reason =
-        status === "STRUGGLING"
-          ? "Kamu sempat struggle di sini — yuk ulang biar makin nempel."
-          : status === "LEARNING"
-            ? "Lanjut konsep ini biar kelar. Kamu udah setengah jalan!"
-            : "Konsep terakhir kamu. Biar makin nempel, coba 5 soal lagi.";
-      recommendation = {
-        type: "continue",
-        conceptId: concept.id,
-        conceptName: concept.name,
-        conceptSlug: concept.slug,
-        topicId: concept.topic.id,
-        subjectName: concept.topic.subject.name,
-        subjectSlug: concept.topic.subject.slug as SubjectSlug,
-        subjectColor: concept.topic.subject.color,
-        subjectIcon: concept.topic.subject.icon,
-        masteryScore: profile.masteryScore,
-        status,
-        reason,
-      };
-    }
-  } else if (focusedIds.length > 0) {
-    const firstSubject = await prisma.subject.findFirst({
-      where: { id: { in: focusedIds } },
-      include: {
-        topics: {
+    const [streak, levels, allSubjects, knowledgeProfiles, attempts, docs] =
+      await Promise.all([
+        prisma.streak.findUnique({
+          where: { userId },
+          select: {
+            currentStreak: true,
+            longestStreak: true,
+            freezeAvailable: true,
+          },
+        }),
+        prisma.level.findMany({
+          orderBy: { level: "asc" },
+          select: { level: true, name: true, minXp: true, maxXp: true },
+        }),
+        prisma.subject.findMany({
+          where: focusedIds.length > 0 ? { id: { in: focusedIds } } : undefined,
           orderBy: { order: "asc" },
-          take: 1,
-          include: {
-            concepts: { orderBy: { order: "asc" }, take: 1 },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            icon: true,
+            color: true,
+            order: true,
+          },
+        }),
+        prisma.studentKnowledgeProfile.findMany({
+          where: { userId },
+          select: {
+            conceptId: true,
+            masteryScore: true,
+            status: true,
+            lastAttemptAt: true,
+            attemptCount: true,
+          },
+        }),
+        prisma.questionAttempt.count({ where: { userId } }),
+        prisma.document.count({ where: { userId } }),
+      ]);
+
+    const totalXp = profile?.totalXp ?? 0;
+    const computed = levelFromXp(totalXp, levels);
+    const levelInfo: DashboardLevelInfo = {
+      ...computed,
+      totalXp,
+    };
+
+    const allConcepts = await prisma.concept.findMany({
+      where:
+        focusedIds.length > 0
+          ? { topic: { subjectId: { in: focusedIds } } }
+          : undefined,
+      select: { id: true, topic: { select: { subjectId: true } } },
+    });
+    const conceptsBySubject = new Map<string, number>();
+    for (const c of allConcepts) {
+      conceptsBySubject.set(
+        c.topic.subjectId,
+        (conceptsBySubject.get(c.topic.subjectId) ?? 0) + 1,
+      );
+    }
+
+    const profilesByConcept = new Map(
+      knowledgeProfiles.map((p) => [p.conceptId, p]),
+    );
+
+    const subjects: DashboardSubjectProgress[] = allSubjects.map((s) => {
+      const totalConcepts = conceptsBySubject.get(s.id) ?? 0;
+      const subjectConcepts = allConcepts
+        .filter((c) => c.topic.subjectId === s.id)
+        .map((c) => c.id);
+      const profiles = subjectConcepts
+        .map((id) => profilesByConcept.get(id))
+        .filter((p): p is NonNullable<typeof p> => Boolean(p));
+      const mastered = profiles.filter((p) => p.status === "MASTERED").length;
+      const learning = profiles.filter((p) => p.status === "LEARNING").length;
+      const struggling = profiles.filter(
+        (p) => p.status === "STRUGGLING",
+      ).length;
+      const notStarted = Math.max(0, totalConcepts - profiles.length);
+      const totalScore = profiles.reduce((acc, p) => acc + p.masteryScore, 0);
+      const masteryPct =
+        profiles.length > 0
+          ? Math.round((totalScore / profiles.length) * 100)
+          : 0;
+      return {
+        id: s.id,
+        slug: s.slug,
+        name: s.name,
+        icon: s.icon,
+        color: s.color,
+        order: s.order,
+        totalConcepts,
+        masteredConcepts: mastered,
+        learningConcepts: learning,
+        strugglingConcepts: struggling,
+        notStartedConcepts: notStarted,
+        masteryPct,
+        attemptCount: profiles.reduce((acc, p) => acc + p.attemptCount, 0),
+      };
+    });
+
+    let recommendation: DashboardRecommendation | null = null;
+    const lastProfile = knowledgeProfiles
+      .filter((p) => p.lastAttemptAt)
+      .sort(
+        (a, b) =>
+          (b.lastAttemptAt?.getTime() ?? 0) - (a.lastAttemptAt?.getTime() ?? 0),
+      )[0];
+    const focusConceptId = lastProfile?.conceptId ?? null;
+
+    if (focusConceptId) {
+      const concept = await prisma.concept.findUnique({
+        where: { id: focusConceptId },
+        include: { topic: { include: { subject: true } } },
+      });
+      const profile = profilesByConcept.get(focusConceptId);
+      if (concept && profile) {
+        const status = profile.status as
+          | "NOT_STARTED"
+          | "LEARNING"
+          | "MASTERED"
+          | "STRUGGLING";
+        const reason =
+          status === "STRUGGLING"
+            ? "Kamu sempat struggle di sini — yuk ulang biar makin nempel."
+            : status === "LEARNING"
+              ? "Lanjut konsep ini biar kelar. Kamu udah setengah jalan!"
+              : "Konsep terakhir kamu. Biar makin nempel, coba 5 soal lagi.";
+        recommendation = {
+          type: "continue",
+          conceptId: concept.id,
+          conceptName: concept.name,
+          conceptSlug: concept.slug,
+          topicId: concept.topic.id,
+          subjectName: concept.topic.subject.name,
+          subjectSlug: concept.topic.subject.slug as SubjectSlug,
+          subjectColor: concept.topic.subject.color,
+          subjectIcon: concept.topic.subject.icon,
+          masteryScore: profile.masteryScore,
+          status,
+          reason,
+        };
+      }
+    } else if (focusedIds.length > 0) {
+      const firstSubject = await prisma.subject.findFirst({
+        where: { id: { in: focusedIds } },
+        include: {
+          topics: {
+            orderBy: { order: "asc" },
+            take: 1,
+            include: {
+              concepts: { orderBy: { order: "asc" }, take: 1 },
+            },
           },
         },
-      },
-      orderBy: { order: "asc" },
-    });
-    const concept = firstSubject?.topics[0]?.concepts[0];
-    if (concept && firstSubject) {
-      recommendation = {
-        type: "new",
-        conceptId: concept.id,
-        conceptName: concept.name,
-        conceptSlug: concept.slug,
-        topicId: concept.topicId,
-        subjectName: firstSubject.name,
-        subjectSlug: firstSubject.slug as SubjectSlug,
-        subjectColor: firstSubject.color,
-        subjectIcon: firstSubject.icon,
-        masteryScore: 0,
-        status: "NOT_STARTED",
-        reason: "Mulai dari konsep pertama di mata pelajaran fokus kamu.",
-      };
+        orderBy: { order: "asc" },
+      });
+      const concept = firstSubject?.topics[0]?.concepts[0];
+      if (concept && firstSubject) {
+        recommendation = {
+          type: "new",
+          conceptId: concept.id,
+          conceptName: concept.name,
+          conceptSlug: concept.slug,
+          topicId: concept.topicId,
+          subjectName: firstSubject.name,
+          subjectSlug: firstSubject.slug as SubjectSlug,
+          subjectColor: firstSubject.color,
+          subjectIcon: firstSubject.icon,
+          masteryScore: 0,
+          status: "NOT_STARTED",
+          reason: "Mulai dari konsep pertama di mata pelajaran fokus kamu.",
+        };
+      }
     }
-  }
 
-  const totalMastered = knowledgeProfiles.filter(
-    (p) => p.status === "MASTERED",
-  ).length;
-  const totalConceptsAll = allConcepts.length;
-  const greeting = timeBasedGreeting();
-  const sparkTip = pickSparkTip();
+    const totalMastered = knowledgeProfiles.filter(
+      (p) => p.status === "MASTERED",
+    ).length;
+    const totalConceptsAll = allConcepts.length;
+    const greeting = timeBasedGreeting();
+    const sparkTip = pickSparkTip();
 
-  return {
-    student: {
-      id: userId,
-      name: user?.name ?? "Teman",
-      grade: profile?.grade ?? null,
-      school: profile?.school ?? null,
-      learningStyle: profile?.learningStyle ?? null,
-    },
-    greeting: greeting.greeting,
-    greetingSubtitle: greeting.subtitle,
-    sparkTip,
-    streak: {
-      current: streak?.currentStreak ?? 0,
-      longest: streak?.longestStreak ?? 0,
-      freezeAvailable: streak?.freezeAvailable ?? 1,
-    },
-    level: levelInfo,
-    subjects,
-    totalMastered,
-    totalConcepts: totalConceptsAll,
-    totalAttempts: attempts,
-    recommendation,
-    recentDocuments: docs,
-  };
-}
-
+    return {
+      student: {
+        id: userId,
+        name: user?.name ?? "Teman",
+        grade: profile?.grade ?? null,
+        school: profile?.school ?? null,
+        learningStyle: profile?.learningStyle ?? null,
+      },
+      greeting: greeting.greeting,
+      greetingSubtitle: greeting.subtitle,
+      sparkTip,
+      streak: {
+        current: streak?.currentStreak ?? 0,
+        longest: streak?.longestStreak ?? 0,
+        freezeAvailable: streak?.freezeAvailable ?? 1,
+      },
+      level: levelInfo,
+      subjects,
+      totalMastered,
+      totalConcepts: totalConceptsAll,
+      totalAttempts: attempts,
+      recommendation,
+      recentDocuments: docs,
+    };
+  },
+);
 export type SubjectExplorerSummary = {
   subject: {
     id: string;

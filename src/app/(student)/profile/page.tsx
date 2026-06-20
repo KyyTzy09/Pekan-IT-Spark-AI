@@ -1,11 +1,11 @@
-import { Flame, Lock, Sparkles, Trophy, UserCheck } from "lucide-react";
+import { ArrowRight, Flame, Lock, Sparkles, Trophy, UserCheck } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { AvatarCustomizerWidget } from "@/components/student/avatar-customizer-widget";
 import { AvatarUpload } from "@/components/student/avatar-upload";
 import { ProfileForm } from "@/components/student/profile-form";
-import { StudyBuddyWidget } from "@/components/student/study-buddy-widget";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDashboardSummary } from "@/server/actions/dashboard";
@@ -51,14 +51,27 @@ export default async function StudentProfilePage() {
 
   const [summary, avatarRaw, allBadges, userBadges, userData] =
     await Promise.all([
-      getDashboardSummary(userId),
-      prisma.avatarCustomization.findUnique({ where: { userId } }),
-      prisma.badge.findMany({ orderBy: { xpReward: "asc" } }),
-      prisma.userBadge.findMany({ where: { userId } }),
+      getDashboardSummary(userId).catch(() => ({
+        student: { id: userId, name: "", grade: null, school: null, learningStyle: null },
+        greeting: "Halo!",
+        greetingSubtitle: "",
+        sparkTip: "",
+        streak: { current: 0, longest: 0, freezeAvailable: 0 },
+        level: { level: 1, name: "Pemula", totalXp: 0, currentMinXp: 0, nextMinXp: null, progress: 0, xpToNext: null },
+        subjects: [],
+        totalMastered: 0,
+        totalConcepts: 0,
+        totalAttempts: 0,
+        recommendation: null,
+        recentDocuments: 0,
+      })),
+      prisma.avatarCustomization.findUnique({ where: { userId } }).catch(() => null),
+      prisma.badge.findMany({ orderBy: { xpReward: "asc" } }).catch(() => []),
+      prisma.userBadge.findMany({ where: { userId } }).catch(() => []),
       prisma.user.findUnique({
         where: { id: userId },
         select: { image: true },
-      }),
+      }).catch(() => null),
     ]);
 
   const ownedBadgeIds = new Set(userBadges.map((ub) => ub.badgeId));
@@ -147,9 +160,26 @@ export default async function StudentProfilePage() {
             <AvatarCustomizerWidget totalXp={summary.level.totalXp} />
           </Reveal>
 
-          {/* Study Buddy */}
+          {/* Tree Link Card */}
           <Reveal delay={60}>
-            <StudyBuddyWidget streak={summary.streak.current} />
+            <Link href="/tree">
+              <div className="group relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-5 shadow-[0_8px_30px_rgba(80,20,50,0.02)] backdrop-blur-xl transition-all hover:shadow-lg hover:border-emerald-500/30">
+                <div className="flex items-center gap-4">
+                  <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-2xl">
+                    🌳
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-sm font-bold text-foreground">
+                      Pohon Kehidupan
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Lihat pertumbuhan pohonmu dalam 3D
+                    </p>
+                  </div>
+                  <ArrowRight size={16} className="text-muted-foreground group-hover:text-emerald-500 transition-colors" />
+                </div>
+              </div>
+            </Link>
           </Reveal>
 
           {/* Profile Form */}

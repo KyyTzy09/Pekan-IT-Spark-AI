@@ -28,6 +28,10 @@ export function ProfileForm({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +54,7 @@ export function ProfileForm({
     } else {
       setSuccess(true);
       gooeyToast.success("Profil berhasil diperbarui!");
-      setTimeout(() => setSuccess(false), 3000);
+      timerRef.current = setTimeout(() => setSuccess(false), 3000);
     }
   };
 

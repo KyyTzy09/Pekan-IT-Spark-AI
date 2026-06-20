@@ -124,13 +124,11 @@ function computeFromFormula(
  */
 export const XP_REWARDS = {
   ANSWER_CORRECT: 10,
-  CHAT_MESSAGE: 2, // per assistant turn (small)
-  CHAT_SESSION: 5, // end of session bonus
+  CHAT_SESSION: 5,
   STREAK_DAILY: 20,
   CONCEPT_MASTERED: 50,
   DAILY_QUEST: 30,
   WEEKLY_CHALLENGE: 100,
-  BADGE_UNLOCK: 25,
 } as const;
 
 export type XpRewardKey = keyof typeof XP_REWARDS;

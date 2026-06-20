@@ -47,7 +47,6 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
     ...authConfig.providers.filter((p) => p.id !== "credentials"),
   ],
   callbacks: {
-    ...authConfig.callbacks,
     async jwt({ token, user, trigger }) {
       if (user?.id) {
         token.id = user.id;
@@ -69,6 +68,14 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         }
       }
       return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.id as string) ?? "";
+        session.user.role = (token.role as string) ?? "STUDENT";
+        session.user.isOnboarded = Boolean(token.isOnboarded);
+      }
+      return session;
     },
     async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {

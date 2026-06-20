@@ -45,6 +45,10 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
   const [context, setContext] = React.useState("");
   const [status, setStatus] = React.useState<Status>("idle");
   const [error, setError] = React.useState<string | null>(null);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const handleCustom = React.useCallback(async () => {
     if (name.trim().length < 2) {
@@ -67,7 +71,7 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
     gooeyToast.success("Mata pelajaran baru berhasil ditambahkan!", {
       description: `Spark telah membuat pretest & materi untuk ${name.trim()}.`,
     });
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setOpen(false);
       router.push(`/practice/pretest/${res.subjectId}`);
       router.refresh();
@@ -77,7 +81,7 @@ export function AddSubjectDialog({ trigger }: { trigger?: React.ReactNode }) {
   const handleClose = () => {
     if (status === "loading") return;
     setOpen(false);
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setStatus("idle");
       setError(null);
       setName("");

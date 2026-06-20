@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { ChallengeListView, type SubjectOption } from "@/components/student/challenge";
+import {
+  ChallengeListView,
+  type SubjectOption,
+} from "@/components/student/challenge";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -47,45 +50,68 @@ export default async function ChallengePage() {
     allSubjectIds.length > 0
       ? await prisma.subject.findMany({
           where: { id: { in: allSubjectIds }, isActive: true },
-          select: { id: true, slug: true, name: true },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            icon: true,
+            color: true,
+            isCustom: true,
+          },
           orderBy: { order: "asc" },
         })
       : await prisma.subject.findMany({
           where: { isActive: true, isCustom: false },
-          select: { id: true, slug: true, name: true },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            icon: true,
+            color: true,
+            isCustom: true,
+          },
           orderBy: { order: "asc" },
           take: 12,
         });
 
   const subjects = subjectRows;
-  const subjectsWithMastery: SubjectOption[] = await Promise.all(
-    subjects.map(async (s) => {
-      const profiles = await prisma.studentKnowledgeProfile.findMany({
-        where: {
-          userId,
-          concept: { topic: { subjectId: s.id } },
-        },
-        select: { masteryScore: true },
-      });
-      const scores = profiles.map((p) => p.masteryScore);
-      const avg =
-        scores.length > 0
-          ? scores.reduce((a, b) => a + b, 0) / scores.length
-          : null;
-      const fullSubject = await prisma.subject.findUnique({
-        where: { id: s.id },
-        select: { icon: true, color: true, isCustom: true },
-      });
-      return {
-        id: s.id,
-        name: s.name,
-        icon: fullSubject?.icon ?? null,
-        color: fullSubject?.color ?? null,
-        avgMastery: avg,
-        isCustom: fullSubject?.isCustom ?? false,
-      };
-    }),
-  );
+
+  const allKnowledgeProfiles =
+    allSubjectIds.length > 0
+      ? await prisma.studentKnowledgeProfile.findMany({
+          where: {
+            userId,
+            concept: { topic: { subjectId: { in: allSubjectIds } } },
+          },
+          select: {
+            masteryScore: true,
+            concept: { select: { topic: { select: { subjectId: true } } } },
+          },
+        })
+      : [];
+
+  const profilesBySubject = new Map<string, number[]>();
+  for (const p of allKnowledgeProfiles) {
+    const sid = p.concept.topic.subjectId;
+    if (!profilesBySubject.has(sid)) profilesBySubject.set(sid, []);
+    profilesBySubject.get(sid)?.push(p.masteryScore);
+  }
+
+  const subjectsWithMastery: SubjectOption[] = subjects.map((s) => {
+    const scores = profilesBySubject.get(s.id) ?? [];
+    const avg =
+      scores.length > 0
+        ? scores.reduce((a, b) => a + b, 0) / scores.length
+        : null;
+    return {
+      id: s.id,
+      name: s.name,
+      icon: s.icon,
+      color: s.color,
+      avgMastery: avg,
+      isCustom: s.isCustom,
+    };
+  });
 
   return (
     <ChallengeListView

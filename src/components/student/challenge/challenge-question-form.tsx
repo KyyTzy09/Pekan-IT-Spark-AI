@@ -44,6 +44,10 @@ export function ChallengeQuestionForm({
   onComplete,
   onSkip,
 }: ChallengeQuestionFormProps) {
+  const explanationTimerRef = React.useRef<
+    ReturnType<typeof setTimeout> | undefined
+  >(undefined);
+  React.useEffect(() => () => clearTimeout(explanationTimerRef.current), []);
   const [selected, setSelected] = React.useState<string | null>(
     prefillAnswer ?? null,
   );
@@ -112,7 +116,7 @@ export function ChallengeQuestionForm({
 
   function triggerExplanation() {
     setLoadingExplanation(true);
-    setTimeout(() => {
+    explanationTimerRef.current = setTimeout(() => {
       setLoadingExplanation(false);
       setShowExplanation(true);
     }, 800);

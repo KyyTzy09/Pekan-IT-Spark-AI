@@ -36,16 +36,6 @@ export const authConfig = {
       : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user?.id) {
-        token.id = user.id;
-        token.role = (user as { role?: string }).role ?? "STUDENT";
-        token.isOnboarded = Boolean(
-          (user as { isOnboarded?: boolean }).isOnboarded,
-        );
-      }
-      return token;
-    },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = (token.id as string) ?? "";

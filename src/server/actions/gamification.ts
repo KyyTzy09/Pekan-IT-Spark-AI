@@ -16,28 +16,15 @@ function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-let cachedLevels: Array<{ level: number; name: string; minXp: number }> | null =
-  null;
-let cachedBadges: Array<{
-  id: string;
-  name: string;
-  description: string | null;
-  xpReward: number;
-  category: any;
-}> | null = null;
-
 async function loadLevelTable() {
-  if (cachedLevels) return cachedLevels;
-  cachedLevels = await prisma.level.findMany({
+  return prisma.level.findMany({
     orderBy: { level: "asc" },
     select: { level: true, name: true, minXp: true },
   });
-  return cachedLevels;
 }
 
 async function loadBadgeTable() {
-  if (cachedBadges) return cachedBadges;
-  cachedBadges = await prisma.badge.findMany({
+  return prisma.badge.findMany({
     select: {
       id: true,
       name: true,
@@ -46,7 +33,6 @@ async function loadBadgeTable() {
       category: true,
     },
   });
-  return cachedBadges;
 }
 
 // ============================================================================

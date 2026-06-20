@@ -88,7 +88,6 @@ export async function embedDocumentChunks(
   const { embeddings } = await embedMany({
     model: embeddingModel,
     values: chunks.map((c) => c.content),
-    maxRetries: 1,
   });
   await prisma.documentEmbedding.createMany({
     data: chunks.map((c, i) => ({

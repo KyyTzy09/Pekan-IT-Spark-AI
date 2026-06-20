@@ -66,6 +66,12 @@ export function UploadView({
   const [dragOver, setDragOver] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
+  const tealBg =
+    "radial-gradient(circle, oklch(0.78 0.15 175 / 0.5), transparent 70%)";
 
   const refresh = React.useCallback(async () => {
     const result = await (
@@ -132,7 +138,7 @@ export function UploadView({
         description: `${file.name} sekarang siap digunakan.`,
       });
       await refresh();
-      window.setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setStatus((prev) =>
           prev.kind === "success" ? { kind: "idle" } : prev,
         );
@@ -199,10 +205,7 @@ export function UploadView({
           <div
             aria-hidden
             className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl"
-            style={{
-              background:
-                "radial-gradient(circle, oklch(0.78 0.15 175 / 0.5), transparent 70%)",
-            }}
+            style={{ background: tealBg }}
           />
           <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
