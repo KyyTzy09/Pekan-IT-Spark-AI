@@ -29,7 +29,9 @@ export function GeneratePracticeDialog({
   subjects: Subject[];
   onGenerate: (subjectId: string, count: number) => Promise<void>;
 }) {
-  const [selectedSubject, setSelectedSubject] = React.useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = React.useState<string | null>(
+    null,
+  );
   const [count, setCount] = React.useState(5);
   const [isGenerating, setIsGenerating] = React.useState(false);
 
@@ -51,7 +53,10 @@ export function GeneratePracticeDialog({
         if (!v && !isGenerating) onClose();
       }}
     >
-      <DialogContent className="max-w-md p-0 overflow-hidden bg-card border border-border/40" showCloseButton={false}>
+      <DialogContent
+        className="max-w-md p-0 overflow-hidden bg-card border border-border/40"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex-row items-start justify-between gap-3 border-border/40 border-b p-5">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">

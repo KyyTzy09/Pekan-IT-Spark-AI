@@ -589,7 +589,10 @@ export async function getTopicDetail(
       masteryScore: p?.masteryScore ?? 0,
       isLocked: unmetPrerequisites.length > 0,
       unmetPrerequisites,
-      materials: c.materials.map((m) => ({ id: m.id, difficulty: m.difficulty })),
+      materials: c.materials.map((m) => ({
+        id: m.id,
+        difficulty: m.difficulty,
+      })),
     };
   });
 

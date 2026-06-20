@@ -64,7 +64,8 @@ export function MaterialLevelsView({
             disabled={level.exists || loadingLevel !== null}
             className={cn(
               "rounded-full text-[11px] font-bold",
-              level.exists && "bg-[var(--teal)]/10 border-[var(--teal)]/30 text-[var(--teal)]",
+              level.exists &&
+                "bg-[var(--teal)]/10 border-[var(--teal)]/30 text-[var(--teal)]",
             )}
           >
             {loadingLevel === level.difficulty ? (

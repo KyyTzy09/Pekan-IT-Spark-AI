@@ -50,7 +50,9 @@ Output JSON:
 
   const parsed = extractedConceptsSchema.safeParse(JSON.parse(text));
   if (!parsed.success) {
-    throw new Error(`Failed to parse extracted concepts: ${parsed.error.message}`);
+    throw new Error(
+      `Failed to parse extracted concepts: ${parsed.error.message}`,
+    );
   }
   return parsed.data.concepts;
 }

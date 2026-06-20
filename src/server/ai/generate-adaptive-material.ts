@@ -12,7 +12,9 @@ const generatedMaterialSchema = z.object({
 
 export type GeneratedAdaptiveMaterial = z.infer<typeof generatedMaterialSchema>;
 
-export function getMaterialDifficultyInstructions(masteryScore: number): string {
+export function getMaterialDifficultyInstructions(
+  masteryScore: number,
+): string {
   if (masteryScore < 0.4) {
     return `EASY - Materi untuk pemula:
 - Gunakan bahasa sederhana dan sehari-hari
@@ -46,12 +48,15 @@ export async function generateAdaptiveMaterial(input: {
 }): Promise<GeneratedAdaptiveMaterial> {
   const styleInstructions: Record<string, string> = {
     VISUAL: "Sertakan diagram Mermaid.js dan visualisasi data.",
-    TEXTUAL: "Gunakan format teks terstruktur dengan heading dan bullet points.",
+    TEXTUAL:
+      "Gunakan format teks terstruktur dengan heading dan bullet points.",
     EXAMPLE_HEAVY: "Sertakan banyak contoh nyata dan studi kasus.",
     SOCRATIC: "Gunakan dialog tanya-jawab untuk menjelaskan konsep.",
   };
 
-  const difficultyInstructions = getMaterialDifficultyInstructions(input.masteryScore);
+  const difficultyInstructions = getMaterialDifficultyInstructions(
+    input.masteryScore,
+  );
 
   const { text } = await generateText({
     model: chatModel,
@@ -89,7 +94,9 @@ Output JSON:
 
   const parsed = generatedMaterialSchema.safeParse(JSON.parse(text));
   if (!parsed.success) {
-    throw new Error(`Failed to parse generated material: ${parsed.error.message}`);
+    throw new Error(
+      `Failed to parse generated material: ${parsed.error.message}`,
+    );
   }
   return parsed.data;
 }

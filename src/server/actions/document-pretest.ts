@@ -3,9 +3,9 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeDifficultyDistribution } from "@/server/ai/curriculum";
 import { extractConceptsFromDocument } from "@/server/ai/extract-document-concepts";
 import { generateQuestionsForConcept } from "@/server/ai/generate-questions";
-import { computeDifficultyDistribution } from "@/server/ai/curriculum";
 
 const submitPretestSchema = z.object({
   documentId: z.string().min(1),
@@ -35,7 +35,10 @@ export async function generateDocumentPretest(documentId: string) {
 
   const concepts = await extractConceptsFromDocument(doc.content);
   if (concepts.length === 0) {
-    return { ok: false as const, error: "Tidak bisa mengekstrak konsep dari dokumen." };
+    return {
+      ok: false as const,
+      error: "Tidak bisa mengekstrak konsep dari dokumen.",
+    };
   }
 
   const profile = await prisma.studentProfile.findUnique({
@@ -70,7 +73,10 @@ export async function generateDocumentPretest(documentId: string) {
         questions.push({ ...q, conceptName: concept.name });
       }
     } catch (err) {
-      console.error(`Failed to generate pretest questions for concept: ${concept.name}`, err);
+      console.error(
+        `Failed to generate pretest questions for concept: ${concept.name}`,
+        err,
+      );
     }
   }
 
@@ -85,7 +91,10 @@ export async function submitDocumentPretest(input: unknown) {
 
   const parsed = submitPretestSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
+    return {
+      ok: false as const,
+      error: parsed.error.issues[0]?.message ?? "Input tidak valid",
+    };
   }
 
   const { documentId, answers } = parsed.data;
@@ -100,7 +109,10 @@ export async function submitDocumentPretest(input: unknown) {
 
   const conceptAccuracy = new Map<string, { correct: number; total: number }>();
   for (const a of answers) {
-    const bucket = conceptAccuracy.get(a.conceptName) ?? { correct: 0, total: 0 };
+    const bucket = conceptAccuracy.get(a.conceptName) ?? {
+      correct: 0,
+      total: 0,
+    };
     bucket.total += 1;
     if (a.isCorrect) bucket.correct += 1;
     conceptAccuracy.set(a.conceptName, bucket);
@@ -118,10 +130,13 @@ export async function submitDocumentPretest(input: unknown) {
     if (!concept) continue;
 
     await prisma.studentKnowledgeProfile.upsert({
-      where: { userId_conceptId: { userId: session.user.id, conceptId: concept.id } },
+      where: {
+        userId_conceptId: { userId: session.user.id, conceptId: concept.id },
+      },
       update: {
         masteryScore,
-        status: ratio >= 0.8 ? "MASTERED" : ratio > 0 ? "LEARNING" : "STRUGGLING",
+        status:
+          ratio >= 0.8 ? "MASTERED" : ratio > 0 ? "LEARNING" : "STRUGGLING",
         attemptCount: { increment: total },
         lastAttemptAt: new Date(),
       },
@@ -129,7 +144,8 @@ export async function submitDocumentPretest(input: unknown) {
         userId: session.user.id,
         conceptId: concept.id,
         masteryScore,
-        status: ratio >= 0.8 ? "MASTERED" : ratio > 0 ? "LEARNING" : "STRUGGLING",
+        status:
+          ratio >= 0.8 ? "MASTERED" : ratio > 0 ? "LEARNING" : "STRUGGLING",
         attemptCount: total,
         lastAttemptAt: new Date(),
       },
@@ -140,6 +156,10 @@ export async function submitDocumentPretest(input: unknown) {
   const totalCorrect = answers.filter((a) => a.isCorrect).length;
   return {
     ok: true as const,
-    stats: { total: answers.length, correct: totalCorrect, conceptsUpdated: updatedCount },
+    stats: {
+      total: answers.length,
+      correct: totalCorrect,
+      conceptsUpdated: updatedCount,
+    },
   };
 }
