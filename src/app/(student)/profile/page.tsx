@@ -49,13 +49,17 @@ export default async function StudentProfilePage() {
   }
   const userId = session.user.id;
 
-  const [summary, avatarRaw, allBadges, userBadges, userData] = await Promise.all([
-    getDashboardSummary(userId),
-    prisma.avatarCustomization.findUnique({ where: { userId } }),
-    prisma.badge.findMany({ orderBy: { xpReward: "asc" } }),
-    prisma.userBadge.findMany({ where: { userId } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { image: true } }),
-  ]);
+  const [summary, avatarRaw, allBadges, userBadges, userData] =
+    await Promise.all([
+      getDashboardSummary(userId),
+      prisma.avatarCustomization.findUnique({ where: { userId } }),
+      prisma.badge.findMany({ orderBy: { xpReward: "asc" } }),
+      prisma.userBadge.findMany({ where: { userId } }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { image: true },
+      }),
+    ]);
 
   const ownedBadgeIds = new Set(userBadges.map((ub) => ub.badgeId));
 

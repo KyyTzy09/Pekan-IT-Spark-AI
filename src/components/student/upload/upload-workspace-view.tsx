@@ -16,9 +16,9 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import { DocumentPretestView } from "@/components/student/document-pretest-view";
 import { DocumentMarkdownText } from "@/components/shared/document-markdown";
 import { Reveal } from "@/components/shared/reveal";
+import { DocumentPretestView } from "@/components/student/document-pretest-view";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +94,9 @@ export function UploadWorkspaceView({
     null | "summary" | "material" | "quiz"
   >(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [pretestQuestions, setPretestQuestions] = React.useState<any[] | null>(null);
+  const [pretestQuestions, setPretestQuestions] = React.useState<any[] | null>(
+    null,
+  );
   const [pretestLoading, setPretestLoading] = React.useState(false);
 
   const setTab = (next: "summary" | "materials" | "quizzes") => {
@@ -130,7 +132,9 @@ export function UploadWorkspaceView({
   const handleStartPretest = async () => {
     setPretestLoading(true);
     try {
-      const { generateDocumentPretest } = await import("@/server/actions/document-pretest");
+      const { generateDocumentPretest } = await import(
+        "@/server/actions/document-pretest"
+      );
       const result = await generateDocumentPretest(document.id);
       if (result.ok) {
         setPretestQuestions(result.questions);
@@ -143,10 +147,17 @@ export function UploadWorkspaceView({
   };
 
   const handleSubmitPretest = async (answers: any[]) => {
-    const { submitDocumentPretest } = await import("@/server/actions/document-pretest");
-    const result = await submitDocumentPretest({ documentId: document.id, answers });
+    const { submitDocumentPretest } = await import(
+      "@/server/actions/document-pretest"
+    );
+    const result = await submitDocumentPretest({
+      documentId: document.id,
+      answers,
+    });
     if (result.ok) {
-      alert(`Pretest selesai! ${result.stats.correct}/${result.stats.total} benar`);
+      alert(
+        `Pretest selesai! ${result.stats.correct}/${result.stats.total} benar`,
+      );
       setPretestQuestions(null);
       router.refresh();
     }
@@ -270,15 +281,26 @@ export function UploadWorkspaceView({
 
       {tab === "summary" && !pretestQuestions && (
         <div className="flex justify-center">
-          <Button onClick={handleStartPretest} disabled={pretestLoading} className="rounded-full bg-amber-500 text-white">
-            {pretestLoading ? <Loader2 size={14} className="animate-spin" /> : <Target size={14} />}
+          <Button
+            onClick={handleStartPretest}
+            disabled={pretestLoading}
+            className="rounded-full bg-amber-500 text-white"
+          >
+            {pretestLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Target size={14} />
+            )}
             Mulai Pretest
           </Button>
         </div>
       )}
 
       {pretestQuestions && (
-        <DocumentPretestView questions={pretestQuestions} onSubmit={handleSubmitPretest} />
+        <DocumentPretestView
+          questions={pretestQuestions}
+          onSubmit={handleSubmitPretest}
+        />
       )}
     </div>
   );

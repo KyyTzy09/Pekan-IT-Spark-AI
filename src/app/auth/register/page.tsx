@@ -14,8 +14,8 @@ import {
   GoogleIcon,
 } from "@/components/auth/auth-form";
 import {
-  AuthRoleSelector,
   type AuthRole,
+  AuthRoleSelector,
 } from "@/components/auth/auth-role-selector";
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { PasswordStrength } from "@/components/auth/password-strength";

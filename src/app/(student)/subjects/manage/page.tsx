@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { SubjectsManageView } from "@/components/student/subjects-manage-view";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { SubjectsManageView } from "@/components/student/subjects-manage-view";
 
 export const metadata: Metadata = {
   title: "Kelola Favorit — Spark Ai",
