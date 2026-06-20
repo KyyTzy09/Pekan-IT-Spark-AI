@@ -1,9 +1,15 @@
+export { AiGeneratedBadge } from "./AiGeneratedBadge";
 export { ChallengeCard } from "./challenge-card";
 export { ChallengeItemRenderer } from "./challenge-item-renderer";
 export { ChallengeListView } from "./challenge-list-view";
 export { ChallengeMaterialView } from "./challenge-material-view";
 export { ChallengeQuestionForm } from "./challenge-question-form";
 export { ChallengeReflectionForm } from "./challenge-reflection-form";
+export {
+  ChallengeSubjectPicker,
+  type SubjectOption,
+  type SubjectPickerVariant,
+} from "./ChallengeSubjectPicker";
 export { DailyChallengeSummary } from "./daily-challenge-summary";
 export { OnDemandGenerator } from "./on-demand-generator";
 export { WeeklyChallengeCard } from "./WeeklyChallengeCard";

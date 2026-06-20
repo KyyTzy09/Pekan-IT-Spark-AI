@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Sparkles, Trophy } from "lucide-react";
+import { CheckCircle, Settings2, Sparkles, Trophy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,17 @@ interface WeeklyChallengeData {
 interface WeeklyChallengeCardProps {
   weeklyChallenge: WeeklyChallengeData;
   onClaimReward: () => Promise<{ ok: boolean; error?: string }>;
+  onPickSubjects?: () => void;
+  showSubjectPicker?: boolean;
+  subjectCount?: number;
 }
 
 export function WeeklyChallengeCard({
   weeklyChallenge,
   onClaimReward,
+  onPickSubjects,
+  showSubjectPicker,
+  subjectCount,
 }: WeeklyChallengeCardProps) {
   const router = useRouter();
   const [claiming, setClaiming] = React.useState(false);
@@ -86,7 +92,7 @@ export function WeeklyChallengeCard({
             / {weeklyChallenge.goal} item selesai
           </div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Bonus +100 XP
+            Bonus +200 XP
           </p>
         </div>
       </div>
@@ -115,7 +121,7 @@ export function WeeklyChallengeCard({
           {weeklyChallenge.xpRewarded ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-[11.5px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
               <CheckCircle size={12} strokeWidth={2.5} />
-              Hadiah Diklaim (+100 XP)
+              Hadiah Diklaim (+200 XP)
             </span>
           ) : weeklyChallenge.completed ? (
             <Button
@@ -125,7 +131,7 @@ export function WeeklyChallengeCard({
               className="relative overflow-hidden rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--coral)] text-white shadow-lg shadow-[var(--purple)]/20 hover:opacity-90 animate-pulse"
             >
               <Sparkles size={12} className="mr-1" />
-              {claiming ? "Mengklaim..." : "Klaim 100 XP"}
+              {claiming ? "Mengklaim..." : "Klaim 200 XP"}
             </Button>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-[11px] font-bold text-muted-foreground">
@@ -134,6 +140,24 @@ export function WeeklyChallengeCard({
           )}
         </div>
       </div>
+
+      {showSubjectPicker && onPickSubjects && (
+        <div className="relative mt-3 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onPickSubjects}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--purple)]/30 bg-[var(--purple)]/5 px-2.5 py-1 text-[11px] font-bold text-[var(--purple)] transition-all hover:bg-[var(--purple)]/10"
+          >
+            <Settings2 size={10} strokeWidth={2.5} />
+            Atur mapel minggu ini
+            {typeof subjectCount === "number" && (
+              <span className="rounded-full bg-[var(--purple)]/15 px-1.5 py-0.5 text-[10px]">
+                {subjectCount}/4
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
       {error && (
         <p className="mt-2 text-center text-[11px] font-bold text-destructive">
