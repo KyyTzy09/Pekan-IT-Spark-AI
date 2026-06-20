@@ -1,13 +1,13 @@
 # PRODUCT REQUIREMENTS DOCUMENT (PRD)
 # Spark Ai — Asisten Tutor Adaptif Berbasis Kecerdasan Buatan
 
-**Versi:** 1.1
-**Tanggal:** 16 Juni 2026
+**Versi:** 2.0
+**Tanggal:** 20 Juni 2026
 **Tim:** [Nama Tim Anda]
 
 ---
 
-> **Changelog v1.1 (16 Juni 2026):** Tambah §4.11 AI Daily Challenge System — 4 tantangan harian campuran (soal + materi markdown + refleksi), hybrid auto+on-demand generation, 4 sumber progress tracking, integrasi dengan Phase 7 gamification.
+> **Changelog v2.0 (20 Juni 2026):** Redesign besar-besaran §4.11 AI Daily Challenge System — dari 4 tantangan campuran statis menjadi 1 tantangan per mapel per hari dengan mix adaptif berdasarkan pertumbuhan siswa, subject picker, AI fallback quota, dan weekly challenge deep dive. Update §4.7.2.a Level system menjadi unbounded. Update §4.9 kurikulum nasional bertambah 7 mapel. Tambah §4.12 Activity Tracking, §4.13 Admin Panel, §4.14 Leaderboard. Deprecate Daily Quest statis.
 
 ---
 
@@ -91,7 +91,7 @@ Spark Ai dirancang dengan empat tujuan utama yang saling terkait untuk menjawab 
 
 ## 3. Target Pengguna
 
-Spark Ai dirancang untuk melayani **dua kelompok pengguna**:
+Spark Ai dirancang untuk melayani **tiga kelompok pengguna**:
 
 ### 3.1 Pengguna Utama: Siswa SMK/SMA Kelas X–XII
 **Karakteristik umum:**
@@ -122,11 +122,21 @@ Spark Ai dirancang untuk melayani **dua kelompok pengguna**:
 
 **Catatan:** Orang tua **bukan pengguna primer**. Mereka hanya memiliki akses monitoring terhadap akun anak yang sudah di-link, tanpa kemampuan mengelola konten atau memodifikasi pembelajaran.
 
+### 3.3 Pengguna Pendukung: Administrator
+**Karakteristik umum:**
+- Tim internal atau kontributor terverifikasi yang mengelola konten kurikulum.
+- Memiliki akses untuk memverifikasi mapel custom buatan siswa.
+
+**Kebutuhan utama:**
+- Mengelola mata pelajaran, topik, dan konsep kurikulum nasional.
+- Memverifikasi mapel custom yang dibuat siswa (approve/reject).
+- Memantau aktivitas pengguna untuk menjaga kualitas konten.
+
 ---
 
 ## 4. Solusi yang Ditawarkan (Spark Ai)
 
-**Spark Ai** adalah platform web tutor pribadi berbasis kecerdasan buatan yang dirancang untuk menjadi pendamping belajar siswa setiap saat — sabar, adaptif, personal, **dan menyenangkan**. Platform ini memiliki **tujuh kemampuan inti** yang saling terintegrasi:
+**Spark Ai** adalah platform web tutor pribadi berbasis kecerdasan buatan yang dirancang untuk menjadi pendamping belajar siswa setiap saat — sabar, adaptif, personal, **dan menyenangkan**. Platform ini memiliki **sembilan kemampuan inti** yang saling terintegrasi:
 
 ### 4.1 Penyesuaian Penjelasan Materi Sesuai Tingkat Pemahaman Siswa
 - **Cara kerja:** Sistem menyimpan *knowledge graph* per siswa yang memetakan konsep mana yang sudah dikuasai, sedang dipelajari, dan belum dipahami. Berdasarkan pemetaan ini, sistem memilih strategi penjelasan yang sesuai.
@@ -194,30 +204,31 @@ Prinsip tambahan:
 #### 4.7.2 Elemen-Elemen Gamifikasi
 
 **a. Sistem XP dan Level**
-- Siswa mendapatkan poin pengalaman (XP) dari setiap aktivitas belajar: menjawab soal dengan benar, menyelesaikan sesi chat Socratic, mempertahankan streak, menguasai konsep baru.
-- Level 1–50 dengan nama lokal Indonesia yang membangkitkan semangat, misalnya: *Pemula → Penjelajah → Pejuang → Ahli → Maestro → Legenda*.
+- Siswa mendapatkan poin pengalaman (XP) dari setiap aktivitas belajar: menjawab soal dengan benar, menyelesaikan sesi chat Socratic, mempertahankan streak, menguasai konsep baru, menyelesaikan tantangan harian.
+- Level 1–50 dengan nama lokal Indonesia yang membangkitkan semangat: *Pemula → Penjelajah → Pejuang → Ahli → Maestro → Legenda*.
+- **Level tidak terbatas (unbounded):** Setelah level 50, siswa tetap naik level tanpa batas dengan tier "Legenda". Formula XP eksponensial memastikan setiap level terasa seperti pencapaian nyata.
 - Progress bar level ditampilkan di beranda agar siswa selalu tahu posisinya dan sisa perjalanan.
 
 **b. Streak Belajar Harian**
 - Menghitung berapa hari berturut-turut siswa belajar (minimal satu aktivitas per hari).
-- Ditampilkan dengan visual api 🔥 dan angka, contoh: *"7 hari berturut-turut!"*.
+- Ditampilkan dengan visual api dan angka, contoh: *"7 hari berturut-turut!"*.
 - **Streak Freeze:** Siswa mendapat 1 "beku streak" per minggu — jika suatu hari tidak sempat belajar, streak tidak putus.
 - **Jika streak putus:** Bukan pesan menyalahkan, tapi ajakan ringan — *"Gapapa, yuk mulai lembaran baru hari ini!"*.
 
 **c. Badge dan Pencapaian (Achievements)**
-- Lebih dari 50 badge yang dapat dikumpulkan sejak awal, terbagi dalam beberapa kategori:
+- 50 badge yang dapat dikumpulkan sejak awal, terbagi dalam beberapa kategori:
   - **Akademik:** *Penakluk Trigonometri*, *Teman Aljabar*, *Penjelajah Tata Bahasa*.
   - **Kebiasaan:** *Streak Master 7 Hari*, *Konsisten 30 Hari*, *Pagi yang Produktif*.
   - **Keberanian:** *Penanya Ulung* (sering bertanya di mode Socratic), *Pemikir Kritis*.
   - **Spesial:** *Penolong Teman* (menggunakan mode kolaboratif di versi berikutnya).
 - Badge dapat dilihat di profil siswa dan dibagikan (jika siswa mau).
 
-**d. Misi Harian (Daily Quest)**
-- Setiap hari, siswa mendapat 3 misi sederhana yang dapat diselesaikan dalam 10–20 menit:
-  - *"Selesaikan 5 soal matematika hari ini."*
-  - *"Belajar 15 menit tanpa jeda."*
-  - *"Uji pemahamanmu di 1 topik baru."*
-- Selesai semua misi = bonus XP dan hadiah kecil (misal stiker avatar).
+**d. Tantangan Harian (Daily Challenge)**
+> **Catatan:** Daily Quest statis (3 misi tetap) sudah di-deprecate dan digantikan oleh AI Daily Challenge System (lihat §4.11).
+
+- Setiap hari, siswa mendapat tantangan per mapel yang dipilihnya (maksimal 4 mapel).
+- Tantangan berisi campuran soal, materi bacaan, dan refleksi yang disesuaikan dengan profil pertumbuhan siswa.
+- Selesai semua tantangan = bonus XP dan streak bertambah.
 
 **e. Bintang Konsep (Knowledge Star)**
 - Setiap konsep yang dikuasai siswa akan "menyalakan" satu bintang di langit konstelasi per mata pelajaran.
@@ -231,6 +242,7 @@ Prinsip tambahan:
 
 **g. Kustomisasi Avatar "Spark"**
 - Karakter "Spark" yang mendampingi siswa bisa di-customize: warna sapaan, aksesoris (kacamata, topi, jubah), background percakapan.
+- Siswa bisa mengunggah foto profil sendiri.
 - Item customization dibuka menggunakan XP dan bintang — **bukan dibeli dengan uang**.
 - **Tujuan:** Ekspresi identitas dan rasa memiliki (*sense of ownership*).
 
@@ -244,8 +256,10 @@ Prinsip tambahan:
 - Tantangan implisit: *"Kamu bisa kalahin rekormu sendiri?"*.
 
 **j. Tantangan Mingguan (Weekly Challenge)**
-- Setiap awal minggu, ada tantangan khusus yang lebih besar dari misi harian, misalnya: *"Selesaikan 20 soal aljabar minggu ini"* atau *"Kuasai 3 konsep baru."*
-- Hadiah: badge eksklusif mingguan.
+- Setiap awal minggu, siswa mendapat tantangan mingguan yang lebih mendalam dari tantangan harian.
+- Tantangan berupa **deep dive per mapel**: 2–4 soal tingkat kesulitan HARD + 1–2 materi bacaan mendalam (1.000–1.500 kata) dengan rotasi Bloom taxonomy.
+- Siswa bisa memilih mapel mana untuk tantangan mingguan (maksimal 4 mapel).
+- Hadiah: bonus XP besar (200 XP) dan badge eksklusif mingguan.
 
 **k. Mini-Celebrations (Perayaan Kecil)**
 - Animasi confetti dan suara positif saat siswa mencapai milestone.
@@ -255,15 +269,15 @@ Prinsip tambahan:
 #### 4.7.3 Yang TIDAK Ada di Gamifikasi Spark Ai (Anti-Pattern)
 
 Demi menjaga kesehatan mental siswa dan etika produk, elemen-elemen berikut **sengaja TIDAK** disertakan:
-- ❌ **Loot box / gacha** — tidak ada unsur judi atau ketidakpastian reward.
-- ❌ **Pay-to-win** — semua item dan badge bisa diperoleh dengan belajar, bukan dengan uang.
-- ❌ **FOMO manipulatif** — tidak ada pesan seperti *"STREAK AKAN HABIS DALAM 2 JAM!!!"* untuk memaksa siswa kembali.
-- ❌ **Energy / life system** — tidak ada batasan harian yang membuat siswa tidak bisa belajar.
-- ❌ **Komparasi sosial yang toxic** — tidak ada leaderboard global yang membandingkan siswa secara kasar.
-- ❌ **Iklan** — tidak ada iklan dalam bentuk apa pun.
-- ❌ **Notifikasi agresif** — reminder belajar maksimal 1–2 per hari, hanya jika siswa memilih untuk mengaktifkannya.
-- ❌ **Variable ratio reward** (seperti *slot machine*) — tidak ada reward acak yang tidak bisa diprediksi.
-- ❌ **Streak punishment yang menyalahkan** — streak putus bukan "hukuman", tapi kesempatan untuk mulai lagi.
+- **Loot box / gacha** — tidak ada unsur judi atau ketidakpastian reward.
+- **Pay-to-win** — semua item dan badge bisa diperoleh dengan belajar, bukan dengan uang.
+- **FOMO manipulatif** — tidak ada pesan seperti *"STREAK AKAN HABIS DALAM 2 JAM!!!"* untuk memaksa siswa kembali.
+- **Energy / life system** — tidak ada batasan harian yang membuat siswa tidak bisa belajar.
+- **Komparasi sosial yang toxic** — tidak ada leaderboard global yang membandingkan siswa secara kasar.
+- **Iklan** — tidak ada iklan dalam bentuk apa pun.
+- **Notifikasi agresif** — reminder belajar maksimal 1–2 per hari, hanya jika siswa memilih untuk mengaktifkannya.
+- **Variable ratio reward** (seperti *slot machine*) — tidak ada reward acak yang tidak bisa diprediksi.
+- **Streak punishment yang menyalahkan** — streak putus bukan "hukuman", tapi kesempatan untuk mulai lagi.
 
 #### 4.7.4 Dampak Gamifikasi yang Diharapkan
 - Siswa termotivasi untuk **kembali belajar secara konsisten** (bukan karena terpaksa).
@@ -288,12 +302,9 @@ Untuk menjawab realita sehari-hari di mana guru sering membagikan materi, soal, 
 
 #### 4.8.2 Format Penyimpanan
 - File asli tidak disimpan di storage/cloud storage untuk menghemat biaya dan mempercepat akses.
-- Isi dokumen disimpan sebagai **teks Markdown** di dalam database PostgreSQL melalui Prisma (`@db.Text`).
+- Isi dokumen disimpan sebagai **teks Markdown** di dalam database.
 - Metadata dokumen (nama file asli, ukuran, tanggal unggah, sumber) tetap disimpan untuk referensi.
-- Untuk dokumen yang berisi gambar atau rumus, sistem akan melakukan konversi tambahan:
-  - **Rumus matematika:** dideteksi dan di-render dalam format LaTeX/MathML.
-  - **Gambar/diagram:** diekstrak sebagai referensi atau dijelaskan oleh AI jika diperlukan.
-  - **Hasil scan/foto:** diolah dengan OCR sebelum dikonversi ke Markdown.
+- Untuk dokumen yang berisi rumus, sistem akan mendeteksi dan merender dalam format LaTeX/KaTeX.
 
 #### 4.8.3 Manfaat Fitur Ini
 - Siswa tidak lagi hanya "menerima file" dari guru tanpa tahu cara mempelajarinya.
@@ -303,13 +314,20 @@ Untuk menjawab realita sehari-hari di mana guru sering membagikan materi, soal, 
 
 ### 4.9 Sistem Mata Pelajaran Hybrid (3-Lapis)
 
-Untuk menjawab realita bahwa siswa SMA/SMK belajar 9–13 mata pelajaran (bukan hanya 4 yang tersedia di seed awal) dan bahwa tidak semua mapel bisa atau layak di-*seed* secara manual, Spark Ai mengadopsi **pendekatan hybrid tiga lapis** untuk ekspansi kurikulum:
+Untuk menjawab realita bahwa siswa SMA/SMK belajar 9–13 mata pelajaran dan bahwa tidak semua mapel bisa atau layak di-*seed* secara manual, Spark Ai mengadopsi **pendekatan hybrid tiga lapis** untuk ekspansi kurikulum:
 
 #### 4.9.1 Lapis 1 — Kurikulum Nasional Seeded (Curated)
-- **Apa:** Mata pelajaran utama SMA/SMK (Matematika, Bahasa Indonesia, Bahasa Inggris, IPA, IPS-Sejarah/Geografi/Ekonomi/Sosiologi, PPKN, Seni Budaya, PJOK) di-*seed* ke database dengan *concept graph* lengkap dan *question bank* yang tervalidasi.
+- **Apa:** Mata pelajaran utama SMA/SMK di-*seed* ke database dengan *concept graph* lengkap dan *question bank* yang tervalidasi. Saat ini sudah di-seed:
+  - Matematika
+  - Bahasa Indonesia
+  - Bahasa Inggris
+  - IPA (Fisika, Kimia, Biologi)
+  - Sejarah, Geografi, Ekonomi, Sosiologi
+  - PPKN
+  - Seni Budaya
+  - PJOK
 - **Siapa yang buat:** Tim internal atau kontributor terverifikasi, **bukan AI generate**.
 - **Mengapa:** Kurikulum nasional adalah *single source of truth*. Kesalahan di fase ini akan merusak seluruh *knowledge profile* siswa ke depannya. Validasi manual memastikan keselarasan dengan Capaian Pembelajaran (CP) dan Alur Tujuan Pembelajaran (ATP) Kurikulum Merdeka.
-- **Kapan:** Bertahap (4 mapel inti sudah di-seed, sisanya menyusul di Phase 6+).
 - **Indikator:** Setiap mapel seeded punya minimal 30 konsep, 30+ soal, dan struktur prerequisite yang jelas.
 
 #### 4.9.2 Lapis 2 — Adaptive Difficulty Engine (Inti "Adaptif")
@@ -318,60 +336,33 @@ Inilah yang membuat Spark Ai benar-benar *adaptive learning* dan bukan sekadar "
 - **Difficulty selector**: rolling accuracy 5 attempt terakhir. Akurasi ≥ 70% → naik difficulty. 3 jawaban salah berturut-turut → turun difficulty. Algoritma ini menghasilkan adaptasi yang halus, bukan "naik/turun" yang kasar.
 - **Concept status**: ≥ 80% → MASTERED, 40–80% → LEARNING, < 40% tapi > 0 → STRUGGLING, 0 → NOT_STARTED.
 - **Prerequisite check**: sebelum membuka konsep baru, sistem memvalidasi bahwa prasyaratnya sudah dikuasai (default threshold 60%, configurable per prasyarat).
-- **Implementasi:** `src/server/learning/adaptive.ts` — pure functions, tidak ada side effect, mudah di-*unit test* dan di-*audit*.
 - **Mengapa bukan AI:** Aturan adaptif deterministik lebih transparan dan dapat dijelaskan kepada siswa ("Kamu benar 5 dari 5, naik ke level HARD!") dibanding model ML yang *black box*. Ini juga sesuai prinsip 4.5 PRD tentang *literasi dan kemandirian belajar* — siswa paham *mengapa* mereka mendapat soal tertentu.
 
 #### 4.9.3 Lapis 3 — Custom Subjects oleh Siswa (AI-Generated, Isolated)
 - **Apa:** Siswa bisa menambah mata pelajaran *custom* di luar kurikulum nasional (mis. Bahasa Jawa, Bahasa Arab, Coding, Musik, Desain Grafis, Bahasa Korea).
-- **Bagaimana:** AI (`src/server/ai/curriculum.ts` dengan Vercel AI SDK `generateObject` + Zod schema) men-*generate*:
+- **Bagaimana:** AI men-*generate*:
   - Deskripsi mapel + icon emoji + warna tema.
   - 3–6 topik utama, masing-masing 3–6 konsep.
   - 5–8 soal pretest pilihan ganda untuk mengukur kemampuan awal siswa.
 - **Validasi keras:** `correctAnswer` harus persis ada di `options` (case-sensitive). `topicIndex` harus merujuk topik yang ada. Validasi di level server, bukan hanya prompt.
-- **Scope terisolasi:** Mapel *custom* di-scope ke akun siswa yang membuatnya (`Subject.createdById`). Tidak masuk kurikulum global, tidak bisa diakses siswa lain. Flag `isVerified: false` untuk membedakan dengan mapel nasional.
-- **Disclaimer eksplisit:** UI menampilkan label "AI" dengan tooltip "Mapel ini dibuat pakai Spark AI" — siswa dan orang tua paham bahwa konten ini *AI-generated*, bukan kurikulum resmi.
-- **Mengapa AI OK di sini, tapi tidak di Lapis 1:** Pertanyaan di pretest *custom* dipakai untuk eksplorasi personal, bukan sebagai *benchmark* standar. Risiko "salah konsep" di-*mitigasi* dengan: (a) prompt ketat yang melarang soal ambigu, (b) Zod validation, (c) Socratic prompting saat siswa belajar (miskonsepsi akan tertangkap lewat dialog). Peta konsep lengkap baru benar-benar krusial di kurikulum nasional; di mapel eksplorasi, *progressive disclosure* (ungkap materi sedikit demi sedikit lewat chat & soal) lebih penting.
+- **Scope terisolasi:** Mapel *custom* di-scope ke akun siswa yang membuatnya. Tidak masuk kurikulum global, tidak bisa diakses siswa lain. Flag `isVerified` untuk review admin.
+- **Disclaimer eksplisit:** UI menampilkan label "AI-generated" — siswa dan orang tua paham bahwa konten ini *AI-generated*, bukan kurikulum resmi.
+- **Mengapa AI OK di sini, tapi tidak di Lapis 1:** Pertanyaan di pretest *custom* dipakai untuk eksplorasi personal, bukan sebagai *benchmark* standar. Risiko "salah konsep" di-*mitigasi* dengan: (a) prompt ketat yang melarang soal ambigu, (b) validasi server, (c) Socratic prompting saat siswa belajar (miskonsepsi akan tertangkap lewat dialog).
 
-#### 4.9.4 Diagram Alur Hybrid
+#### 4.9.4 Yang TIDAK Boleh Dilakukan
+- **Jangan auto-generate soal pretest untuk mapel nasional** — kualitas terlalu kritis.
+- **Jangan biarkan mapel *custom* masuk kurikulum global** — inkonsistensi & susah di-maintain.
+- **Jangan pakai ML/RL untuk difficulty selection** — aturan deterministik sudah cukup, transparan, dan *debuggable*.
+- **Jangan skip prerequisite check** — siswa akan loncat-loncat dan bingung.
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ SISWA PILIH / BUAT MAPEL                                          │
-│   • Dari daftar nasional (Lapis 1) → siap pretest pakai seed     │
-│   • Custom (Lapis 3) → AI generate outline + 5-8 soal pretest   │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ PRETEST: Adaptive Difficulty (Lapis 2)                            │
-│   • Start dari EASY, naik/turun via rolling accuracy             │
-│   • Update mastery score EMA                                      │
-│   • Tentukan concept status per konsep                            │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ LEARN LOOP: Socratic Chat + Adaptive Practice                    │
-│   • Spark ngobrol pake Socratic method                            │
-│   • Practice page pilih soal berdasarkan mastery + prereq check   │
-│   • Streak, XP, badges triggered                                 │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### 4.9.5 Yang TIDAK Boleh Dilakukan
-- ❌ **Jangan auto-generate soal pretest untuk mapel nasional** — kualitas terlalu kritis.
-- ❌ **Jangan biarkan mapel *custom* masuk kurikulum global** — inkonsistensi & susah di-maintain.
-- ❌ **Jangan pakai ML/RL untuk difficulty selection** — aturan deterministik sudah cukup, transparan, dan *debuggable*.
-- ❌ **Jangan skip prerequisite check** — siswa akan loncat-loncat dan bingung.
-
-### 4.10 Adaptive Learning Engine (Detail Teknis)
+### 4.10 Adaptive Learning Engine (Detail)
 
 Engine adaptif adalah pondasi dari personalisasi di Spark Ai. Berbeda dengan LMS konvensional yang menyajikan materi secara *linear*, Spark Ai menyesuaikan **kesulitan, urutan, dan jenis penjelasan** dengan kondisi nyata siswa.
 
 #### 4.10.1 Mastery Score (0–1) per Konsep
-- **Update rule:** `newScore = oldScore + 0.2 * (target - oldScore)` di mana `target = 1` jika benar, `0` jika salah.
-- **Properti:** Cepat konvergen (sekitar 5 attempt untuk akurasi tinggi), tahan terhadap fluktuasi (EMA smoothing).
-- **Dipakai untuk:** menentukan `ConceptStatus` (mastered/learning/struggling), membuka konsep berikutnya, merekomendasikan topik.
+- **Update rule:** EMA dengan learning rate 0.2 — setiap jawaban benar menambah skor, setiap salah mengurangi.
+- **Properti:** Cepat konvergen (sekitar 5 attempt untuk akurasi tinggi), tahan terhadap fluktuasi.
+- **Dipakai untuk:** menentukan status konsep (mastered/learning/struggling), membuka konsep berikutnya, merekomendasikan topik.
 
 #### 4.10.2 Difficulty Selection
 - **Window:** 5 attempt terakhir per konsep.
@@ -381,7 +372,7 @@ Engine adaptif adalah pondasi dari personalisasi di Spark Ai. Berbeda dengan LMS
 - **Level:** EASY (1) → MEDIUM (2) → HARD (3) → ADVANCED (4).
 
 #### 4.10.3 Prerequisite Check
-- Setiap konsep bisa mendefinisikan prasyarat via `ConceptPrerequisite` (dengan `minMasteryScore` per edge, default 0.6).
+- Setiap konsep bisa mendefinisikan prasyarat dengan threshold minimum mastery score (default 0.6).
 - Saat siswa masuk ke konsep baru, sistem cek apakah semua prasyarat sudah lewat threshold.
 - Prasyarat yang lemah di-*list* dan disarankan untuk dipelajari dulu.
 
@@ -391,163 +382,167 @@ Engine adaptif adalah pondasi dari personalisasi di Spark Ai. Berbeda dengan LMS
 - Mata pelajaran mengelompokkan topik (3–8 topik per mapel).
 - Visualisasi sebagai konstelasi bintang (lihat 4.7.e) sudah diimplementasikan.
 
-### 4.11 AI Daily Challenge System (NEW — Juni 2026, pasca-Phase 4)
+### 4.11 AI Daily Challenge System
 
-Untuk menjawab kebutuhan siswa yang bukan hanya butuh "latihan soal" tapi juga **bimbingan belajar yang variatif dan personal setiap hari**, Spark Ai menambahkan sistem **tantangan harian AI-generated** yang menjadi tulang punggung engagement siswa.
+Sistem tantangan harian yang menjadi tulang punggung engagement siswa. Dirancang untuk memberikan **bimbingan belajar yang variatif dan personal setiap hari** — bukan sekadar "latihan soal", tapi paket belajar lengkap.
 
 #### 4.11.1 Filosofi
 
 Siswa SMA/SMK belajar banyak mapel, dan cara mereka belajar tidak monoton. Tantangan harian adalah **"paket belajar harian"** yang:
 - **Bervariasi** — bukan cuma soal, tapi juga materi bacaan dan refleksi
-- **Personal** — di-generate berdasarkan knowledge profile, mapel fokus, dan progress terkini
-- **Terukur** — AI menilai kemajuan dari 4 sumber: mastery, challenge completion, materials read, refleksi
-- **Fleksibel** — 4 tantangan auto tiap hari, plus bisa minta tambahan kapan saja (hybrid)
+- **Personal** — disesuaikan dengan profil pertumbuhan siswa per mapel
+- **Per-mapel** — 1 tantangan per mapel per hari (siswa pilih mapelnya sendiri)
+- **Fleksibel** — auto-generated setiap hari, plus bisa minta tambahan kapan saja
 
-#### 4.11.2 Anatomi Tantangan Harian
+#### 4.11.2 Pemilihan Mapel (Subject Picker)
 
-Setiap hari, siswa mendapat **4 tantangan campuran** (mix config):
-- **2 soal latihan** (multiple choice atau free text) — untukukur pemahaman
-- **1 materi bacaan** (format markdown) — untukambah pengetahuan kontekstual
-- **1 refleksi** (open-ended prompt) — untuk metacognition
+Siswa memiliki kendali penuh atas mapel mana yang ingin difokuskan:
+- **Daily Challenge:** Siswa pilih 1–4 mapel untuk tantangan harian. Default = mapel fokus dari onboarding.
+- **Weekly Challenge:** Siswa pilih 1–4 mapel untuk tantangan mingguan (deep dive).
+- **Mastery Insight:** Saat memilih mapel, siswa bisa melihat level mastery saat ini untuk membantu keputusan.
 
-Contoh komposisi harian:
-```
-Senin: [2 soal Aljabar] + [Materi: Fungsi Kuadrat] + [Refleksi: "Apa konsep paling menantang minggu ini?"]
-Selasa: [1 soal IPA] + [Materi: Sel Tumbuhan] + [2 soal Biologi] + [Refleksi: "Hubungkan materi dengan kehidupanmu"]
-Rabu:   [3 soal Matematika] + [Materi: Trigonometri Lanjut] + [Refleksi: "Strategi apa yang kamu pakai?"]
-```
+#### 4.11.3 Anatomi Tantangan Harian
 
-#### 4.11.3 Tipe Challenge
+Setiap mapel yang dipilih menghasilkan **1 tantangan** dengan mix item yang **disesuaikan dengan profil pertumbuhan siswa** (growth-aware):
 
-**a. Challenge: Soal (`QUESTION`)**
+**Mix Adaptif (berdasarkan mastery siswa):**
+
+| Profil Pertumbuhan | Kondisi | Komposisi Item |
+|---------------------|---------|----------------|
+| Weak + Stagnant | Mastery rendah, tidak ada perbaikan | 2 soal EASY + 1 materi dasar + 1 refleksi |
+| Weak + Growing | Mastery rendah, tapi ada perbaikan | 2 soal MEDIUM + 1 materi + 1 refleksi |
+| Balanced | Mastery menengah, stabil | 2 soal MEDIUM + 1 materi + 1 refleksi |
+| Strong + Stagnant | Mastery tinggi, tidak ada tantangan baru | 2 soal HARD + 1 materi lanjut + 1 refleksi |
+| Strong + Growing | Mastery tinggi, terus berkembang | 2 soal HARD/ADVANCED + 1 materi mendalam + 1 refleksi |
+
+**Tipe item dalam tantangan:**
+
+**a. Soal Latihan (`QUESTION`)**
 - Multiple choice dengan 4 opsi + penjelasan
-- Atau free text (esai singkat) — dievaluasi AI (`evaluateAnswer` existing)
+- Atau free text (esai singkat) — dievaluasi AI
 - Track: benar/salah, waktu, hint usage
-- Update mastery score di `StudentKnowledgeProfile` via EMA
+- Update mastery score via EMA
+- **Untuk mapel nasional:** soal diambil dari bank soal yang sudah di-seed (bukan AI-generated)
+- **Fallback:** Jika bank soal kosong untuk difficulty tertentu, AI generate sebagai last resort (dengan quota)
 
-**b. Challenge: Materi Markdown (`MATERIAL`)**
-- Konten markdown yang di-render dengan KaTeX support
+**b. Materi Bacaan (`MATERIAL`)**
+- Konten markdown yang di-render dengan dukungan rumus (KaTeX)
 - Panjang: 400–800 kata, estimasi 5–10 menit baca
 - Section: intro, konsep inti, contoh, summary, "Coba pikirkan" callout
-- Adaptive: kalau mastery concept rendah → lebih dasar + lebih banyak analogi
-- Disimpan di DB (bukan stream) supaya bisa diulang, dishare, dan di-track progress baca
+- Adaptive: kalau mastery rendah → penjelasan lebih dasar + lebih banyak analogi
+- Disimpan di DB supaya bisa diulang, dishare, dan di-track progress baca
 - Disclaimer: "Materi ini AI-generated. Konfirmasi ke guru untuk hal-hal penting."
+- **LearningStyle-aware:** Gaya materi disesuaikan dengan preferensi siswa (Visual → diagram Mermaid, Textual → penjelasan formal, Example-Heavy → studi kasus, Socratic → dialog)
 
-**c. Challenge: Refleksi (`REFLECTION`)**
+**c. Refleksi (`REFLECTION`)**
 - Prompt terbuka (tidak yes/no) yang memicu metacognition
 - Contoh: "Dari materi yang baru dibaca, bagian mana yang masih membingungkan? Kenapa?"
-- Siswa jawab dengan text bebas (min 50 char)
+- Siswa jawab dengan text bebas (min 50 karakter)
 - AI analyze: sentiment (positive/neutral/negative), depth (surface/moderate/deep), suggestions
 - **BUKAN untuk dinilai "benar/salah"** — untuk self-awareness + sinyal ke AI
 
-#### 4.11.4 Hybrid Generation (Harian + On-Demand)
+#### 4.11.4 Tantangan Mingguan (Weekly Challenge)
 
-**Auto harian (1× per user per day):**
-- Setiap hari (reset tengah malam WIB), `getOrCreateTodayChallenges(userId)` jalan
-- Cek apakah `Challenge WHERE userId=X AND scheduledFor=今天` sudah ada
-- Kalau belum → generate 4 tantangan dengan mix default
-- Kalau sudah → return existing (idempotent)
+Berbeda dengan tantangan harian yang ringan, tantangan mingguan dirancang untuk **deep dive**:
+- **2–4 soal tingkat HARD** per mapel — menguji pemahaman mendalam
+- **1–2 materi bacaan mendalam** (1.000–1.500 kata) — lebih detail dan kompleks dari materi harian
+- **Rotasi Bloom taxonomy** — tidak hanya "mengingat", tapi juga "menganalisis", "mengevaluasi", "mencipta"
+- **Siswa pilih mapel** untuk weekly challenge (maksimal 4 mapel)
+- **Hadiah:** 200 XP + badge eksklusif mingguan
 
-**On-demand (kapan saja):**
-- Siswa klik "Minta tantangan tambahan" di halaman challenge
-- Generate 1 tantangan baru dengan opsi:
-  - Tipe: soal / materi / refleksi (atau mix)
-  - Subject: tertentu atau auto-pick
-  - Difficulty: easy/medium/hard (atau adaptive)
-- Rate limit: max 10/hari/user (anti-spam)
-- On-demand challenges disimpan dengan `scheduledFor = today` dan `source = ON_DEMAND`
+#### 4.11.5 AI Quota
 
-#### 4.11.5 AI Menilai Progress dari 4 Sumber
+Untuk menjaga kualitas konten dan mengontrol biaya AI:
+- **20 soal** AI-generated per user per hari (fallback saat bank soal kosong)
+- **5 materi** AI-generated per user per hari
+- **On-demand generation:** maksimal 10 kali per hari per user (anti-spam)
+- Quota di-reset setiap tengah malam WIB
 
-| Sumber | Metrik | Tracking |
-|--------|--------|----------|
-| **Mastery Score** | Avg `StudentKnowledgeProfile.masteryScore` per concept/subject | Existing (EMA) |
-| **Challenge Completion** | Jumlah `ChallengeItem` COMPLETED per hari | New (`UserChallengeProgress`) |
-| **Materials Read** | Jumlah `MaterialRead.completed = true` + total `readSeconds` | New (`MaterialRead`) |
-| **Refleksi** | Jumlah `Reflection` + rata-rata `aiAnalysis.depth` | New (`Reflection.aiAnalysis`) |
+#### 4.11.6 Progress Tracking
 
-**Aggregate Score (0-100):**
+Sistem menilai kemajuan siswa dari **4 sumber**:
+
+| Sumber | Metrik | Deskripsi |
+|--------|--------|-----------|
+| **Mastery Score** | Rata-rata mastery per mapel/konsep | Dari latihan adaptif (EMA) |
+| **Challenge Completion** | Jumlah tantangan selesai per hari | Dari sistem tantangan harian |
+| **Materials Read** | Jumlah materi dibaca + total waktu baca | Dari tracking baca materi |
+| **Refleksi** | Jumlah refleksi + rata-rata kedalaman | Dari analisis AI refleksi |
+
+**Aggregate Score (0–100):**
 ```
 overall = mastery × 0.4 + challenge_completion × 0.3 + materials × 0.2 + reflections × 0.1
 ```
 
 Per-subject breakdown juga tersedia untuk dashboard & parent view.
 
-#### 4.11.6 Penyimpanan & Privacy
+#### 4.11.7 Integrasi dengan Gamifikasi
 
-- Challenge, Material, Reflection, Progress — **disimpan di DB** (bukan di-stream) supaya:
-  - Bisa diulang baca (especially materi)
-  - Track progress baca (`MaterialRead.readSeconds`)
-  - Bisa di-render ulang dengan format konsisten
-  - Bisa di-share ke orang tua (Phase 8)
-- Privacy: sama seperti data lain — UU PDP compliant, bisa dihapus atas request
-
-#### 4.11.7 Anti-Pattern Challenge
-
-- ❌ **Tidak boleh auto-generate soal untuk mapel nasional** — challenge soal ambil dari `Question` bank existing (seed nasional), AI cuma pilih & framing, bukan bikin soal baru
-- ✅ **AI boleh generate materi markdown** — lebih ke penjelasan/kontekstualisasi, bukan fakta keras
-- ❌ **Tidak boleh challenge = gate** — siswa tetap bisa browse materials & akses semua fitur tanpa complete challenges
-- ❌ **Tidak boleh refleksi dipakai untuk judge** — cuma untuk self-reflection + sinyal AI
-- ❌ **Tidak boleh on-demand spam** — rate limit 10/hari
-- ✅ **Challenge completion tetap dikaitkan dengan gamification** (XP, streak) sesuai Phase 7
-
-#### 4.11.8 Diagram Alur
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ HARI BARU (midnight WIB)                                          │
-│   • Cron-style: getOrCreateTodayChallenges(userId)                │
-│   • Cek existing → kalau belum, generate 4 challenges              │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ GENERATE MIX (AI: generateDailyChallengeMix)                      │
-│   • Input: userId, date, profile, focusedSubjects, weak concepts  │
-│   • Decide mix: 2 soal + 1 materi + 1 refleksi (atau variasi)     │
-│   • Pilih subject (rotasi atau auto-pick dari weak concepts)       │
-│   • Generate item details (soal dari Question bank, materi AI,    │
-│     refleksi prompt)                                              │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ SISWA INTERACT                                                     │
-│   • Buka /challenge → lihat 4 challenges hari ini                  │
-│   • Buka challenge item: soal jawab / materi baca / refleksi jawab│
-│   • Track: completion, read time, reflection analysis             │
-│   • Minta tambahan via on-demand → generate 1 challenge baru       │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ PROGRESS AGGREGATION (every night + on-demand)                    │
-│   • aggregateStudentProgress(userId) → combined score             │
-│   • Update XP, streak, badges (Phase 7 integration)               │
-│   • Parent dashboard (Phase 8) bisa lihat                        │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### 4.11.9 Integrasi dengan Phase 7 (Gamification)
-
-| Challenge Action | XP Reward | Streak Effect |
-|-----------------|-----------|---------------|
+| Aktivitas | XP Reward | Streak Effect |
+|-----------|-----------|---------------|
 | Selesai 1 soal benar | +10 XP | counts as 1 activity |
 | Selesai 1 materi (read + ack) | +5 XP | counts as 1 activity |
 | Selesai 1 refleksi (≥ 50 char) | +15 XP | counts as 1 activity |
-| Selesai 1 challenge (all items) | +25 XP bonus | — |
-| Selesai semua 4 challenge hari ini | +50 XP bonus | +1 streak day |
+| Selesai 1 tantangan (semua item) | +25 XP bonus | — |
+| Selesai semua tantangan hari ini | +50 XP bonus | +1 streak day |
 | 7 hari streak full challenges | +100 XP bonus | — |
+| Selesai weekly challenge | +200 XP bonus | — |
 
-Daily Quest statis (Phase 7.4) di-deprecate — diganti challenge system ini. Weekly Challenge (Phase 7.5) = summary 7×4 = 28 items.
+#### 4.11.8 Anti-Pattern Challenge
 
-#### 4.11.10 Yang TIDAK Boleh Dilakukan
+- **Tidak boleh auto-generate soal untuk mapel nasional** — challenge soal ambil dari bank soal existing, AI cuma pilih & framing, atau jadi fallback terakhir
+- **AI boleh generate materi markdown** — lebih ke penjelasan/kontekstualisasi, bukan fakta keras
+- **Tidak boleh challenge = gate** — siswa tetap bisa browse materials & akses semua fitur tanpa complete challenges
+- **Tidak boleh refleksi dipakai untuk judge** — cuma untuk self-reflection + sinyal AI
+- **Tidak boleh on-demand spam** — rate limit 10/hari
+- **Tidak boleh hardcode subject** — subject harus di-pick dari `challengeSubjectIds` per user
 
-- ❌ **Jangan generate soal baru untuk mapel nasional** — pakai `Question` bank existing
-- ❌ **Jangan gate akses siswa pakai challenge** — semua fitur accessible tanpa complete challenges
-- ❌ **Jangan pakai refleksi untuk scoring** — itu self-reflection, bukan rapor
-- ❌ **Jangan spam on-demand** — rate limit 10/hari/user
-- ❌ **Jangan hardcode subject** — subject harus di-pick dari `focusedSubjects` atau `weakConcepts` per user
+### 4.12 Activity Tracking & Visualisasi Progress
+
+Spark Ai menyediakan **pelacakan aktivitas belajar** yang komprehensif untuk membantu siswa memahami pola belajar mereka sendiri:
+
+#### 4.12.1 Heatmap Aktivitas
+- Visualisasi mirip GitHub contributions — kalender harian yang menunjukkan intensitas belajar.
+- Warna lebih gelap = lebih banyak aktivitas belajar di hari tersebut.
+- Klik pada hari tertentu untuk melihat detail aktivitas.
+
+#### 4.12.2 Grafik Progress
+- Line chart progress mingguan — menunjukkan tren mastery score dari waktu ke waktu.
+- Breakdown per mapel — siswa bisa melihat mapel mana yang paling berkembang dan mana yang perlu perhatian.
+
+#### 4.12.3 Statistik Ringkasan
+- Total XP yang sudah diperoleh
+- Streak saat ini dan terpanjang
+- Level saat ini
+- Jumlah badge yang sudah dikumpulkan
+- Waktu belajar total
+
+### 4.13 Admin Panel
+
+Spark Ai menyediakan panel administrasi untuk mengelola konten dan memantau kualitas:
+
+#### 4.13.1 Manajemen Kurikulum
+- CRUD mata pelajaran, topik, dan konsep kurikulum nasional.
+- Kelola bank soal per konsep (tambah, edit, hapus).
+- Pantau prerequisite chains antar konsep.
+
+#### 4.13.2 Verifikasi Mapel Custom
+- Review mapel custom yang dibuat siswa (approve/reject).
+- Approve = set `isVerified: true` (tetap `isCustom: true`, tidak masuk kurikulum global).
+- Reject = soft delete dengan alasan wajib min 3 karakter.
+- Audit log: setiap approve/reject dicatat dengan admin, waktu, dan alasan.
+
+#### 4.13.3 Manajemen Pengguna
+- Lihat daftar siswa, orang tua, dan admin.
+- Aktifkan/nonaktifkan akun pengguna jika diperlukan.
+
+### 4.14 Leaderboard (Non-Toxic)
+
+Spark Ai menyediakan leaderboard yang dirancang untuk **motivasi, bukan kompetisi toxic**:
+- **Leaderboard per mapel** — siswa bisa melihat posisi mereka relatif terhadap siswa lain di mapel tertentu.
+- **Opt-in** — siswa bisa memilih untuk tidak tampil di leaderboard.
+- **Tidak ada leaderboard global kasar** — fokus pada kemajuan diri sendiri, bukan perbandingan dengan orang lain.
+- **Highlight pencapaian pribadi** — "Kamu naik 3 level minggu ini!" bukan "Kamu peringkat 47 dari 500".
 
 ---
 
@@ -563,6 +558,7 @@ Spark Ai diharapkan memberikan manfaat nyata bagi seluruh pemangku kepentingan:
 - **Pembentukan kebiasaan belajar mandiri:** Dengan pendampingan yang konsisten, siswa diharapkan mampu belajar secara mandiri secara bertahap.
 - **Akses belajar 24/7:** Kapan pun siswa membutuhkan penjelasan atau ingin latihan, Spark Ai siap mendampingi.
 - **Bisa memanfaatkan materi dari guru:** File PDF atau DOCX yang dibagikan guru melalui WhatsApp dapat langsung diubah menjadi ringkasan, penjelasan, atau latihan soal yang dipersonalisasi.
+- **Kendali atas mapel fokus:** Siswa bisa memilih mapel mana yang ingin difokuskan untuk tantangan harian dan mingguan.
 
 ### 5.2 Manfaat bagi Orang Tua
 - **Gambaran jelas tentang perkembangan belajar anak:** Ringkasan berkala membantu orang tua memahami apa yang sudah dipelajari anak tanpa harus memeriksa secara detail.
@@ -587,21 +583,14 @@ Untuk menjaga fokus dan kualitas pengembangan, Spark Ai memiliki batasan-batasan
 
 ### 6.1 Batasan Lingkup Mata Pelajaran
 - **Target pengguna:** Siswa SMA dan SMK (kelas 10–12) sesuai Kurikulum Merdeka.
-- **In scope (seeded — kurikulum nasional):** Mata pelajaran utama yang akan di-*seed* ke database:
-  - Matematika
-  - Bahasa Indonesia
-  - Bahasa Inggris
-  - IPA (Fisika, Kimia, Biologi) — sebagai mata pelajaran terintegrasi
-  - IPS — Sejarah, Geografi, Ekonomi, Sosiologi (roadmap Phase 6+)
-  - PPKN (roadmap Phase 6+)
-- **Pendekatan hybrid (keputusan v0.9, Juni 2026):**
-  - **Lapis 1 — Seed kurikulum nasional** oleh tim/kontributor (bukan AI generate) untuk menjaga kualitas & keselarasan dengan Kurikulum Merdeka.
-  - **Lapis 2 — Adaptive difficulty algorithm** (`src/server/learning/adaptive.ts`): rolling accuracy 5 attempt terakhir menentukan naik/turun difficulty, prerequisite check, mastery score 0–1.
-  - **Lapis 3 — Custom subjects oleh user (AI-generated, terisolasi per-user)**: siswa bisa tambah mapel tambahan (mis. Bahasa Jawa, Coding, Musik) yang di-scope ke akun mereka saja. AI (`src/server/ai/curriculum.ts`) generate outline + 5–8 soal pretest dengan Zod validation. Flag `isVerified=false` untuk review admin.
+- **In scope (seeded — kurikulum nasional):** Mata pelajaran yang sudah di-seed ke database:
+  - Matematika, Bahasa Indonesia, Bahasa Inggris
+  - IPA (Fisika, Kimia, Biologi)
+  - Sejarah, Geografi, Ekonomi, Sosiologi
+  - PPKN, Seni Budaya, PJOK
 - **Out of scope tahap awal:**
-  - Mata pelajaran di luar jenjang SMA/SMK (SD, SMP, perguruan tinggi) — di luar target pengguna.
+  - Mata pelajaran di luar jenjang SMA/SMK (SD, SMP, perguruan tinggi).
   - Mata pelajaran kejuruan SMK spesifik perjurusan — dapat dipertimbangkan untuk fase berikutnya.
-  - Mata pelajaran yang di-*generate* AI untuk masuk kurikulum global (bukan untuk pretest/practice per-user).
 
 ### 6.2 Batasan Peran Aplikasi
 - **TIDAK dimaksudkan untuk menggantikan peran guru di sekolah.** Guru tetap memiliki peran utama dalam pendidikan karakter, diskusi kelas, proyek kolaboratif, dan penilaian formal.
@@ -609,17 +598,14 @@ Untuk menjaga fokus dan kualitas pengembangan, Spark Ai memiliki batasan-batasan
 - **TIDAK dimaksudkan sebagai alat contekan.** Aplikasi ini dirancang untuk **membantu belajar**, bukan untuk memberikan jawaban instan untuk PR atau ujian.
 
 ### 6.3 Batasan Konten dan Akurasi
-- **Pada tahap awal, menggunakan data dan materi pembelajaran standar** yang bersumber dari:
-  - Capaian Pembelajaran (CP) dan Alur Tujuan Pembelajaran (ATP) Kurikulum Merdeka.
-  - Buku teks elektronik resmi (BSE) dari Kemendikbud.
-  - Soal-soal latihan yang sudah terverifikasi kesesuaiannya dengan kurikulum.
-- **Keterbatasan pengakuan:** Sistem mungkin tidak selalu sempurna dalam menjawab pertanyaan di luar cakupan materi, atau dalam menafsirkan pertanyaan yang ambigu. Dalam kondisi seperti ini, sistem akan secara eksplisit mengakui keterbatasannya dan menyarankan siswa untuk mengonfirmasi dengan sumber lain (buku, guru).
+- **Pada tahap awal, menggunakan data dan materi pembelajaran standar** yang bersumber dari Capaian Pembelajaran (CP) dan Alur Tujuan Pembelajaran (ATP) Kurikulum Merdeka.
+- **Keterbatasan pengakuan:** Sistem mungkin tidak selalu sempurna dalam menjawab pertanyaan di luar cakupan materi. Dalam kondisi seperti ini, sistem akan secara eksplisit mengakui keterbatasannya dan menyarankan siswa untuk mengonfirmasi dengan sumber lain.
 
-### 6.4 Batasan Teknis dan Operasional (Tahap Awal)
-- **Perangkat:** Website dioptimalkan untuk browser desktop dan mobile (responsif). Versi aplikasi mobile native (Android/iOS) dapat dikembangkan pada tahap berikutnya.
-- **Koneksi:** Aplikasi membutuhkan koneksi internet untuk berfungsi penuh karena pemrosesan AI dilakukan di server. Mode offline penuh belum tersedia pada tahap awal.
-- **Bahasa:** Antarmuka dan interaksi menggunakan Bahasa Indonesia. Dukungan bahasa daerah (Jawa, Sunda, dll) dapat dipertimbangkan untuk versi berikutnya.
-- **Upload dokumen:** Pada tahap awal, sistem mendukung file PDF dan DOCX dengan ukuran maksimal tertentu (misalnya 10 MB atau maksimal 50 halaman). File disimpan dalam bentuk teks Markdown di database, bukan sebagai file biner di cloud storage. Dokumen hasil scan atau berisi gambar kompleks mungkin memerlukan OCR yang akan diperbaiki secara bertahap.
+### 6.4 Batasan Teknis dan Operasional
+- **Perangkat:** Website dioptimalkan untuk browser desktop dan mobile (responsif). Versi aplikasi mobile native dapat dikembangkan pada tahap berikutnya.
+- **Koneksi:** Aplikasi membutuhkan koneksi internet untuk berfungsi penuh karena pemrosesan AI dilakukan di server. Mode offline penuh belum tersedia.
+- **Bahasa:** Antarmuka dan interaksi menggunakan Bahasa Indonesia.
+- **Upload dokumen:** Mendukung file PDF dan DOCX (maksimal 10 MB atau 50 halaman). Dokumen disimpan sebagai teks Markdown di database.
 
 ### 6.5 Batasan Etika dan Privasi
 - **Data siswa:** Dikumpulkan dan dikelola sesuai dengan prinsip perlindungan data pribadi (UU PDP) — hanya untuk tujuan pembelajaran, tidak disalahgunakan, dan dapat dihapus atas permintaan pengguna.
@@ -628,7 +614,7 @@ Untuk menjaga fokus dan kualitas pengembangan, Spark Ai memiliki batasan-batasan
 
 ### 6.6 Batasan Pengembangan Versi Awal
 - Fitur-fitur canggih seperti input suara, input foto (untuk soal matematika/gambar), OCR dokumen hasil scan, dan integrasi dengan sistem sekolah akan dikembangkan secara bertahap.
-- Fokus tahap awal adalah membangun fondasi yang kuat: pengalaman belajar yang personal, adaptif, dan aman sesuai dengan tujuan proyek, termasuk kemampuan dasar upload dan pemrosesan dokumen PDF/DOCX.
+- Fokus tahap awal adalah membangun fondasi yang kuat: pengalaman belajar yang personal, adaptif, dan aman.
 
 ### 6.7 Batasan Etika Gamifikasi
 Gamifikasi dalam Spark Ai dirancang untuk membuat belajar **menyenangkan dan bermakna**, **bukan** untuk membuat siswa **ketagihan atau tereksploitasi**. Batasan yang tegas:
