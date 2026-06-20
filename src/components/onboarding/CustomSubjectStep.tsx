@@ -1,6 +1,11 @@
-import { Loader2, Wand2 } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  Loader2,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import type { EducationLevel } from "./ProfileStep";
 
 const SUGGESTED_CUSTOM = [
@@ -40,110 +45,135 @@ export function CustomSubjectStep({
   const charLeft = 280 - context.length;
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--purple)]/25 bg-[var(--purple)]/5 p-3.5 text-[12px] leading-relaxed text-foreground/80">
-        <p className="font-bold text-[var(--purple)]">🪄 Spark AI bakal:</p>
-        <ul className="mt-1.5 space-y-1 pl-4">
-          <li>• Bikin 3-6 topik sesuai mapel kamu</li>
-          <li>• Generate 3-6 konsep per topik</li>
-          <li>• Bikin 5-8 soal pretest untuk ukur kemampuan awal</li>
-        </ul>
+    <div className="space-y-5">
+      {/* AI info card */}
+      <div className="rounded-2xl border border-[var(--purple)]/25 bg-gradient-to-br from-[var(--purple)]/5 to-[var(--pink)]/3 p-4">
+        <div className="flex items-start gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--purple)] to-[var(--pink)] text-white shadow-[0_4px_12px_rgba(139,92,246,0.3)]">
+            <Sparkles size={16} strokeWidth={2.5} />
+          </span>
+          <div>
+            <p className="font-heading text-[13px] font-bold text-[var(--purple)]">
+              Spark AI bakal bikin:
+            </p>
+            <ul className="mt-1.5 space-y-0.5 text-[12px] text-foreground/80">
+              {[
+                "3-6 topik sesuai mapel",
+                "3-6 konsep per topik",
+                "5-8 soal pretest",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-1.5">
+                  <span className="text-[var(--purple)]">✓</span> {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
 
-      <div>
+      {/* Name input */}
+      <div className="relative">
         <label
           htmlFor="subject-name"
-          className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+          className="mb-1.5 block text-[12px] font-semibold text-foreground/80"
         >
           Nama mapel
         </label>
-        <input
-          id="subject-name"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder="cth: Bahasa Jawa, Coding, Musik…"
-          maxLength={60}
-          disabled={isGenerating}
-          className="mt-1.5 h-11 w-full rounded-2xl border border-border/50 bg-background/70 px-4 text-[14px] font-semibold backdrop-blur-sm transition-colors placeholder:text-muted-foreground/60 focus:border-[var(--coral)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--coral)]/15 disabled:opacity-50"
-        />
+        <div
+          className={cn(
+            "group/field relative flex items-center rounded-2xl border bg-input/40 p-1 transition-all focus-within:border-[var(--coral)]/40 focus-within:ring-3 focus-within:ring-[var(--coral)]/15",
+            name ? "border-[var(--coral)]/30" : "border-border/40",
+          )}
+        >
+          <span className="grid size-9 shrink-0 place-items-center text-muted-foreground transition-colors group-focus-within/field:text-[var(--coral)]">
+            <Wand2 size={16} />
+          </span>
+          <input
+            id="subject-name"
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder=" "
+            maxLength={60}
+            disabled={isGenerating}
+            className="h-11 w-full min-w-0 rounded-xl bg-transparent px-2.5 text-[14px] outline-none placeholder:text-transparent disabled:opacity-50"
+          />
+          <label
+            htmlFor="subject-name"
+            className={cn(
+              "pointer-events-none absolute left-12 px-1 text-[13px] text-muted-foreground transition-all",
+              name
+                ? "-top-2.5 text-[10px] font-bold text-[var(--coral)]"
+                : "top-3",
+            )}
+          >
+            cth: Bahasa Jawa, Coding, Musik...
+          </label>
+        </div>
       </div>
 
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      {/* Grade/Edu - compact */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Education */}
+        <div>
+          <p className="mb-1.5 text-[12px] font-semibold text-foreground/80">
             Jenjang
-          </label>
-          <div className="mt-1.5 flex h-11 overflow-hidden rounded-2xl border border-border/40 bg-input/40">
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
             {(["SMA", "SMK"] as const).map((opt) => {
               const active = educationLevel === opt;
+              const Icon = opt === "SMA" ? GraduationCap : BookOpen;
               return (
-                <label
+                <button
                   key={opt}
-                  htmlFor={`cs-edu-${opt}`}
+                  type="button"
+                  onClick={() => onEducationLevelChange(opt)}
                   className={cn(
-                    "flex flex-1 cursor-pointer items-center justify-center text-[13px] font-semibold transition-colors",
+                    "flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-[12px] font-semibold transition-all active:scale-95",
                     active
-                      ? "bg-[var(--coral)]/10 text-[var(--coral)]"
-                      : "text-foreground/70 hover:bg-muted/60",
+                      ? "border-[var(--coral)]/50 bg-[var(--coral)]/10 text-[var(--coral)]"
+                      : "border-border/40 bg-card/60 text-foreground/70 hover:bg-card/80",
                   )}
                 >
-                  <input
-                    id={`cs-edu-${opt}`}
-                    type="radio"
-                    name="csEducationLevel"
-                    value={opt}
-                    checked={active}
-                    onChange={() => onEducationLevelChange(opt)}
-                    className="sr-only"
-                  />
+                  <Icon size={13} />
                   {opt}
-                </label>
+                </button>
               );
             })}
           </div>
         </div>
-        <div className="flex-1">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {/* Grade */}
+        <div>
+          <p className="mb-1.5 text-[12px] font-semibold text-foreground/80">
             Kelas
-          </label>
-          <div className="mt-1.5 flex h-11 overflow-hidden rounded-2xl border border-border/40 bg-input/40">
-            {([10, 11, 12] as const).map((g) => {
-              const active = grade === g;
-              return (
-                <label
-                  key={g}
-                  htmlFor={`cs-grade-${g}`}
-                  className={cn(
-                    "flex flex-1 cursor-pointer items-center justify-center text-[13px] font-semibold transition-colors",
-                    active
-                      ? "bg-[var(--coral)]/10 text-[var(--coral)]"
-                      : "text-foreground/70 hover:bg-muted/60",
-                  )}
-                >
-                  <input
-                    id={`cs-grade-${g}`}
-                    type="radio"
-                    name="csGrade"
-                    value={g}
-                    checked={active}
-                    onChange={() => onGradeChange(g)}
-                    className="sr-only"
-                  />
-                  {g}
-                </label>
-              );
-            })}
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {([10, 11, 12] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => onGradeChange(g)}
+                className={cn(
+                  "rounded-xl border py-2 text-center text-[13px] font-bold transition-all active:scale-95",
+                  grade === g
+                    ? "border-[var(--coral)]/50 bg-[var(--coral)]/10 text-[var(--coral)]"
+                    : "border-border/40 bg-card/60 text-foreground/70 hover:bg-card/80",
+                )}
+              >
+                {g}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* Context textarea */}
       <div>
-        <div className="flex items-center justify-between">
+        <div className="mb-1.5 flex items-center justify-between">
           <label
             htmlFor="subject-context"
-            className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+            className="text-[12px] font-semibold text-foreground/80"
           >
-            Konteks tambahan (opsional)
+            Konteks tambahan
           </label>
           <span
             className={cn(
@@ -158,16 +188,17 @@ export function CustomSubjectStep({
           id="subject-context"
           value={context}
           onChange={(e) => onContextChange(e.target.value)}
-          placeholder="Bisa kasih tau Spark ini mapel tentang apa, level kamu, atau fokus yang kamu mau. Boleh kosong."
+          placeholder="Kosongin juga gapapa — AI bakal generate otomatis"
           maxLength={280}
-          rows={3}
+          rows={2}
           disabled={isGenerating}
-          className="mt-1.5 w-full resize-none rounded-2xl border border-border/50 bg-background/70 px-4 py-2.5 text-[13px] font-medium leading-relaxed backdrop-blur-sm transition-colors placeholder:text-muted-foreground/60 focus:border-[var(--coral)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--coral)]/15 disabled:opacity-50"
+          className="w-full resize-none rounded-2xl border border-border/40 bg-input/40 px-3.5 py-2.5 text-[13px] leading-relaxed outline-none transition-all placeholder:text-muted-foreground/60 focus:border-[var(--coral)]/40 focus:ring-3 focus:ring-[var(--coral)]/15 disabled:opacity-50"
         />
       </div>
 
+      {/* Suggestions */}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <p className="text-[11px] font-semibold text-muted-foreground">
           Atau pilih ide populer:
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -177,7 +208,12 @@ export function CustomSubjectStep({
               type="button"
               onClick={() => onNameChange(s)}
               disabled={isGenerating}
-              className="rounded-full border border-border/40 bg-background/60 px-3 py-1 text-[11.5px] font-bold text-foreground/85 transition-all hover:-translate-y-0.5 hover:border-[var(--coral)]/40 hover:bg-[var(--coral)]/8 hover:text-[var(--coral)] disabled:opacity-40"
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-40",
+                name === s
+                  ? "border-[var(--coral)]/50 bg-[var(--coral)]/10 text-[var(--coral)]"
+                  : "border-border/40 bg-card/60 text-foreground/80 hover:border-[var(--coral)]/40 hover:bg-[var(--coral)]/5 hover:text-[var(--coral)]",
+              )}
             >
               {s}
             </button>
@@ -185,12 +221,14 @@ export function CustomSubjectStep({
         </div>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="rounded-2xl border border-[var(--coral)]/30 bg-[var(--coral)]/8 p-3 text-[12px] leading-relaxed text-[var(--coral)]">
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/8 p-3 text-[12px] text-destructive">
           ⚠️ {error}
         </div>
       )}
 
+      {/* Generating state */}
       {isGenerating && (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-[var(--purple)]/25 bg-[var(--purple)]/5 p-6 text-center">
           <div className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-[var(--purple)] to-[var(--pink)] text-white shadow-[0_8px_24px_rgba(139,92,246,0.35)]">
@@ -198,13 +236,13 @@ export function CustomSubjectStep({
           </div>
           <div>
             <p className="font-heading text-[15px] font-bold text-foreground">
-              Spark lagi mikir keras…
+              Spark lagi mikir keras...
             </p>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              Lagi bikin outline & soal pretest buat mapel &quot;{name}&quot;.
+              Lagi bikin outline & soal pretest buat &quot;{name}&quot;
             </p>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}

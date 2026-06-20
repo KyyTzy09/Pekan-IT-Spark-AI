@@ -1,4 +1,7 @@
-import { BookOpen, Heart, Sparkles, Wand2 } from "lucide-react";
+"use client";
+
+import { BookOpen, Sparkles, Wand2 } from "lucide-react";
+import * as React from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
 
 export function WelcomeStep({
@@ -10,75 +13,96 @@ export function WelcomeStep({
   onChooseNational: () => void;
   onChooseCustom: () => void;
 }) {
+  const [hoveredCard, setHoveredCard] = React.useState<
+    "national" | "custom" | null
+  >(null);
+
   return (
     <div className="space-y-5">
-      <div className="flex justify-center pt-2">
-        <SparkCharacter
-          size="lg"
-          color="default"
-          accessory="none"
-          background="default"
-        />
-      </div>
+      {/* Animated character with speech bubble */}
+      <div className="relative flex flex-col items-center pt-1">
+        <div className="relative">
+          {/* Glow effect */}
+          <div
+            aria-hidden
+            className="absolute inset-0 size-20 rounded-full bg-gradient-to-br from-[var(--coral)]/20 to-[var(--purple)]/20 blur-2xl"
+          />
+          <SparkCharacter
+            size="lg"
+            color="default"
+            accessory="none"
+            background="default"
+          />
+        </div>
 
-      <div className="rounded-2xl border border-border/40 bg-card/60 p-4 backdrop-blur-sm">
-        <div className="flex items-start gap-3">
-          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--purple)] to-[var(--pink)] text-white">
-            <Heart size={14} strokeWidth={2.5} />
-          </span>
-          <div>
-            <p className="font-heading text-[13px] font-bold text-foreground">
-              Hai, {userName}! Aku Spark ✨
-            </p>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-              Temen belajar AI kamu. Isi beberapa hal dulu biar aku bisa nemenin
-              kamu dengan pas.
-            </p>
-          </div>
+        {/* Speech bubble */}
+        <div className="mt-3 max-w-[260px] rounded-2xl border border-border/40 bg-card/70 px-4 py-3 text-center backdrop-blur-sm">
+          <p className="text-[13px] leading-relaxed text-foreground/90">
+            Hai,{" "}
+            <span className="font-bold text-[var(--coral)]">{userName}</span>!
+            Yuk kenalan dulu biar kita bisa belajar bareng 🚀
+          </p>
+          {/* Bubble tail */}
+          <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-border/40 bg-card/70" />
         </div>
       </div>
 
-      <p className="text-center text-[12px] font-bold text-foreground/80">
-        Mau mulai dari mana?
+      {/* Route cards */}
+      <p className="text-center text-[12px] font-bold text-foreground/70">
+        Pilih jalur yang kamu mau
       </p>
 
       <div className="grid gap-3">
+        {/* National card */}
         <button
           type="button"
           onClick={onChooseNational}
-          className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-5 text-left backdrop-blur-sm transition-all hover:border-[var(--teal)]/40 hover:shadow-[0_8px_24px_rgba(20,184,166,0.12)] active:scale-[0.98] active:border-[var(--teal)]/60"
+          onMouseEnter={() => setHoveredCard("national")}
+          onMouseLeave={() => setHoveredCard(null)}
+          className="group relative overflow-hidden rounded-3xl border border-border/40 bg-card/60 p-5 text-left backdrop-blur-sm transition-all duration-300 hover:border-[var(--teal)]/50 hover:shadow-[0_12px_36px_rgba(20,184,166,0.15)] active:scale-[0.98]"
         >
+          {/* Background gradient orb */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full opacity-20 blur-2xl transition-opacity group-hover:opacity-30"
+            className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-25 group-hover:scale-110"
             style={{
               background:
                 "radial-gradient(circle, oklch(0.78 0.14 175 / 0.5), transparent 70%)",
             }}
           />
-          <div className="relative flex items-start gap-3">
-            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] text-white shadow-[0_4px_12px_rgba(20,184,166,0.3)] transition-transform group-hover:-translate-y-0.5 group-active:scale-95">
-              <BookOpen size={20} strokeWidth={2.5} />
+
+          <div className="relative flex items-start gap-4">
+            {/* Icon */}
+            <span
+              className={cn(
+                "grid size-14 shrink-0 place-items-center rounded-2xl text-white shadow-lg transition-all duration-300 group-hover:-translate-y-1",
+                hoveredCard === "national"
+                  ? "bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] shadow-[0_8px_20px_rgba(20,184,166,0.4)]"
+                  : "bg-gradient-to-br from-[var(--teal)]/80 to-[var(--blue)]/80 shadow-[0_4px_12px_rgba(20,184,166,0.2)]",
+              )}
+            >
+              <BookOpen size={22} strokeWidth={2.5} />
             </span>
+
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-heading text-[15px] font-bold text-foreground">
-                  Mulai dari mapel nasional
+                <p className="font-heading text-[16px] font-bold text-foreground">
+                  Kurikulum Nasional
                 </p>
                 <span className="rounded-full bg-[var(--teal)]/15 px-2 py-0.5 text-[9px] font-bold text-[var(--teal)] ring-1 ring-[var(--teal)]/20">
                   Populer
                 </span>
               </div>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-                Pilih dari mapel Kurikulum Merdeka yang tersedia. Cocok buat
-                kamu yang mau belajar sesuai kurikulum sekolah.
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                Mapel SMA/SMK sesuai Kurikulum Merdeka. Spark langsung siap
+                nemenin belajar.
               </p>
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {["Profil", "Pilih Mapel", "Gaya Belajar", "Pretest"].map(
                   (tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-[var(--teal)]/10 px-2 py-0.5 text-[9.5px] font-bold text-[var(--teal)]"
+                      className="rounded-full bg-[var(--teal)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--teal)] transition-colors group-hover:bg-[var(--teal)]/15"
                     >
                       {tag}
                     </span>
@@ -89,41 +113,53 @@ export function WelcomeStep({
           </div>
         </button>
 
+        {/* Custom card */}
         <button
           type="button"
           onClick={onChooseCustom}
-          className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/60 p-5 text-left backdrop-blur-sm transition-all hover:border-[var(--coral)]/40 hover:shadow-[0_8px_24px_rgba(225,29,72,0.12)] active:scale-[0.98] active:border-[var(--coral)]/60"
+          onMouseEnter={() => setHoveredCard("custom")}
+          onMouseLeave={() => setHoveredCard(null)}
+          className="group relative overflow-hidden rounded-3xl border border-border/40 bg-card/60 p-5 text-left backdrop-blur-sm transition-all duration-300 hover:border-[var(--coral)]/50 hover:shadow-[0_12px_36px_rgba(225,29,72,0.15)] active:scale-[0.98]"
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute -left-8 -top-8 size-28 rounded-full opacity-20 blur-2xl transition-opacity group-hover:opacity-30"
+            className="pointer-events-none absolute -left-10 -top-10 size-32 rounded-full opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-25 group-hover:scale-110"
             style={{
               background:
                 "radial-gradient(circle, oklch(0.75 0.18 350 / 0.5), transparent 70%)",
             }}
           />
-          <div className="relative flex items-start gap-3">
-            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] text-white shadow-[0_4px_12px_rgba(225,29,72,0.3)] transition-transform group-hover:-translate-y-0.5 group-active:scale-95">
-              <Wand2 size={20} strokeWidth={2.5} />
+
+          <div className="relative flex items-start gap-4">
+            <span
+              className={cn(
+                "grid size-14 shrink-0 place-items-center rounded-2xl text-white shadow-lg transition-all duration-300 group-hover:-translate-y-1",
+                hoveredCard === "custom"
+                  ? "bg-gradient-to-br from-[var(--coral)] to-[var(--orange)] shadow-[0_8px_20px_rgba(225,29,72,0.4)]"
+                  : "bg-gradient-to-br from-[var(--coral)]/80 to-[var(--orange)]/80 shadow-[0_4px_12px_rgba(225,29,72,0.2)]",
+              )}
+            >
+              <Wand2 size={22} strokeWidth={2.5} />
             </span>
+
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-heading text-[15px] font-bold text-foreground">
-                  Bikin mapel kustom
+                <p className="font-heading text-[16px] font-bold text-foreground">
+                  Mapel Kustom
                 </p>
-                <span className="rounded-full bg-[var(--coral)]/15 px-2 py-0.5 text-[9px] font-bold text-[var(--coral)] ring-1 ring-[var(--coral)]/20">
-                  AI
+                <span className="rounded-full bg-[var(--purple)]/15 px-2 py-0.5 text-[9px] font-bold text-[var(--purple)] ring-1 ring-[var(--purple)]/20">
+                  AI Powered
                 </span>
               </div>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-                Mapel yang kamu mau belum ada? Tulis aja, Spark AI bakal
-                langsung bikin outline + pretest buat kamu.
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                Mau belajar hal unik? AI bakal bikin outline + pretest khusus
+                buat kamu.
               </p>
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {["Input Nama Mapel", "AI Generate", "Pretest"].map((tag) => (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {["Bikin Mapel", "AI Generate", "Pretest"].map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-[var(--coral)]/10 px-2 py-0.5 text-[9.5px] font-bold text-[var(--coral)]"
+                    className="rounded-full bg-[var(--coral)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--coral)] transition-colors group-hover:bg-[var(--coral)]/15"
                   >
                     {tag}
                   </span>
@@ -134,6 +170,7 @@ export function WelcomeStep({
         </button>
       </div>
 
+      {/* Tip */}
       <div className="rounded-2xl border border-[var(--purple)]/20 bg-[var(--purple)]/5 p-3.5 backdrop-blur-sm">
         <div className="flex items-start gap-2.5">
           <Sparkles
@@ -142,14 +179,20 @@ export function WelcomeStep({
             className="mt-0.5 shrink-0 text-[var(--purple)]"
           />
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            <span className="font-bold text-foreground">Tips:</span> Pilih kalo
-            kamu mau mapel yang biasanya dipelajari di sekolah (Matematika,
-            Fisika, dll). Pilih{" "}
-            <span className="font-bold">Bikin mapel kustom</span> kalau mapel
-            kamu unik atau ga ada di kurikulum nasional.
+            <span className="font-bold text-foreground">Tips:</span> Pilih{" "}
+            <span className="font-bold text-[var(--teal)]">
+              Kurikulum Nasional
+            </span>{" "}
+            untuk mapel sekolah biasa. Pilih{" "}
+            <span className="font-bold text-[var(--coral)]">Mapel Kustom</span>{" "}
+            kalau mapel kamu tidak ada di list.
           </p>
         </div>
       </div>
     </div>
   );
+}
+
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(" ");
 }
