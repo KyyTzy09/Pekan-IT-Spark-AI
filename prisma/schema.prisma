@@ -139,8 +139,6 @@ model User {
   weeklyChallenges    WeeklyChallenge[]
   studyBuddy          StudyBuddy?
   avatarCustomization AvatarCustomization?
-  learningPlans       LearningPlan[]
-  learningActivities  LearningActivity[]
   documents           Document[]
   documentAuditLogs   DocumentAuditLog[]
   knowledgeProfiles   StudentKnowledgeProfile[]
@@ -153,6 +151,7 @@ model User {
   reflections         Reflection[]
   challengeProgress   UserChallengeProgress[]
   adminActions        AdminAuditLog[]           @relation("AdminActor")
+  aiQuota             DailyAiQuota?
 
   @@map("users")
 }
@@ -195,19 +194,21 @@ model VerificationToken {
 }
 
 model StudentProfile {
-  id              String          @id @default(cuid())
-  userId          String          @unique
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  educationLevel  EducationLevel?
-  grade           Int?
-  school          String?
-  learningStyle   LearningStyle?
-  responseDepth   ResponseDepth   @default(MENENGAH)
-  focusedSubjects String[]        @default([])
-  reminderEnabled Boolean         @default(false)
-  reminderTime    String?
-  totalXp         Int             @default(0)
-  level           Int             @default(1)
+  id                        String          @id @default(cuid())
+  userId                    String          @unique
+  user                      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  educationLevel            EducationLevel?
+  grade                     Int?
+  school                    String?
+  learningStyle             LearningStyle?
+  responseDepth             ResponseDepth   @default(MENENGAH)
+  focusedSubjects           String[]        @default([])
+  challengeSubjectIds       String[]        @default([])
+  weeklyChallengeSubjectIds String[]        @default([])
+  reminderEnabled           Boolean         @default(false)
+  reminderTime              String?
+  totalXp                   Int             @default(0)
+  level                     Int             @default(1)
 
   @@map("student_profiles")
 }
@@ -591,32 +592,17 @@ model AvatarCustomization {
   @@map("avatar_customizations")
 }
 
-model LearningPlan {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  weekStart DateTime
-  plan      Json     @db.JsonB
-  completed Boolean  @default(false)
-  createdAt DateTime @default(now())
+model DailyAiQuota {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime @db.Date
+  questionsCount Int      @default(0)
+  materialsCount Int      @default(0)
+  updatedAt      DateTime @updatedAt
 
-  @@unique([userId, weekStart])
-  @@map("learning_plans")
-}
-
-model LearningActivity {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String
-  metadata  Json?    @db.JsonB
-  xpEarned  Int      @default(0)
-  createdAt DateTime @default(now())
-
-  @@index([userId, createdAt])
-  @@index([userId, type])
-  @@index([createdAt])
-  @@map("learning_activities")
+  @@index([date])
+  @@map("daily_ai_quotas")
 }
 
 model Document {
@@ -761,22 +747,22 @@ enum ReflectionDepth {
 }
 
 model Challenge {
-  id           String          @id @default(cuid())
-  userId       String
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subjectId    String?
-  subject      Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  title        String
-  description  String          @db.Text
-  type         ChallengeType   @default(DAILY)
-  status       ChallengeStatus @default(ACTIVE)
-  source       ChallengeSource @default(AUTO_DAILY)
-  scheduledFor DateTime        @db.Date
-  mixConfig    Json            @db.JsonB
-  generatedAt  DateTime        @default(now())
-  completedAt  DateTime?
-  items        ChallengeItem[]
-  reflections  Reflection[]
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId       String?
+  subject         Subject?          @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title           String
+  description     String            @db.Text
+  type            ChallengeType     @default(DAILY)
+  status          ChallengeStatus   @default(ACTIVE)
+  source          ChallengeSource   @default(AUTO_DAILY)
+  scheduledFor    DateTime          @db.Date
+  mixConfig       Json              @db.JsonB
+  generatedAt     DateTime          @default(now())
+  completedAt     DateTime?
+  items           ChallengeItem[]
+  reflections     Reflection[]
   weeklyChallenge WeeklyChallenge[]
 
   @@index([userId, scheduledFor])
@@ -889,14 +875,14 @@ model UserChallengeProgress {
 }
 
 model DocumentQuiz {
-  id          String   @id @default(cuid())
-  documentId  String
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  title       String
-  questions   Json     @db.JsonB // Array of quiz questions
-  attempts    Json     @db.JsonB @default("[]") // Array of attempts
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  title      String
+  questions  Json     @db.JsonB // Array of quiz questions
+  attempts   Json     @default("[]") @db.JsonB // Array of attempts
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([documentId])
   @@map("document_quizzes")
@@ -913,15 +899,15 @@ enum AdminAction {
 }
 
 model AdminAuditLog {
-  id          String      @id @default(cuid())
-  adminId     String
-  admin       User        @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
-  action      AdminAction
-  targetType  String
-  targetId    String
-  metadata    Json?       @db.JsonB
-  note        String?     @db.Text
-  createdAt   DateTime    @default(now())
+  id         String      @id @default(cuid())
+  adminId    String
+  admin      User        @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
+  action     AdminAction
+  targetType String
+  targetId   String
+  metadata   Json?       @db.JsonB
+  note       String?     @db.Text
+  createdAt  DateTime    @default(now())
 
   @@index([adminId, createdAt])
   @@index([targetType, targetId])
@@ -930,11 +916,11 @@ model AdminAuditLog {
 }
 
 model ParentTipCache {
-  id         String   @id @default(cuid())
-  studentId  String
-  forDate    String
-  content    String   @db.Text
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  studentId String
+  forDate   String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
 
   @@unique([studentId, forDate])
   @@index([studentId])

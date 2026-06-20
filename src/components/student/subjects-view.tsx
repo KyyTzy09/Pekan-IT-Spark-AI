@@ -7,8 +7,8 @@ import {
   CircleDashed,
   Heart,
   Layers,
-  Lock,
   Loader2,
+  Lock,
   Sparkles,
   Star,
   Target,
@@ -19,17 +19,17 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { Constellation } from "@/components/student/constellation-view";
+import { GeneratePracticeDialog } from "@/components/student/generate-practice-dialog";
 import { MaterialLevelsView } from "@/components/student/material-levels-view";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { GeneratePracticeDialog } from "@/components/student/generate-practice-dialog";
+import type { SubjectExplorerSummary } from "@/server/actions/dashboard";
+import { generatePracticeQuestionsForSubject } from "@/server/actions/generate-practice-questions";
 import {
   generateMaterialsForSubject,
   toggleSubjectFavorite,
 } from "@/server/actions/subjects";
-import { generatePracticeQuestionsForSubject } from "@/server/actions/generate-practice-questions";
-import type { SubjectExplorerSummary } from "@/server/actions/dashboard";
 
 export type SubjectListItem = {
   id: string;
@@ -842,17 +842,17 @@ export function TopicDetailView({
     totalConcepts: number;
     masteredConcepts: number;
     averageMastery: number;
-      concepts: Array<{
-        id: string;
-        name: string;
-        slug: string;
-        description: string | null;
-        status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
-        masteryScore: number;
-        isLocked: boolean;
-        unmetPrerequisites: Array<{ id: string; name: string }>;
-        materials: Array<{ id: string; difficulty: string }>;
-      }>;
+    concepts: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      description: string | null;
+      status: "NOT_STARTED" | "LEARNING" | "MASTERED" | "STRUGGLING";
+      masteryScore: number;
+      isLocked: boolean;
+      unmetPrerequisites: Array<{ id: string; name: string }>;
+      materials: Array<{ id: string; difficulty: string }>;
+    }>;
   };
 }) {
   return (

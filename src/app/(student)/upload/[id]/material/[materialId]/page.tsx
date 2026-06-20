@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { UploadMaterialReaderView } from "@/components/student/upload/upload-material-reader-view";
 import { auth } from "@/lib/auth";
-import { getMaterialDetail } from "@/server/actions/challenges";
 import { prisma } from "@/lib/prisma";
+import { getMaterialDetail } from "@/server/actions/challenges";
 
 export const dynamic = "force-dynamic";
 

@@ -19,12 +19,22 @@ export function DocumentPretestView({
   onSubmit,
 }: {
   questions: PretestQuestion[];
-  onSubmit: (answers: Array<{ questionIndex: number; answer: string; isCorrect: boolean; conceptName: string }>) => Promise<void>;
+  onSubmit: (
+    answers: Array<{
+      questionIndex: number;
+      answer: string;
+      isCorrect: boolean;
+      conceptName: string;
+    }>,
+  ) => Promise<void>;
 }) {
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<number, string>>({});
   const [submitted, setSubmitted] = React.useState(false);
-  const [result, setResult] = React.useState<{ total: number; correct: number } | null>(null);
+  const [result, setResult] = React.useState<{
+    total: number;
+    correct: number;
+  } | null>(null);
 
   const current = questions[currentIndex];
   const selectedAnswer = answers[currentIndex];
@@ -67,9 +77,12 @@ export function DocumentPretestView({
     return (
       <div className="rounded-2xl border border-border/40 bg-card/80 p-6 text-center">
         <CheckCircle2 size={32} className="mx-auto text-[var(--teal)]" />
-        <h3 className="mt-3 font-heading text-[18px] font-bold">Pretest Selesai!</h3>
+        <h3 className="mt-3 font-heading text-[18px] font-bold">
+          Pretest Selesai!
+        </h3>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          {result.correct} dari {result.total} benar ({Math.round((result.correct / result.total) * 100)}%)
+          {result.correct} dari {result.total} benar (
+          {Math.round((result.correct / result.total) * 100)}%)
         </p>
       </div>
     );
@@ -78,18 +91,24 @@ export function DocumentPretestView({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground">
-        <span>Soal {currentIndex + 1} / {questions.length}</span>
-        <span className={cn(
-          "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
-          current.difficulty === "EASY" && "bg-emerald-100 text-emerald-700",
-          current.difficulty === "MEDIUM" && "bg-amber-100 text-amber-700",
-          current.difficulty === "HARD" && "bg-rose-100 text-rose-700",
-        )}>
+        <span>
+          Soal {currentIndex + 1} / {questions.length}
+        </span>
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
+            current.difficulty === "EASY" && "bg-emerald-100 text-emerald-700",
+            current.difficulty === "MEDIUM" && "bg-amber-100 text-amber-700",
+            current.difficulty === "HARD" && "bg-rose-100 text-rose-700",
+          )}
+        >
           {current.difficulty}
         </span>
       </div>
 
-      <p className="text-[13px] font-medium text-foreground">{current.questionText}</p>
+      <p className="text-[13px] font-medium text-foreground">
+        {current.questionText}
+      </p>
 
       <div className="space-y-2">
         {current.options.map((option) => (
@@ -110,12 +129,14 @@ export function DocumentPretestView({
       </div>
 
       {submitted && selectedAnswer && (
-        <div className={cn(
-          "rounded-xl border p-3 text-[11px]",
-          selectedAnswer === current.correctAnswer
-            ? "border-[var(--teal)]/30 bg-[var(--teal)]/5 text-[var(--teal)]"
-            : "border-destructive/30 bg-destructive/5 text-destructive",
-        )}>
+        <div
+          className={cn(
+            "rounded-xl border p-3 text-[11px]",
+            selectedAnswer === current.correctAnswer
+              ? "border-[var(--teal)]/30 bg-[var(--teal)]/5 text-[var(--teal)]"
+              : "border-destructive/30 bg-destructive/5 text-destructive",
+          )}
+        >
           {selectedAnswer === current.correctAnswer ? "Benar!" : "Salah"}
           <p className="mt-1 text-muted-foreground">{current.explanation}</p>
         </div>

@@ -1,5 +1,5 @@
-> **Last updated:** 2026-06-17 (v0.97 — Phase 7 done (XP/Level unbounded + Streak + 50 badges + Activity page + Cloudinary), Phase 8 parent dashboard done, **Phase 10.0 foundation done** + Custom Subject Verification per §4.6.6.8, Audit log write side ready)
-> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; Phase 6 ✅; Phase 7 ✅; Phase 8 ✅; Phase 10 (10.0 ✅, 10.1–10.3 mostly pending)
+> **Last updated:** 2026-06-20 (v0.98 — Phase 7 done (XP/Level unbounded + Streak + 50 badges + Activity page + Cloudinary), Phase 8 parent dashboard done, Phase 10 (10.0 done, 10.1–10.3 mostly pending), **Challenge redesign v1: hapus LearningPlan + per-subject daily/weekly + subject picker + AI fallback quota**)
+> **Status:** Phase 0 ✅; Phase 1 ✅; Phase 2.1 ✅; Phase 2.2 ✅; Phase 2.3 ✅; Phase 3.1 ✅; Phase 3.2 ✅; Phase 3.3 ✅; Phase 4 ✅; Phase 6 ✅; Phase 7 ✅; Phase 8 ✅; Phase 10 (10.0 ✅, 10.1–10.3 mostly pending); **Phase 14 Challenge Redesign ✅**
 > **Convention:** `[ ]` todo, `[x]` done, `[~]` in progress, `[!]` blocked
 > **Package Manager:** `bun` — semua command di dokumen ini pakai `bun` / `bunx`
 > **⚠️ WAJIB pakai `rtk` prefix:** Setiap command `bun` / `bunx` WAJIB ditulis `rtk bun` / `rtk bunx` (cth: `rtk bunx prisma migrate dev`, bukan `bunx prisma migrate dev`). Ini untuk konsistensi tooling environment.
@@ -243,9 +243,7 @@
 - [x] 🔴 Visualisasi konstelasi bintang (Knowledge Star) per mapel
 
 ### 3.4 Learning Plan
-- [ ] 🟠 Generate rencana belajar mingguan personal
-- [ ] 🟠 Track completion learning plan
-- [ ] 🟠 Adaptasi rencana berdasarkan performa
+- [x] 🔴 **REMOVED 2026-06-20** — `LearningPlan`, `LearningActivity` models dropped; `/plan` route, `learning-plan-view.tsx`, `learning-plan.ts` deleted. Daily + Weekly Challenge sudah cover adaptive content. Subject picker di /challenge memungkinkan user pilih mapel tantangan sendiri (lihat Phase 14).
 
 ---
 
@@ -750,6 +748,83 @@
 - [ ] 🟢 iOS app (React Native / Capacitor)
 - [ ] 🟢 AI-generated practice questions from uploaded material
 - [ ] 🟢 Video penjelasan AI / avatar berbicara
+
+---
+
+## Phase 14 — Challenge System Redesign (Juni 2026)
+
+> **Konteks:** Plan sudah dihapus (lihat §3.4). Daily + Weekly Challenge dirombak total: 1 challenge per mapel (max 4 mapel), item mix adaptif (growth-aware), subject picker, AI fallback untuk bank soal/materi kosong.
+
+### 14.1 Schema (DONE — commit 2026-06-20)
+- [x] 🔴 `StudentProfile.challengeSubjectIds: String[]` — daily subject selection (default = focusedSubjects)
+- [x] 🔴 `StudentProfile.weeklyChallengeSubjectIds: String[]` — weekly subject selection
+- [x] 🔴 `DailyAiQuota` model — track AI generation per user per day (20 questions + 5 materials)
+- [x] 🔴 Migration `20260620000000_challenge_redesign_2026_06_20`:
+  - Drop `learning_plans`, `learning_activities`
+  - Add fields above
+  - Backfill `challengeSubjectIds = focusedSubjects` for existing users
+- [x] 🔴 `User.aiGenerationQuota` reverse rel
+
+### 14.2 Pure Functions (DONE — 27 unit tests)
+- [x] 🔴 `src/server/learning/mix.ts::computeMixForSubject` — growth-aware mix (Weak+Stagnant / Weak+Growing / Balanced / Strong+Stagnant / Strong+Growing) — 9 tests
+- [x] 🔴 `src/server/learning/strength.ts::computeMasteryAverage` — 4 tests
+- [x] 🔴 `src/server/learning/strength.ts::computeGrowthTrend` — 5 tests
+- [x] 🔴 `src/server/learning/strength.ts::pickChallengeSubjectIds` — cascade fallback (challengeSubjectIds → focusedSubjects → top-4 national) — 5 tests
+- [x] 🔴 `src/server/learning/weekly.ts::computeWeeklyItemCounts` — adaptive by strength — 4 tests
+- [x] 🔴 `src/server/ai-quota.ts::canIncrementQuota` + `getQuotaResetBoundary` — 8 tests
+
+### 14.3 Server Actions (DONE)
+- [x] 🔴 `src/server/actions/challenges.ts`:
+  - `generateAndStoreDailyChallenges` — REWRITE per-subject loop, growth-aware mix, AI fallback chain (Tier 2 AI question, Tier 3 convert to material)
+  - `getOrCreateWeeklyChallenge` — delegates to `regenerateWeeklyChallenge`
+  - `updateWeeklyChallengeProgress` — counts across all WEEKLY challenges (not DAILY)
+  - `claimWeeklyChallengeReward` — 200 XP (was 100)
+- [x] 🔴 `src/server/actions/weekly-challenge.ts`:
+  - `regenerateWeeklyChallenge(userId)` — per-mapel deep dive, 2-4 HARD soal + 1-2 deep material (1000-1500 kata), bloom taxonomy rotated
+- [x] 🔴 `src/server/actions/challenge-subjects.ts`:
+  - `setChallengeSubjects(subjectIds)` — Zod validate 1-4 ids, apply today or tomorrow
+  - `setWeeklyChallengeSubjects(subjectIds)` — same pattern, weekly
+
+### 14.4 AI Generators (DONE)
+- [x] 🔴 `src/server/ai/challenge.ts`:
+  - `generateWeeklyPerSubjectAI` — per-mapel deep dive, validates `correctAnswer ∈ options`
+  - `generateWeeklyDeepMaterial` — 1000-1500 kata, learningStyle-aware
+  - `generateWeeklyTitleAI` — title + description
+
+### 14.5 UI (DONE)
+- [x] 🔴 `src/components/student/challenge/ChallengeSubjectPicker.tsx` — modal dengan chip grid, mastery badge, max 4 selector
+- [x] 🔴 `src/components/student/challenge/AiGeneratedBadge.tsx` — small inline badge "AI" untuk item AI-generated
+- [x] 🔴 `src/components/student/challenge/WeeklyChallengeCard.tsx` — 100→200 XP, subject picker button
+- [x] 🔴 `src/components/student/challenge/challenge-list-view.tsx` — daily subject picker button, weekly picker button
+- [x] 🔴 `src/components/student/student-nav.tsx` — hapus entry `/plan` (line 119-125)
+- [x] 🔴 `src/app/(student)/challenge/page.tsx` — fetch `challengeSubjectIds` + `weeklyChallengeSubjectIds` + mastery per subject
+
+### 14.6 Anti-Pattern (Tetap Ditegakkan + 1 Update)
+- [x] 🔴 ❌ AI generate soal untuk **mapel nasional** di pretest/quiz → ✅ Tetap TIDAK (hanya Tier 2 fallback untuk challenge)
+- [x] 🔴 ❌ Mapel custom masuk kurikulum global → ✅ Tetap
+- [x] 🔴 ❌ ML/RL untuk difficulty selection → ✅ Tetap (deterministic)
+- [x] 🔴 ❌ Skip prerequisite check di practice → ✅ Tetap
+- [x] 🔴 ❌ Gate akses siswa pakai challenge → ✅ Tetap
+- [x] 🔴 ❌ Refleksi dipakai untuk scoring → ✅ Tetap
+- [x] 🔴 ❌ On-demand generation spam → ✅ Tetap (10/hari)
+- [x] 🔴 ❌ Hardcode subject di challenge → ✅ Tetap (subjects dari `challengeSubjectIds` / `weeklyChallengeSubjectIds`)
+- [x] 🔴 ❌ Challenge completion jadi gate → ✅ Tetap
+- [x] 🆕 ❌ Unlimited AI generation → ✅ BARU (20 soal + 5 materi per user/day)
+
+### 14.7 Migration Dihapus
+- [x] 🔴 `model LearningPlan { ... }` — DROPPED
+- [x] 🔴 `model LearningActivity { ... }` — DROPPED
+- [x] 🔴 `/plan` page, `learning-plan-view.tsx`, `learning-plan.ts` — DELETED
+- [x] 🔴 `/api/plan` route — DELETED
+- [x] 🔴 `User.learningPlans` + `User.learningActivities` reverse rels — REMOVED
+
+### 14.8 Verification
+- [x] 🟠 `rtk bunx tsc --noEmit` → **PASSED**
+- [x] 🟠 `rtk bunx vitest run` → **42/42 tests passed** (15 new tests added)
+- [x] 🟠 `rtk bun run build` → **PASSED** (compiled in 18.4s, /plan removed from route list)
+- [x] 🟠 `rtk bunx prisma migrate status` → all migrations applied
+- [x] 🟢 Manual smoke test (TODO: needs running server)
+- [x] 🟢 Update SparkAi.md §4.11 (TODO)
 
 ---
 

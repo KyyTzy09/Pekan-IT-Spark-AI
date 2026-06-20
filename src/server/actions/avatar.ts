@@ -1,13 +1,20 @@
 "use server";
 
+import crypto from "node:crypto";
 import { auth } from "@/lib/auth";
 import { CLOUDINARY_CONFIG } from "@/lib/cloudinary";
-import crypto from "node:crypto";
 
 const MAX_FILE_SIZE = 7 * 1024 * 1024; // 7MB
 
 export async function getCloudinarySignature(): Promise<
-  | { ok: true; signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string }
+  | {
+      ok: true;
+      signature: string;
+      timestamp: number;
+      apiKey: string;
+      cloudName: string;
+      folder: string;
+    }
   | { ok: false; error: string }
 > {
   const session = await auth();
@@ -15,7 +22,11 @@ export async function getCloudinarySignature(): Promise<
     return { ok: false, error: "Kamu harus login dulu." };
   }
 
-  if (!CLOUDINARY_CONFIG.apiKey || !CLOUDINARY_CONFIG.apiSecret || !CLOUDINARY_CONFIG.cloudName) {
+  if (
+    !CLOUDINARY_CONFIG.apiKey ||
+    !CLOUDINARY_CONFIG.apiSecret ||
+    !CLOUDINARY_CONFIG.cloudName
+  ) {
     return { ok: false, error: "Cloudinary belum dikonfigurasi." };
   }
 
@@ -23,7 +34,10 @@ export async function getCloudinarySignature(): Promise<
   const folder = `spark-ai/avatars/${session.user.id}`;
 
   const paramsToSign = `folder=${folder}&timestamp=${timestamp}${CLOUDINARY_CONFIG.apiSecret}`;
-  const signature = crypto.createHash("sha1").update(paramsToSign).digest("hex");
+  const signature = crypto
+    .createHash("sha1")
+    .update(paramsToSign)
+    .digest("hex");
 
   return {
     ok: true,
@@ -35,9 +49,9 @@ export async function getCloudinarySignature(): Promise<
   };
 }
 
-export async function updateAvatarAction(imageUrl: string): Promise<
-  { ok: boolean; error?: string }
-> {
+export async function updateAvatarAction(
+  imageUrl: string,
+): Promise<{ ok: boolean; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) {
     return { ok: false, error: "Kamu harus login dulu." };

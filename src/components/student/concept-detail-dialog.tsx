@@ -1,5 +1,6 @@
 "use client";
 
+import { gooeyToast } from "goey-toast";
 import {
   BookOpen,
   CheckCircle2,
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/sheet";
 import { startNewChat } from "@/server/actions/chat";
 import { getConceptDetail, markConceptAsRead } from "@/server/actions/subjects";
-import { gooeyToast } from "goey-toast";
 
 interface ConceptDetailDialogProps {
   conceptId: string | null;

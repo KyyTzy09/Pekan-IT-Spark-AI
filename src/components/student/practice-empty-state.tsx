@@ -24,7 +24,10 @@ export function PracticeEmptyState({
   const [generateDialogOpen, setGenerateDialogOpen] = React.useState(false);
 
   const handleGenerate = async (subjectId: string, count: number) => {
-    const result = await generatePracticeQuestionsForSubject({ subjectId, totalCount: count });
+    const result = await generatePracticeQuestionsForSubject({
+      subjectId,
+      totalCount: count,
+    });
     if (result.ok) {
       window.location.reload();
     } else {

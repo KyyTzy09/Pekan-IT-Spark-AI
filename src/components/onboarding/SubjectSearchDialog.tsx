@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { Loader2, Search, Wand2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { generateCustomSubjectPretest } from "@/server/actions/generate-onboarding-pretest";
 
 type Subject = {

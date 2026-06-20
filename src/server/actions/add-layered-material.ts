@@ -22,7 +22,10 @@ export async function addAdvancedMaterial(
 
   const parsed = addMaterialSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Input tidak valid",
+    };
   }
 
   const { conceptId, difficulty } = parsed.data;

@@ -15,7 +15,12 @@ export type GeneratePracticeQuestionsInput = z.infer<typeof generateSchema>;
 
 export async function generatePracticeQuestionsForSubject(
   input: GeneratePracticeQuestionsInput,
-): Promise<{ ok: boolean; generated?: number; subjectName?: string; error?: string }> {
+): Promise<{
+  ok: boolean;
+  generated?: number;
+  subjectName?: string;
+  error?: string;
+}> {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "STUDENT") {
     return { ok: false, error: "Kamu harus login dulu." };
@@ -23,7 +28,10 @@ export async function generatePracticeQuestionsForSubject(
 
   const parsed = generateSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Input tidak valid" };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Input tidak valid",
+    };
   }
 
   const { subjectId, totalCount } = parsed.data;
@@ -52,7 +60,10 @@ export async function generatePracticeQuestionsForSubject(
   }
 
   const profiles = await prisma.studentKnowledgeProfile.findMany({
-    where: { userId: session.user.id, conceptId: { in: concepts.map((c) => c.id) } },
+    where: {
+      userId: session.user.id,
+      conceptId: { in: concepts.map((c) => c.id) },
+    },
     select: { conceptId: true, masteryScore: true },
   });
 
@@ -71,8 +82,14 @@ export async function generatePracticeQuestionsForSubject(
 
   for (const concept of concepts) {
     const mastery = masteryByConcept.get(concept.id) ?? 0;
-    const questionsPerConcept = Math.max(1, Math.ceil(totalCount / concepts.length));
-    const distribution = computeDifficultyDistribution(mastery, questionsPerConcept);
+    const questionsPerConcept = Math.max(
+      1,
+      Math.ceil(totalCount / concepts.length),
+    );
+    const distribution = computeDifficultyDistribution(
+      mastery,
+      questionsPerConcept,
+    );
 
     try {
       const questions = await generateQuestionsForConcept({
@@ -105,7 +122,10 @@ export async function generatePracticeQuestionsForSubject(
         totalGenerated += questions.length;
       }
     } catch (err) {
-      console.error(`Failed to generate questions for concept ${concept.name}:`, err);
+      console.error(
+        `Failed to generate questions for concept ${concept.name}:`,
+        err,
+      );
     }
   }
 

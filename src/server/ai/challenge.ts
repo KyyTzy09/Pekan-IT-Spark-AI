@@ -1216,3 +1216,239 @@ Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang meruju
     return { questions: [], materials: [] };
   }
 }
+
+// ============================================================================
+// §6 New: Per-subject weekly AI generators
+// ============================================================================
+
+export const weeklyPerSubjectQuestionSchema = z.object({
+  questionText: z.string().min(20).max(600),
+  options: z.array(z.string()).length(4),
+  correctAnswer: z.string(),
+  explanation: z.string().min(40).max(500),
+  hint: z.string().min(10).max(200),
+});
+
+export const weeklyPerSubjectMaterialSchema = z.object({
+  title: z.string().min(5).max(120),
+  content: z.string().min(800).max(8000),
+  keyPoints: z.array(z.string()).min(3).max(8),
+  estimatedMinutes: z.number().int().min(10).max(60),
+});
+
+export const weeklyPerSubjectContentSchema = z.object({
+  questions: z.array(weeklyPerSubjectQuestionSchema).max(10),
+  materials: z.array(weeklyPerSubjectMaterialSchema).max(3),
+});
+
+export type WeeklyPerSubjectContent = z.infer<
+  typeof weeklyPerSubjectContentSchema
+>;
+
+export async function generateWeeklyPerSubjectAI(input: {
+  subjectName: string;
+  subjectSlug: SubjectSlug | string;
+  learningStyle?: string;
+  strength: "weak" | "balanced" | "strong";
+  questionsCount: number;
+  materialsCount: number;
+}): Promise<WeeklyPerSubjectContent> {
+  const styleHint = learningStyleHint(input.learningStyle);
+  const strengthHint = strengthHintText(input.strength);
+
+  const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
+
+Buat konten TANTANGAN MINGGUAN DEEP DIVE untuk satu mata pelajaran.
+
+ATURAN WAJIB:
+- ${input.questionsCount} soal HARD pilihan ganda (4 opsi A/B/C/D, 1 jawaban benar)
+- ${input.materialsCount} materi markdown (1000-1500 kata per materi)
+- Soal HARUS menguji ANALISIS, EVALUASI, atau CREATE (bukan hafalan)
+- correctAnswer HARUS persis sama dengan salah satu string di options
+- Materi wajib pakai heading ##, section ###, contoh konkret, summary, callout "💭 Tantangan minggu ini"
+- Bahasa Indonesia yang asyik untuk remaja
+- Output HARUS JSON valid sesuai format. Jangan bungkus dengan markdown fence.
+- Setiap materi 5-8 keyPoints
+
+${styleHint}
+
+${strengthHint}
+
+Format output:
+{
+  "questions": [
+    {
+      "questionText": "...",
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "correctAnswer": "A. ...",
+      "explanation": "Penjelasan 100-200 kata",
+      "hint": "Pertanyaan pancingan, BUKAN bocoran"
+    }
+  ],
+  "materials": [
+    {
+      "title": "...",
+      "content": "Markdown 1000-1500 kata",
+      "keyPoints": ["poin 1", "poin 2", ...],
+      "estimatedMinutes": 30
+    }
+  ]
+}`;
+
+  const userPrompt = `Mapel: ${input.subjectName}
+Jumlah soal: ${input.questionsCount}
+Jumlah materi: ${input.materialsCount}
+
+Buat konten tantangan mingguan untuk mapel di atas. Output JSON.`;
+
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.6,
+    });
+
+    const rawJson = safeParseJson(text);
+    const validated = weeklyPerSubjectContentSchema.parse(rawJson);
+    return {
+      questions: validated.questions.slice(0, input.questionsCount),
+      materials: validated.materials.slice(0, input.materialsCount),
+    };
+  } catch (err) {
+    console.warn("generateWeeklyPerSubjectAI failed:", err);
+    return { questions: [], materials: [] };
+  }
+}
+
+function learningStyleHint(style?: string): string {
+  switch (style) {
+    case "VISUAL":
+      return "Style: VISUAL — materi wajib sertakan diagram Mermaid.js + analogi visual.";
+    case "TEXTUAL":
+      return "Style: TEXTUAL — materi terstruktur akademis dengan glosarium.";
+    case "EXAMPLE_HEAVY":
+      return "Style: EXAMPLE_HEAVY — materi wajib dimulai dengan studi kasus nyata + bedah solusi.";
+    case "SOCRATIC":
+      return "Style: SOCRATIC — materi dalam bentuk dialog tanya-jawab Siswa ↔ Spark.";
+    default:
+      return "Style: BALANCED.";
+  }
+}
+
+function strengthHintText(strength: "weak" | "balanced" | "strong"): string {
+  if (strength === "weak") {
+    return "Strength: WEAK — soal ANALYZE, materi dengan analogi sederhana + step-by-step.";
+  }
+  if (strength === "strong") {
+    return "Strength: STRONG — soal EVALUATE/CREATE, materi lebih dalam dengan terminologi advanced.";
+  }
+  return "Strength: BALANCED — soal APPLY/ANALYZE, materi penjelasan + aplikasi.";
+}
+
+export async function generateWeeklyDeepMaterial(input: {
+  subjectName: string;
+  conceptName: string;
+  learningStyle?: string;
+  masteryScore: number;
+}): Promise<{
+  title: string;
+  content: string;
+  keyPoints: string[];
+  estimatedMinutes: number;
+}> {
+  const styleHint = learningStyleHint(input.learningStyle);
+  const lengthTarget = input.masteryScore < 0.4 ? 1200 : 1100;
+
+  const systemPrompt = `Kamu adalah Spark — tutor AI untuk siswa SMA/SMK Indonesia.
+
+Buat MATERI DEEP DIVE untuk tantangan mingguan.
+
+WAJIB:
+- 1000-${lengthTarget + 200} kata Markdown
+- Heading ## + minimal 3 section ###
+- Contoh konkret + aplikasi dunia nyata
+- 5-8 keyPoints
+- Summary + callout "💭 Tantangan minggu ini: ..."
+- Difficulty HARD (terminologi advanced, dorong berpikir analitis)
+
+${styleHint}
+
+Output JSON: { "title": "...", "content": "Markdown...", "keyPoints": [...], "estimatedMinutes": 30-60 }`;
+
+  const userPrompt = `Mapel: ${input.subjectName}
+Topik: ${input.conceptName}
+
+Buat materi deep dive untuk topik ini. Output JSON.`;
+
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.6,
+    });
+
+    const rawJson = safeParseJson(text) as Record<string, unknown>;
+    return {
+      title: String(rawJson.title ?? `${input.conceptName} — Deep Dive`).slice(
+        0,
+        120,
+      ),
+      content: String(rawJson.content ?? "").slice(0, 8000),
+      keyPoints: Array.isArray(rawJson.keyPoints)
+        ? (rawJson.keyPoints as string[]).slice(0, 8)
+        : ["Poin utama konsep", "Aplikasi di kehidupan nyata"],
+      estimatedMinutes:
+        typeof rawJson.estimatedMinutes === "number"
+          ? Math.max(10, Math.min(60, rawJson.estimatedMinutes))
+          : 30,
+    };
+  } catch (err) {
+    console.warn("generateWeeklyDeepMaterial failed:", err);
+    return {
+      title: `${input.conceptName} — Deep Dive`,
+      content: `## ${input.conceptName}\n\nMateri ini sedang disiapkan. Coba lagi nanti atau pilih mapel lain.`,
+      keyPoints: ["Materi dalam persiapan"],
+      estimatedMinutes: 30,
+    };
+  }
+}
+
+export async function generateWeeklyTitleAI(input: {
+  userName?: string;
+  grade: number | null;
+  subjectNames: string[];
+}): Promise<{ title: string; description: string }> {
+  const systemPrompt = `Kamu adalah Spark — tutor AI untuk siswa SMA/SMK Indonesia.
+Buat judul + deskripsi singkat (1 kalimat) untuk tantangan mingguan.
+Bahasa Indonesia asyik untuk remaja. JSON valid saja.`;
+
+  const userPrompt = `Siswa: ${input.userName ?? "Siswa"}
+Kelas: ${input.grade ?? "SMA"}
+Mapel minggu ini: ${input.subjectNames.join(", ")}
+
+Format JSON: { "title": "max 80 char", "description": "max 200 char" }`;
+
+  try {
+    const { text } = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.7,
+    });
+    const rawJson = safeParseJson(text) as Record<string, unknown>;
+    return {
+      title: String(rawJson.title ?? "Misi Mingguan").slice(0, 80),
+      description: String(
+        rawJson.description ?? "Selesaikan tantangan mingguan!",
+      ).slice(0, 200),
+    };
+  } catch (err) {
+    console.warn("generateWeeklyTitleAI failed:", err);
+    return {
+      title: `Misi Mingguan: ${input.subjectNames[0] ?? "Pemburu Ilmu"}`,
+      description: `Selesaikan tantangan mingguan untuk klaim 200 XP!`,
+    };
+  }
+}

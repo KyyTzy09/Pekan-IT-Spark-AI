@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, Sparkles, Target, Trophy } from "lucide-react";
+import { ArrowLeft, ChevronDown, Settings2, Sparkles, Target, Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,8 +8,10 @@ import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
 import {
   ChallengeCard,
+  ChallengeSubjectPicker,
   OnDemandGenerator,
   WeeklyChallengeCard,
+  type SubjectOption,
 } from "@/components/student/challenge";
 import { Button } from "@/components/ui/button";
 import { claimWeeklyChallengeReward } from "@/server/actions/challenges";
@@ -65,6 +67,9 @@ interface ChallengeListViewProps {
   progress: { total: number; completed: number; points: number };
   dailyProgress: DailyProgress;
   subjectOptions: Array<{ slug: string; name: string }>;
+  initialChallengeSubjectIds: string[];
+  initialWeeklySubjectIds: string[];
+  availableSubjects: SubjectOption[];
   initiallyEmpty?: boolean;
   weeklyChallenge?: any;
 }
@@ -76,6 +81,9 @@ export function ChallengeListView({
   progress: propProgress,
   dailyProgress: propDailyProgress,
   subjectOptions,
+  initialChallengeSubjectIds,
+  initialWeeklySubjectIds,
+  availableSubjects,
   initiallyEmpty,
   weeklyChallenge,
 }: ChallengeListViewProps) {
@@ -86,6 +94,23 @@ export function ChallengeListView({
   const [dailyProgress, setDailyProgress] = React.useState(propDailyProgress);
   const [loading, setLoading] = React.useState(!!initiallyEmpty);
   const [filter, setFilter] = React.useState<Filter>("all");
+  const [pickerOpen, setPickerOpen] = React.useState<{
+    variant: "daily" | "weekly";
+  } | null>(null);
+  const [pickerSnapshot, setPickerSnapshot] = React.useState<{
+    daily: string[];
+    weekly: string[];
+  }>({
+    daily: initialChallengeSubjectIds,
+    weekly: initialWeeklySubjectIds,
+  });
+
+  React.useEffect(() => {
+    setPickerSnapshot({
+      daily: initialChallengeSubjectIds,
+      weekly: initialWeeklySubjectIds,
+    });
+  }, [initialChallengeSubjectIds, initialWeeklySubjectIds]);
 
   React.useEffect(() => {
     if (!initiallyEmpty) {
@@ -210,6 +235,31 @@ export function ChallengeListView({
             </Button>
           </div>
 
+          <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2.5">
+            <button
+              type="button"
+              onClick={() => setPickerOpen({ variant: "daily" })}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--coral)]/30 bg-[var(--coral)]/5 px-3 py-1.5 text-[11.5px] font-bold text-[var(--coral)] transition-all hover:bg-[var(--coral)]/10"
+            >
+              <Settings2 size={11} strokeWidth={2.5} />
+              Atur mapel tantangan
+              <span className="rounded-full bg-[var(--coral)]/15 px-1.5 py-0.5 text-[10px]">
+                {pickerSnapshot.daily.length}/4
+              </span>
+            </button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-8 rounded-full text-[11.5px] text-muted-foreground"
+            >
+              <Link href="/dashboard">
+                <ArrowLeft size={11} />
+                Beranda
+              </Link>
+            </Button>
+          </div>
+
           <div className="relative mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatTile
               icon={<Target size={14} />}
@@ -247,6 +297,9 @@ export function ChallengeListView({
           <WeeklyChallengeCard
             weeklyChallenge={weeklyChallenge}
             onClaimReward={claimWeeklyChallengeReward}
+            onPickSubjects={() => setPickerOpen({ variant: "weekly" })}
+            showSubjectPicker={true}
+            subjectCount={pickerSnapshot.weekly.length}
           />
         </Reveal>
       )}
@@ -393,6 +446,23 @@ export function ChallengeListView({
             ))}
           </div>
         </Reveal>
+      )}
+
+      {pickerOpen && (
+        <ChallengeSubjectPicker
+          open={true}
+          onClose={() => {
+            setPickerOpen(null);
+            router.refresh();
+          }}
+          variant={pickerOpen.variant}
+          currentSubjectIds={
+            pickerOpen.variant === "daily"
+              ? pickerSnapshot.daily
+              : pickerSnapshot.weekly
+          }
+          availableSubjects={availableSubjects}
+        />
       )}
     </div>
   );

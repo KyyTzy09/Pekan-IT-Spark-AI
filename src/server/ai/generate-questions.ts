@@ -76,7 +76,9 @@ Output JSON:
 
   const parsed = generatedQuestionsSchema.safeParse(JSON.parse(text));
   if (!parsed.success) {
-    throw new Error(`Failed to parse generated questions: ${parsed.error.message}`);
+    throw new Error(
+      `Failed to parse generated questions: ${parsed.error.message}`,
+    );
   }
   return parsed.data.questions;
 }

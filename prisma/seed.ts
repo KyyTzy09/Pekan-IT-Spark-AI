@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { embedMany, embeddingModel } from "../src/lib/ai";
+import { embeddingModel, embedMany } from "../src/lib/ai";
 import { prisma } from "../src/lib/prisma";
 
 const CONCEPTS_BY_SUBJECT: Record<
