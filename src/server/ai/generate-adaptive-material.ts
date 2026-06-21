@@ -122,7 +122,7 @@ Aturan:
 5. Gunakan bahasa Indonesia yang baik dan benar
 6. Sertakan contoh yang relevan
 
-STRUKTUR WAJIB:
+STRUKTUR WAJIB (semua di dalam field contentMd JSON):
 - Judul dan pengantar (kaitkan dengan kehidupan siswa)
 - Penjelasan konsep utama (mendalam, bukan permukaan)
 - Contoh soal beserta pembahasan langkah demi langkah
@@ -130,10 +130,12 @@ STRUKTUR WAJIB:
 - Ringkasan poin-poin penting
 - Callout refleksi: "💭 Coba pikirkan: <pertanyaan>"
 
-Output JSON:
+PENTING: Jangan output materi secara terpisah! Seluruh konten markdown WAJIB ada di dalam field contentMd pada JSON. Jangan gunakan placeholder atau ringkasan.
+
+Output HANYA JSON (tanpa teks lain sebelum atau sesudah):
 {
   "title": "Judul Materi",
-  "contentMd": "Isi materi dalam Markdown...",
+  "contentMd": "# Judul Materi\n\nIsi materi LENGKAP dalam Markdown di sini...",
   "keyPoints": ["Point 1", "Point 2", "Point 3"],
   "estimatedMinutes": 15
 }`,
