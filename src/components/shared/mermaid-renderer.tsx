@@ -220,5 +220,21 @@ function preprocessChart(chart: string): string {
     },
   );
 
+  // 6. Connector labels: -->|Text with (parentheses)| --> -->|"Text with (parentheses)"|
+  processed = processed.replace(
+    /(-->|---|-\.-|==>|--o|--x|\-\->|\-\.\.)\s*\|([^|]*\([^|]*\)[^|]*)\|/g,
+    (match, arrow, text) => {
+      const trimmed = text.trim();
+      if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ) {
+        return match;
+      }
+      const escaped = trimmed.replace(/"/g, '\\"');
+      return `${arrow}|"${escaped}"|`;
+    },
+  );
+
   return processed;
 }
