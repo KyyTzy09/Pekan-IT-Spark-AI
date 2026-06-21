@@ -18,6 +18,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `npm test` | `rtk npm test` |
 | `npx prisma generate` | `rtk npx prisma generate` |
 | `cat package.json` | `rtk read package.json` |
+| `read` | `rtk read` |
 
 **Perintah yang TIDAK perlu RTK:**
 - `cd`, `mkdir`, `rm`, `cp`, `mv` (file operations, bukan output-heavy)
