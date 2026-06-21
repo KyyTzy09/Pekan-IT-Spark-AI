@@ -71,7 +71,7 @@ describe("tryMapAndRecoverMixPlan", () => {
     expect(material?.title).toContain("Trigonometri");
     expect(material?.keyPoints?.length).toBeGreaterThanOrEqual(3);
     expect(material?.estimatedMinutes).toBeGreaterThanOrEqual(10);
-    expect(material?.content?.length).toBeGreaterThanOrEqual(5000);
-    expect(countWords(material?.content || "")).toBeGreaterThanOrEqual(1000);
+    expect(material?.content?.length).toBeGreaterThanOrEqual(1500);
+    expect(countWords(material?.content || "")).toBeGreaterThanOrEqual(300);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Loader2, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ type PretestQuestion = {
 type Flow = "national" | "custom" | null;
 
 const NATIONAL_STEPS = [
-  { key: "welcome", label: "Welcome" },
+  { key: "welcome", label: "Mulai" },
   { key: "profile", label: "Profil" },
   { key: "subjects", label: "Mapel" },
   { key: "style", label: "Gaya" },
@@ -57,7 +57,7 @@ const NATIONAL_STEPS = [
 ] as const;
 
 const CUSTOM_STEPS = [
-  { key: "welcome", label: "Welcome" },
+  { key: "welcome", label: "Mulai" },
   { key: "custom-subject", label: "Mapel" },
   { key: "custom-pretest", label: "Pretest" },
 ] as const;
@@ -361,70 +361,52 @@ export function OnboardingWizardClient({
 
   const stepTitle = () => {
     const currentStepKey = steps[step]?.key;
-    if (currentStepKey === "welcome") {
-      return (
-        <>
-          Hai! Aku <span className="text-gradient-warm">Spark</span> ✨
-        </>
-      );
-    }
     if (flow === "custom") {
       if (currentStepKey === "custom-subject") return "Bikin mapel kustom";
       if (currentStepKey === "custom-pretest") return "Cek level awal kamu";
     }
     if (currentStepKey === "profile") return "Tentang kamu";
-    if (currentStepKey === "subjects") return "Mapel fokus kamu";
-    if (currentStepKey === "style") return "Gaya belajar & reminder";
+    if (currentStepKey === "subjects") return "Pilih mapel fokus";
+    if (currentStepKey === "style") return "Gaya belajar kamu";
     if (currentStepKey === "pretest") return "Cek level awal kamu";
     return "";
   };
 
   const stepDescription = () => {
     const currentStepKey = steps[step]?.key;
-    if (currentStepKey === "welcome") {
-      return "Isi beberapa hal ini, biar aku bisa nemenin kamu dengan pas.";
-    }
     if (flow === "custom") {
       if (currentStepKey === "custom-subject") {
-        return "Nama mapel yang kamu mau, terus Spark bakal generate outline + soal pretest.";
+        return "Kasih tau Spark mapel apa yang kamu mau, nanti AI generate outline + soal pretest.";
       }
       if (currentStepKey === "custom-pretest") {
         return "Soal ini dibuat khusus buat kamu sama AI. Jawab aja sebisanya.";
       }
     }
     if (currentStepKey === "profile") {
-      return "Biar aku nyesuaiin penjelasan sama level dan kurikulum sekolahmu.";
+      return "Biar Spark bisa nyesuaiin penjelasan sama level dan kurikulum sekolahmu.";
     }
     if (currentStepKey === "subjects") {
-      return "Pilih minimal 1. Bisa lebih dari satu, biar Spark bisa fokus ngebantu.";
+      return "Pilih minimal 1 mapel. Bisa lebih dari satu biar Spark fokus ngebantu.";
     }
     if (currentStepKey === "style") {
-      return "Gaya belajar + reminder (opsional). Isi yang penting dulu.";
+      return "Pilih gaya belajar yang paling cocok buat kamu. Reminder opsional.";
     }
     if (currentStepKey === "pretest") {
-      return "Soal pretest muncul sesuai mapel yang kamu pilih. Bisa di-skip, tapi kalo dijawab Spark bisa lebih nyesuaiin.";
+      return "Jawab sebisanya — Spark pakai ini buat nyesuaiin materi. Bisa di-skip.";
     }
     return "";
   };
+
+  const isWelcomeScreen = flow === null || step === 0;
 
   React.useEffect(() => {
     router.prefetch("/dashboard");
   }, [router]);
 
-  if (flow === null) {
+  // ─── Welcome screen (no header/footer chrome) ───
+  if (isWelcomeScreen) {
     return (
       <div className="flex flex-1 flex-col">
-        <header className="mb-6">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            Halo, <span className="text-[var(--coral)]">{userName}</span> 👋
-          </p>
-          <h1 className="mt-1 font-heading text-[24px] font-bold leading-tight tracking-tight sm:text-[28px]">
-            {stepTitle()}
-          </h1>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13px]">
-            {stepDescription()}
-          </p>
-        </header>
         <WelcomeStep
           userName={userName}
           onChooseNational={handleChooseNational}
@@ -434,36 +416,38 @@ export function OnboardingWizardClient({
     );
   }
 
+  // ─── All other steps ───
   return (
     <div className="flex flex-1 flex-col">
+      {/* Header */}
       <header className="mb-6">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-          Halo, <span className="text-[var(--coral)]">{userName}</span> 👋
-        </p>
-        <h1 className="mt-1 font-heading text-[24px] font-bold leading-tight tracking-tight sm:text-[28px]">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            Halo, <span className="text-[var(--coral)]">{userName}</span> 👋
+          </p>
+          <span className="text-[11px] font-semibold text-muted-foreground/60">
+            Step {step + 1} dari {steps.length}
+          </span>
+        </div>
+        <h1 className="font-heading text-[22px] font-bold leading-tight tracking-tight sm:text-[26px]">
           {stepTitle()}
         </h1>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13px]">
+        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
           {stepDescription()}
         </p>
       </header>
 
+      {/* Step indicator */}
       {showStepIndicator && (
         <StepIndicator steps={steps as unknown as Step[]} current={step} />
       )}
 
+      {/* Step content */}
       <div
         key={`step-${flow}-${step}`}
         className="mt-6 flex-1 animate-step-fade-in"
       >
-        {/* National flow - only render current step */}
-        {flow === "national" && step === 0 && (
-          <WelcomeStep
-            userName={userName}
-            onChooseNational={handleChooseNational}
-            onChooseCustom={handleChooseCustom}
-          />
-        )}
+        {/* National flow */}
         {flow === "national" && step === 1 && (
           <ProfileStep
             educationLevel={educationLevel}
@@ -508,9 +492,11 @@ export function OnboardingWizardClient({
         {flow === "national" &&
           step === 4 &&
           (pretestLoading ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16">
-              <Loader2 size={28} className="animate-spin text-[var(--coral)]" />
-              <p className="text-[13px] font-semibold text-muted-foreground">
+            <div className="flex flex-col items-center justify-center gap-4 py-16">
+              <div className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-[var(--coral)]/15 to-[var(--orange)]/10">
+                <Loader2 size={28} className="animate-spin text-[var(--coral)]" />
+              </div>
+              <p className="text-[14px] font-semibold text-muted-foreground">
                 Memuat soal pretest...
               </p>
             </div>
@@ -525,14 +511,7 @@ export function OnboardingWizardClient({
             />
           ))}
 
-        {/* Custom flow - only render current step */}
-        {flow === "custom" && step === 0 && (
-          <WelcomeStep
-            userName={userName}
-            onChooseNational={handleChooseNational}
-            onChooseCustom={handleChooseCustom}
-          />
-        )}
+        {/* Custom flow */}
         {flow === "custom" && step === 1 && (
           <CustomSubjectStep
             name={customName}
@@ -559,32 +538,35 @@ export function OnboardingWizardClient({
         )}
       </div>
 
+      {/* Error */}
       {error && flow !== "custom" && (
         <div
           role="alert"
-          className="mt-4 flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/8 px-3.5 py-2.5 text-[12.5px] font-medium text-destructive"
+          className="mt-4 flex items-start gap-3 rounded-xl border-2 border-destructive/30 bg-destructive/8 px-4 py-3 text-[13px] font-medium text-destructive"
         >
-          <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-destructive" />
+          <span className="mt-1 size-2 shrink-0 rounded-full bg-destructive" />
           {error}
         </div>
       )}
 
-      <footer className="mt-6 flex items-center justify-between gap-3 border-t border-border/40 pt-5">
+      {/* Footer navigation */}
+      <footer className="mt-8 flex items-center justify-between gap-4 border-t border-border/40 pt-6">
         <Button
           type="button"
           variant="ghost"
           size="lg"
           onClick={goBack}
           disabled={submitting || isGenerating}
-          className="rounded-2xl"
+          className="rounded-xl text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft size={16} />
           Kembali
         </Button>
+
         {step < steps.length - 1 ? (
           <Button
             type="button"
-            size="lg"
+            size="xl"
             onClick={
               flow === "custom" && step === 1 && !isGenerating
                 ? generatedQuestions
@@ -600,53 +582,53 @@ export function OnboardingWizardClient({
                   : customName.trim().length < 2
                 : !isStepValid(step))
             }
-            className="rounded-2xl bg-[var(--coral)] px-5 text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)] hover:bg-[var(--coral)]/90 hover:shadow-[0_10px_24px_rgba(225,29,72,0.5)]"
+            className="rounded-xl bg-gradient-to-r from-[var(--coral)] to-[var(--orange)] px-7 text-[14px] font-bold text-white shadow-[0_8px_24px_rgba(225,29,72,0.3)] hover:shadow-[0_12px_32px_rgba(225,29,72,0.4)]"
           >
             {flow === "custom" && step === 1 ? (
               isGenerating ? (
                 <>
-                  <Loader2 size={15} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   Generate...
                 </>
               ) : generatedQuestions ? (
                 <>
                   Lanjut
-                  <ArrowRight size={15} strokeWidth={2.5} />
+                  <ArrowRight size={16} strokeWidth={2.5} />
                 </>
               ) : (
                 <>
-                  <Sprout size={15} strokeWidth={2.5} />
+                  <Sparkles size={16} strokeWidth={2.5} />
                   Generate + Test
                 </>
               )
             ) : (
               <>
                 Lanjut
-                <ArrowRight size={15} strokeWidth={2.5} />
+                <ArrowRight size={16} strokeWidth={2.5} />
               </>
             )}
           </Button>
         ) : (
           <Button
             type="button"
-            size="lg"
+            size="xl"
             onClick={handleSubmit}
             disabled={!isStepValid(step) || submitting || isGenerating}
             className={cn(
-              "rounded-2xl px-5 text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)] transition-all",
+              "rounded-xl px-7 text-[14px] font-bold text-white shadow-[0_8px_24px_rgba(225,29,72,0.3)] transition-all",
               submitting
                 ? "bg-[var(--coral)]/70"
-                : "bg-[var(--coral)] hover:bg-[var(--coral)]/90 hover:shadow-[0_10px_32px_rgba(225,29,72,0.5)]",
+                : "bg-gradient-to-r from-[var(--coral)] to-[var(--orange)] hover:shadow-[0_12px_32px_rgba(225,29,72,0.45)]",
             )}
           >
             {submitting ? (
               <>
-                <Loader2 size={15} className="animate-spin" />
-                Menyiapkan dashboard kamu...
+                <Loader2 size={16} className="animate-spin" />
+                Menyiapkan dashboard...
               </>
             ) : (
               <>
-                <Sprout size={15} strokeWidth={2.5} />
+                <Sparkles size={16} strokeWidth={2.5} />
                 {flow === "custom"
                   ? "Selesai & Mulai Belajar"
                   : "Mulai Belajar"}

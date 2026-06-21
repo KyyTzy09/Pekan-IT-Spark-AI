@@ -128,53 +128,48 @@ export function SubjectSearchDialog({
         onEscapeKeyDown={(e) => {
           if (isGenerating) e.preventDefault();
         }}
-        className="max-w-lg p-0 overflow-hidden bg-card border border-border/40"
+        className="max-w-lg overflow-hidden border-2 border-border/60 bg-card p-0"
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, oklch(0.78 0.18 25 / 0.5), transparent 70%)",
-          }}
-        />
-
-        <DialogHeader className="relative flex-row items-start justify-between gap-3 border-border/40 border-b p-5">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
-              Tambah mapel
-            </p>
-            <DialogTitle className="mt-1 font-heading text-[20px] font-bold leading-tight">
-              {showCustomForm ? "Bikin mapel kustom" : "Cari mapel"}
-            </DialogTitle>
+        <DialogHeader className="border-b border-border/40 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--purple)]">
+                Tambah mapel
+              </p>
+              <DialogTitle className="mt-1 font-heading text-[20px] font-bold leading-tight">
+                {showCustomForm ? "Bikin mapel kustom" : "Cari mapel"}
+              </DialogTitle>
+            </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isGenerating}
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-border/60 bg-background/80 text-muted-foreground transition-colors hover:bg-background disabled:opacity-40"
+              aria-label="Tutup"
+            >
+              <X size={16} strokeWidth={2.5} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isGenerating}
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-border/40 bg-background/60 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-background disabled:opacity-40"
-            aria-label="Tutup"
-          >
-            <X size={16} strokeWidth={2.5} />
-          </button>
         </DialogHeader>
 
-        <div className="relative max-h-[60vh] overflow-y-auto p-5 sm:max-h-[480px]">
+        <div className="max-h-[60vh] overflow-y-auto p-5 sm:max-h-[480px]">
           {!showCustomForm ? (
-            <div className="space-y-3">
-              <div className="group/field relative flex items-center rounded-2xl border border-border/40 bg-background/60 transition-colors focus-within:border-[var(--coral)]/40 focus-within:ring-2 focus-within:ring-[var(--coral)]/15">
-                <span className="grid size-10 place-items-center text-muted-foreground">
-                  <Search size={15} />
+            <div className="space-y-4">
+              {/* Search input */}
+              <div className="relative flex items-center rounded-xl border-2 border-border/60 bg-background/80 transition-colors focus-within:border-[var(--coral)] focus-within:ring-4 focus-within:ring-[var(--coral)]/10">
+                <span className="grid size-11 place-items-center text-muted-foreground">
+                  <Search size={18} />
                 </span>
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cari mapel nasional..."
-                  className="h-11 w-full min-w-0 rounded-2xl bg-transparent pr-3.5 text-[14px] outline-none placeholder:text-muted-foreground/80"
+                  className="h-12 w-full bg-transparent pr-4 text-[15px] outline-none placeholder:text-muted-foreground/60"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              {/* Subject grid */}
+              <div className="grid grid-cols-2 gap-2.5">
                 {filtered.map((s) => {
                   const active = selectedSubjects.includes(s.id);
                   return (
@@ -183,23 +178,23 @@ export function SubjectSearchDialog({
                       type="button"
                       onClick={() => onToggleSubject(s.id)}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all",
+                        "flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all",
                         active
-                          ? "border-[var(--coral)]/40 bg-[var(--coral)]/8 ring-1 ring-[var(--coral)]/30"
-                          : "border-border/30 bg-background/40 hover:border-border/60",
+                          ? "border-[var(--coral)] bg-[var(--coral)]/8 ring-4 ring-[var(--coral)]/10"
+                          : "border-border/60 bg-background/80 hover:border-border",
                       )}
                     >
                       <span
-                        className="grid size-8 shrink-0 place-items-center rounded-lg text-white"
+                        className="grid size-10 shrink-0 place-items-center rounded-md text-white"
                         style={{
                           background: s.color
                             ? `linear-gradient(135deg, ${s.color}, oklch(0.65 0.15 60))`
                             : "linear-gradient(135deg, var(--coral), var(--orange))",
                         }}
                       >
-                        <span className="text-[14px]">{s.icon ?? "📚"}</span>
+                        <span className="text-[16px]">{s.icon ?? "📚"}</span>
                       </span>
-                      <span className="text-[12px] font-semibold text-foreground">
+                      <span className="text-[13px] font-bold text-foreground">
                         {s.name}
                       </span>
                     </button>
@@ -207,37 +202,40 @@ export function SubjectSearchDialog({
                 })}
               </div>
 
-              <div className="border-t border-border/30 pt-3">
-                <p className="mb-2 text-[11px] text-muted-foreground">
+              {/* Custom form trigger */}
+              <div className="border-t border-border/40 pt-4">
+                <p className="mb-2.5 text-[12px] font-semibold text-muted-foreground">
                   Mapel kamu tidak ada di daftar?
                 </p>
                 <Button
                   type="button"
                   onClick={() => setShowCustomForm(true)}
-                  className="h-10 w-full rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--pink)] text-white font-bold shadow-[0_6px_18px_rgba(139,92,246,0.3)]"
+                  className="h-12 w-full rounded-lg bg-gradient-to-r from-[var(--purple)] to-[var(--pink)] font-bold text-white shadow-[0_8px_24px_rgba(139,92,246,0.3)]"
                 >
-                  <Wand2 size={14} strokeWidth={2.5} />
+                  <Wand2 size={16} strokeWidth={2.5} />
                   Bikin mapel custom + AI
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-[var(--purple)]/25 bg-[var(--purple)]/5 p-3.5 text-[12px] leading-relaxed text-foreground/80">
+            <div className="space-y-5">
+              {/* AI info */}
+              <div className="rounded-xl border-2 border-[var(--purple)]/30 bg-[var(--purple)]/5 p-4 text-[13px] leading-relaxed text-foreground/80">
                 <p className="font-bold text-[var(--purple)]">
                   🪄 Spark AI bakal:
                 </p>
-                <ul className="mt-1.5 space-y-1 pl-4">
+                <ul className="mt-2 space-y-1.5 pl-4">
                   <li>• Bikin 3-6 topik sesuai mapel kamu</li>
                   <li>• Generate 3-6 konsep per topik</li>
                   <li>• Bikin 5-8 soal pretest untuk ukur kemampuan awal</li>
                 </ul>
               </div>
 
-              <div>
+              {/* Name input */}
+              <section>
                 <label
                   htmlFor="search-subject-name"
-                  className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                  className="mb-2 block text-[13px] font-bold text-foreground"
                 >
                   Nama mapel
                 </label>
@@ -245,58 +243,59 @@ export function SubjectSearchDialog({
                   id="search-subject-name"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="cth: Bahasa Jawa, Coding, Musik…"
+                  placeholder="Contoh: Bahasa Jawa, Coding, Musik..."
                   maxLength={60}
                   disabled={isGenerating}
-                  className="mt-1.5 h-11 w-full rounded-2xl border border-border/50 bg-background/70 px-4 text-[14px] font-semibold backdrop-blur-sm transition-colors placeholder:text-muted-foreground/60 focus:border-[var(--coral)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--coral)]/15 disabled:opacity-50"
+                  className="h-12 w-full rounded-xl border-2 border-border/60 bg-background/80 px-4 text-[15px] font-semibold transition-colors placeholder:text-muted-foreground/60 focus:border-[var(--coral)] focus:outline-none focus:ring-4 focus:ring-[var(--coral)]/10 disabled:opacity-50"
                 />
-              </div>
+              </section>
 
-              <div>
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="search-subject-context"
-                    className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
-                  >
-                    Konteks tambahan (opsional)
-                  </label>
-                </div>
+              {/* Context textarea */}
+              <section>
+                <label
+                  htmlFor="search-subject-context"
+                  className="mb-2 block text-[13px] font-bold text-foreground"
+                >
+                  Konteks tambahan (opsional)
+                </label>
                 <textarea
                   id="search-subject-context"
                   value={customContext}
                   onChange={(e) => setCustomContext(e.target.value)}
                   placeholder="Boleh kosong. Kasih tau Spark fokus yang kamu mau."
                   maxLength={280}
-                  rows={2}
+                  rows={3}
                   disabled={isGenerating}
-                  className="mt-1.5 w-full resize-none rounded-2xl border border-border/50 bg-background/70 px-4 py-2.5 text-[13px] font-medium leading-relaxed backdrop-blur-sm transition-colors placeholder:text-muted-foreground/60 focus:border-[var(--coral)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--coral)]/15 disabled:opacity-50"
+                  className="w-full resize-none rounded-xl border-2 border-border/60 bg-background/80 px-4 py-3 text-[14px] font-medium leading-relaxed transition-colors placeholder:text-muted-foreground/60 focus:border-[var(--coral)] focus:outline-none focus:ring-4 focus:ring-[var(--coral)]/10 disabled:opacity-50"
                 />
-              </div>
+              </section>
 
+              {/* Error */}
               {error && (
-                <div className="rounded-2xl border border-[var(--coral)]/30 bg-[var(--coral)]/8 p-3 text-[12px] leading-relaxed text-[var(--coral)]">
+                <div className="rounded-xl border-2 border-[var(--coral)]/40 bg-[var(--coral)]/8 p-4 text-[13px] leading-relaxed text-[var(--coral)]">
                   ⚠️ {error}
                 </div>
               )}
 
+              {/* Generate button */}
               <Button
                 type="button"
                 onClick={handleGenerate}
                 disabled={isGenerating || customName.trim().length < 2}
-                className="h-11 w-full rounded-full bg-[var(--coral)] font-bold text-white shadow-[0_8px_22px_rgba(225,29,72,0.35)] disabled:opacity-40"
+                className="h-12 w-full rounded-lg bg-gradient-to-r from-[var(--coral)] to-[var(--orange)] font-bold text-white shadow-[0_8px_24px_rgba(225,29,72,0.3)] disabled:opacity-40"
               >
                 {isGenerating ? (
                   <>
                     <Loader2
-                      size={15}
+                      size={18}
                       className="animate-spin"
                       strokeWidth={2.5}
                     />
-                    Spark lagi mikir keras…
+                    Spark lagi mikir keras...
                   </>
                 ) : (
                   <>
-                    <Wand2 size={15} strokeWidth={2.5} />
+                    <Wand2 size={18} strokeWidth={2.5} />
                     Generate pake Spark AI
                   </>
                 )}

@@ -25,18 +25,18 @@ const materialSchema = z.object({
     .describe("Judul materi, singkat dan menarik untuk siswa"),
   content: z
     .string()
-    .min(5000)
-    .refine((text) => countWords(text) >= 1000, {
-      message: "Materi terlalu pendek, minimal 1000 kata",
+    .min(1500)
+    .refine((text) => countWords(text) >= 300, {
+      message: "Materi terlalu pendek, minimal 300 kata",
     })
     .describe(
-      "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 3 section, contoh soal pembahasan, dan penutup ringkas. Panjang 1000-2000 kata.",
+      "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 2 section, dan ringkas. Panjang 300-800 kata.",
     ),
   keyPoints: z
     .array(z.string())
-    .min(3)
+    .min(2)
     .max(8)
-    .describe("3-8 poin penting yang harus diingat siswa"),
+    .describe("2-8 poin penting yang harus diingat siswa"),
   estimatedMinutes: z
     .number()
     .int()
@@ -423,7 +423,7 @@ function getSubjectNameFromSlug(slug: string): string {
   }
 }
 
-async function tryMapAndRecoverMixPlan(
+export async function tryMapAndRecoverMixPlan(
   rawJson: unknown,
   input: DailyMixInput,
 ): Promise<DailyMixPlan | null> {
@@ -931,9 +931,9 @@ export async function generateMaterialMarkdown(args: {
 const materialContentSchema = z.object({
   content: z
     .string()
-    .min(5000)
-    .refine((text) => countWords(text) >= 1000, {
-      message: "Materi terlalu pendek, minimal 1000 kata",
+    .min(1500)
+    .refine((text) => countWords(text) >= 300, {
+      message: "Materi terlalu pendek, minimal 300 kata",
     }),
 });
 
@@ -988,7 +988,7 @@ Difficulty: ${difficulty}. ${
         : "Seimbang, definisi + contoh + sedikit insight."
   }
 
-Panjang: 1000-2000 kata (WAJIB minimal 1000 kata). Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat. Output HANYA markdown, jangan ada penjelasan meta.`;
+Panjang: 300-800 kata (minimal 300 kata). Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat. Output HANYA markdown, jangan ada penjelasan meta.`;
 
   const userPrompt = `Mapel: ${args.subjectName}
 Topik: ${args.topicName}
@@ -1152,17 +1152,17 @@ export const weeklyMaterialSchema = z.object({
   title: z.string().max(100).describe("Judul materi"),
   content: z
     .string()
-    .min(400)
-    .describe("Materi belajar mendalam dalam format Markdown (600-1000 kata)"),
+    .min(200)
+    .describe("Materi belajar dalam format Markdown (300-800 kata)"),
   keyPoints: z
     .array(z.string())
-    .min(3)
+    .min(2)
     .max(8)
-    .describe("3-8 poin penting dari materi"),
+    .describe("2-8 poin penting dari materi"),
   estimatedMinutes: z
     .number()
     .int()
-    .min(5)
+    .min(3)
     .max(30)
     .describe("Estimasi waktu baca dalam menit"),
   subjectName: z.string().describe("Nama mapel yang materi ini rujuk"),
@@ -1196,7 +1196,7 @@ ATURAN WAJIB:
 2. Soal harus membutuhkan analisis, sintesis, atau aplikasi konsep.
 3. Setiap soal punya 4 opsi jawaban dengan 1 jawaban benar yang pasti.
 4. correctAnswer HARUS persis sama dengan salah satu string di options.
-5. Materi harus 600-1000 kata, format Markdown bersih, dengan penjelasan mendalam.
+5. Materi harus 300-800 kata, format Markdown bersih, dengan penjelasan mendalam.
 6. Materi harus menyertakan contoh konkret dan aplikasi di kehidupan nyata.
 7. Bahasa Indonesia yang asyik dan engaging untuk siswa SMA/SMK.
 8. Output HARUS JSON valid sesuai format yang diminta.
@@ -1252,18 +1252,18 @@ Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang meruju
 // ============================================================================
 
 export const weeklyPerSubjectQuestionSchema = z.object({
-  questionText: z.string().min(20).max(600),
+  questionText: z.string().min(10).max(600),
   options: z.array(z.string()).length(4),
   correctAnswer: z.string(),
-  explanation: z.string().min(40).max(500),
-  hint: z.string().min(10).max(200),
+  explanation: z.string().min(20).max(500),
+  hint: z.string().min(5).max(200),
 });
 
 export const weeklyPerSubjectMaterialSchema = z.object({
-  title: z.string().min(5).max(120),
-  content: z.string().min(800).max(8000),
-  keyPoints: z.array(z.string()).min(3).max(8),
-  estimatedMinutes: z.number().int().min(10).max(60),
+  title: z.string().min(3).max(120),
+  content: z.string().min(400).max(8000),
+  keyPoints: z.array(z.string()).min(2).max(8),
+  estimatedMinutes: z.number().int().min(5).max(60),
 });
 
 export const weeklyPerSubjectContentSchema = z.object({
@@ -1292,10 +1292,10 @@ Buat konten TANTANGAN MINGGUAN DEEP DIVE untuk satu mata pelajaran.
 
 ATURAN WAJIB:
 - ${input.questionsCount} soal HARD pilihan ganda (4 opsi A/B/C/D, 1 jawaban benar)
-- ${input.materialsCount} materi markdown (1000-1500 kata per materi)
+- ${input.materialsCount} materi markdown (400-800 kata per materi)
 - Soal HARUS menguji ANALISIS, EVALUASI, atau CREATE (bukan hafalan)
 - correctAnswer HARUS persis sama dengan salah satu string di options
-- Materi wajib pakai heading ##, section ###, contoh konkret, summary, callout "💭 Tantangan minggu ini"
+- Materi wajib pakai heading ##, section ###, contoh konkret, summary
 - Bahasa Indonesia yang asyik untuk remaja
 - Output HARUS JSON valid sesuai format. Jangan bungkus dengan markdown fence.
 - Setiap materi 5-8 keyPoints
@@ -1318,7 +1318,7 @@ Format output:
   "materials": [
     {
       "title": "...",
-      "content": "Markdown 1000-1500 kata",
+      "content": "Markdown 400-800 kata",
       "keyPoints": ["poin 1", "poin 2", ...],
       "estimatedMinutes": 30
     }
@@ -1430,12 +1430,12 @@ async function _generateWeeklyDeepMaterialInner(
     title: z.string().max(120),
     content: z
       .string()
-      .min(10000)
-      .refine((text) => countWords(text) >= 2000, {
-        message: "Materi weekly terlalu pendek, minimal 2000 kata",
+      .min(3000)
+      .refine((text) => countWords(text) >= 600, {
+        message: "Materi weekly terlalu pendek, minimal 600 kata",
       }),
-    keyPoints: z.array(z.string()).min(8).max(12),
-    estimatedMinutes: z.number().int().min(30).max(90),
+    keyPoints: z.array(z.string()).min(3).max(12),
+    estimatedMinutes: z.number().int().min(15).max(90),
   });
 
   const systemPrompt = `Kamu adalah Spark — tutor AI untuk siswa SMA/SMK Indonesia.
@@ -1443,19 +1443,19 @@ async function _generateWeeklyDeepMaterialInner(
 Buat MATERI DEEP DIVE untuk tantangan mingguan.
 
 WAJIB:
-- 2000-3500 kata Markdown (WAJIB minimal 2000 kata)
-- Heading ## + minimal 5 section ###
+- 600-1000 kata Markdown (minimal 600 kata)
+- Heading ## + minimal 2-3 section ###
 - Penjelasan konsep sangat mendalam dan komprehensif
 - Contoh konkret + studi kasus dunia nyata + aplikasi praktis
 - Contoh soal kompleks dengan pembahasan detail
 - Perbandingan dengan konsep terkait
-- 8-12 keyPoints
+- 3-6 keyPoints
 - Ringkasan menyeluruh + callout "💭 Tantangan minggu ini: ..."
 - Difficulty HARD (terminologi advanced, dorong berpikir analitis)
 
 ${styleHint}
 
-Output JSON: { "title": "...", "content": "Markdown...", "keyPoints": [...], "estimatedMinutes": 45-75 }`;
+Output JSON: { "title": "...", "content": "Markdown...", "keyPoints": [...], "estimatedMinutes": 15-30 }`;
 
   const userPrompt = `Mapel: ${input.subjectName}
 Topik: ${input.conceptName}
