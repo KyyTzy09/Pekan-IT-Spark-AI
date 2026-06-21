@@ -32,8 +32,9 @@ export default function MermaidRenderer({ chart }: MermaidRendererProps) {
           themeVariables: {
             background: "transparent",
             primaryColor: "rgba(239, 68, 68, 0.1)",
-            primaryTextColor: "hsl(var(--foreground))",
-            lineColor: "hsl(var(--border))",
+            primaryTextColor: "#e4e4e7",
+            lineColor: "#3f3f46",
+            tertiaryColor: "rgba(239, 68, 68, 0.05)",
           },
         });
 
