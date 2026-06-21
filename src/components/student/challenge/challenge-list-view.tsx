@@ -254,17 +254,6 @@ export function ChallengeListView({
                 {pickerSnapshot.daily.length}/4
               </span>
             </button>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-8 rounded-full text-[11.5px] text-muted-foreground"
-            >
-              <Link href="/dashboard">
-                <ArrowLeft size={11} />
-                Beranda
-              </Link>
-            </Button>
           </div>
 
           <div className="relative mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
