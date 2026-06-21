@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 const DAY_MS = 86_400_000;
@@ -88,15 +88,15 @@ export async function getStudentActivity(
   userId: string,
   windowDays = 365,
 ): Promise<StudentActivity> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role === "STUDENT" && session.user.id !== userId) {
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role === "STUDENT" && session.id !== userId) {
     throw new Error("FORBIDDEN");
   }
-  if (session.user.role === "PARENT") {
+  if (session.role === "PARENT") {
     const link = await prisma.parentStudentLink.findFirst({
       where: {
-        parentId: session.user.id,
+        parentId: session.id,
         studentId: userId,
         status: "ACCEPTED",
       },

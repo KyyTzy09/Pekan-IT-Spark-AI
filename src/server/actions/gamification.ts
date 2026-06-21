@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import {
   getStreakBrokenMessage,
   levelFromXp,
@@ -63,9 +63,9 @@ export async function addXp(
   source: XpSource,
   metadata?: Record<string, unknown>,
 ): Promise<AddXpResult> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role === "STUDENT" && session.user.id !== userId) {
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role === "STUDENT" && session.id !== userId) {
     throw new Error("FORBIDDEN");
   }
 
@@ -160,9 +160,9 @@ export type RecordActivityResult = {
 export async function recordActivity(
   userId: string,
 ): Promise<RecordActivityResult> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role === "STUDENT" && session.user.id !== userId) {
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role === "STUDENT" && session.id !== userId) {
     throw new Error("FORBIDDEN");
   }
 
@@ -371,9 +371,9 @@ const BADGE_RULES: Record<string, BadgeRule> = {
 export async function checkAndUnlockBadges(
   userId: string,
 ): Promise<BadgeUnlock[]> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role === "STUDENT" && session.user.id !== userId) {
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role === "STUDENT" && session.id !== userId) {
     throw new Error("FORBIDDEN");
   }
 
@@ -515,9 +515,9 @@ export async function checkAndUnlockBadges(
 // ============================================================================
 
 export async function getStudyBuddyAction() {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
-  const userId = session.user.id;
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.id;
 
   let buddy = await prisma.studyBuddy.findUnique({
     where: { userId },
@@ -537,9 +537,9 @@ export async function getStudyBuddyAction() {
 }
 
 export async function updateStudyBuddyAction(type: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
-  const userId = session.user.id;
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.id;
 
   await prisma.studyBuddy.upsert({
     where: { userId },
@@ -562,9 +562,9 @@ export async function updateStudyBuddyAction(type: string) {
 // ============================================================================
 
 export async function getAvatarCustomizationAction() {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
-  const userId = session.user.id;
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.id;
 
   let avatar = await prisma.avatarCustomization.findUnique({
     where: { userId },
@@ -589,9 +589,9 @@ export async function updateAvatarCustomizationAction(
   accessory: string | null,
   background: string | null,
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Login dulu ya" };
-  const userId = session.user.id;
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Login dulu ya" };
+  const userId = session.id;
 
   // Fetch student profile to validate XP unlock requirement
   const profile = await prisma.studentProfile.findUnique({

@@ -1,17 +1,17 @@
 import { redirect } from "next/navigation";
 import { MaterialsLibraryView } from "@/components/student/materials/materials-library-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getMaterialLibrary } from "@/server/actions/challenges";
 
 export const dynamic = "force-dynamic";
 
 export default async function MaterialsPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 
@@ -19,7 +19,7 @@ export default async function MaterialsPage() {
     getMaterialLibrary({ limit: 50, offset: 0 }),
     prisma.subject.findMany({
       where: {
-        materials: { some: { userId: session.user.id } },
+        materials: { some: { userId: session.id } },
       },
       select: { id: true, name: true, slug: true, icon: true, color: true },
       orderBy: { order: "asc" },

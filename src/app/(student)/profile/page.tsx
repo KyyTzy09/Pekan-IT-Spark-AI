@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { AvatarUpload } from "@/components/student/avatar-upload";
 import { ProfileForm } from "@/components/student/profile-form";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getDashboardSummary } from "@/server/actions/dashboard";
 
@@ -49,11 +49,11 @@ const BADGE_MAP: Record<string, { emoji: string; gradient: string }> = {
 };
 
 export default async function StudentProfilePage() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  const userId = session.user.id;
+  const userId = session.id;
 
   const [summary, _avatarRaw, allBadges, userBadges, userData] =
     await Promise.all([

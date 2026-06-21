@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { QuizPlayer } from "@/components/student/quiz-player";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { startPretestSession } from "@/server/actions/practice";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,8 @@ export default async function PretestPage({
 }: {
   params: Promise<{ subjectId: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 

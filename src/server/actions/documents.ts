@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   addXp,
@@ -67,10 +67,10 @@ export type ListDocumentsResult =
   | { ok: false; error: string };
 
 async function requireStudent() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role !== "STUDENT") throw new Error("FORBIDDEN");
-  return session.user.id;
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role !== "STUDENT") throw new Error("FORBIDDEN");
+  return session.id;
 }
 
 const uploadMetaSchema = z.object({

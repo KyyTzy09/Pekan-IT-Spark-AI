@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { generateCurriculumOutline } from "@/server/ai/curriculum";
 
 const generateSchema = z.object({
@@ -45,8 +45,8 @@ export async function generateCustomSubjectPretest(
     name: input.name,
   });
 
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return { ok: false, error: "Kamu harus login dulu." };
   }
 

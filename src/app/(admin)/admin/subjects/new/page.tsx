@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { SubjectForm } from "@/components/admin/subject-form";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewSubjectPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
-  if (session.user.role !== "ADMIN") redirect("/");
+  const session = await getSession();
+  if (!session?.id) redirect("/auth/login");
+  if (session.role !== "ADMIN") redirect("/");
 
   return (
     <div className="space-y-5 pb-20">

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   recordQuestionAttempt,
@@ -14,10 +14,10 @@ import type {
 } from "../../../generated/prisma/client";
 
 async function requireStudent() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role !== "STUDENT") throw new Error("FORBIDDEN");
-  return session.user.id;
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role !== "STUDENT") throw new Error("FORBIDDEN");
+  return session.id;
 }
 
 function answersMatch(

@@ -1,7 +1,7 @@
 "use server";
 
 import { generateText } from "@/lib/ai";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getProgressTimeline } from "@/server/actions/challenges";
 import { getDashboardSummary } from "@/server/actions/dashboard";
@@ -28,15 +28,15 @@ export async function getParentHistoryData(
   activeStudentId?: string,
   days = 30,
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return { ok: false, error: "UNAUTHORIZED" };
   }
-  if (session.user.role !== "PARENT") {
+  if (session.role !== "PARENT") {
     return { ok: false, error: "FORBIDDEN" };
   }
 
-  const parentId = session.user.id;
+  const parentId = session.id;
 
   const links = await prisma.parentStudentLink.findMany({
     where: { parentId, status: "ACCEPTED" },
@@ -200,15 +200,15 @@ export async function getParentHistoryData(
 }
 
 export async function getParentDashboardData(activeStudentId?: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return { ok: false, error: "UNAUTHORIZED" };
   }
-  if (session.user.role !== "PARENT") {
+  if (session.role !== "PARENT") {
     return { ok: false, error: "FORBIDDEN" };
   }
 
-  const parentId = session.user.id;
+  const parentId = session.id;
 
   // 1. Fetch all linked children (ACCEPTED)
   const links = await prisma.parentStudentLink.findMany({
@@ -426,11 +426,11 @@ export async function getParentAiRecommendation(
   studentId: string,
   studentName: string,
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return { ok: false, error: "UNAUTHORIZED" };
   }
-  if (session.user.role !== "PARENT") {
+  if (session.role !== "PARENT") {
     return { ok: false, error: "FORBIDDEN" };
   }
 

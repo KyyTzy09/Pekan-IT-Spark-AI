@@ -3,28 +3,28 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { InviteManager } from "@/components/student/invite-manager";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getActiveInvite, listInvites } from "@/server/actions/invite";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvitePage() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
   const [profile, active, history] = await Promise.all([
     prisma.studentProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: session.id },
       select: { user: { select: { name: true } } },
     }),
     getActiveInvite(),
     listInvites(),
   ]);
 
-  const studentName = profile?.user.name ?? session.user.name ?? null;
+  const studentName = profile?.user.name ?? session.name ?? null;
   const activeInvite = active?.status === "PENDING" ? active : null;
 
   return (

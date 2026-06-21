@@ -13,7 +13,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Reveal } from "@/components/shared/reveal";
 import { StudentProfileChart } from "@/components/student/student-profile-chart";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 
@@ -62,11 +62,11 @@ const BADGE_MAP: Record<string, { emoji: string; gradient: string }> = {
 };
 
 export default async function UserProfileDetailPage({ params }: PageProps) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 

@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { ChatListView } from "@/components/student/chat-list-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { listChatSessions } from "@/server/actions/chat";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChatListPage() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
@@ -22,7 +22,7 @@ export default async function ChatListPage() {
 
   return (
     <ChatListView
-      userName={session.user.name ?? "Teman"}
+      userName={session.name ?? "Teman"}
       subjects={subjects}
       sessions={sessions}
     />

@@ -1,7 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { CLOUDINARY_CONFIG } from "@/lib/cloudinary";
 
 const MAX_FILE_SIZE = 7 * 1024 * 1024; // 7MB
@@ -17,8 +17,8 @@ export async function getCloudinarySignature(): Promise<
     }
   | { ok: false; error: string }
 > {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return { ok: false, error: "Kamu harus login dulu." };
   }
 
@@ -31,7 +31,7 @@ export async function getCloudinarySignature(): Promise<
   }
 
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = `spark-ai/avatars/${session.user.id}`;
+  const folder = `spark-ai/avatars/${session.id}`;
 
   const paramsToSign = `folder=${folder}&timestamp=${timestamp}${CLOUDINARY_CONFIG.apiSecret}`;
   const signature = crypto
@@ -52,8 +52,8 @@ export async function getCloudinarySignature(): Promise<
 export async function updateAvatarAction(
   imageUrl: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return { ok: false, error: "Kamu harus login dulu." };
   }
 
@@ -63,7 +63,7 @@ export async function updateAvatarAction(
 
   const { prisma } = await import("@/lib/prisma");
   await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: session.id },
     data: { image: imageUrl },
   });
 

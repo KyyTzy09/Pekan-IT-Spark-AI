@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { auth, unstable_update } from "@/lib/auth";
+import { getSession, refreshSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateTopicConceptsContent } from "@/server/ai/curriculum";
 import type {
@@ -74,15 +74,15 @@ export async function completeOnboardingCustom(
     input,
   });
 
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/");
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   const parsed = completeSchema.safeParse(input);
   if (!parsed.success) {
@@ -254,7 +254,7 @@ export async function completeOnboardingCustom(
       });
     });
 
-    await unstable_update({});
+    await refreshSession();
 
     console.log("[ONBOARDING_SERVICE] completeOnboardingCustom success", {
       userId,

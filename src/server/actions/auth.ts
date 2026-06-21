@@ -1,11 +1,10 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { AuthError } from "next-auth";
 import { z } from "zod";
-import { signIn, signOut } from "@/lib/auth";
-import { sanitizeInternalPath } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
+import { clearSession, setSession, type SessionUser } from "@/lib/session";
+import { sanitizeInternalPath } from "@/lib/auth-utils";
 
 const SMART_LANDING = "/auth/redirect";
 
@@ -54,6 +53,24 @@ function resolveRedirectTarget(callbackUrl: string | undefined): string {
   return safe ?? SMART_LANDING;
 }
 
+function makeSessionUser(user: {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  isOnboarded: boolean;
+  image: string | null;
+}): SessionUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    isOnboarded: user.isOnboarded,
+    image: user.image,
+  };
+}
+
 export async function loginAction(
   _prev: AuthActionState | undefined,
   formData: FormData,
@@ -74,21 +91,31 @@ export async function loginAction(
     };
   }
 
-  const target = resolveRedirectTarget(parsed.data.callbackUrl);
+  const emailStr = parsed.data.email.toLowerCase();
+  const user = await prisma.user.findUnique({
+    where: { email: emailStr },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      passwordHash: true,
+      role: true,
+      isOnboarded: true,
+      image: true,
+    },
+  });
 
-  try {
-    await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirectTo: target,
-    });
-    return {};
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "Email atau password salah. Coba dicek kembali ya." };
-    }
-    throw error;
+  if (!user?.passwordHash) {
+    return { error: "Email atau password salah. Coba dicek kembali ya." };
   }
+
+  const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+  if (!isValid) {
+    return { error: "Email atau password salah. Coba dicek kembali ya." };
+  }
+
+  await setSession(makeSessionUser(user));
+  return {};
 }
 
 export async function registerAction(
@@ -117,93 +144,86 @@ export async function registerAction(
   const data = parsed.data;
   const email = data.email.toLowerCase();
 
-  try {
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      return { error: "Email sudah terdaftar. Coba masuk aja, yuk." };
-    }
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return { error: "Email sudah terdaftar. Coba masuk aja, yuk." };
+  }
 
-    const passwordHash = await bcrypt.hash(data.password, 12);
+  const passwordHash = await bcrypt.hash(data.password, 12);
 
-    if (data.role === "STUDENT") {
-      await prisma.user.create({
-        data: {
-          email,
-          name: data.name,
-          passwordHash,
-          image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
-          role: "STUDENT",
-          studentProfile: { create: {} },
-        },
-      });
-    } else {
-      const link = await prisma.parentStudentLink.findUnique({
-        where: { inviteCode: data.inviteCode },
-        include: { student: { select: { id: true, isOnboarded: true } } },
-      });
-
-      if (!link) {
-        return {
-          fieldErrors: {
-            inviteCode: "Kode undangan nggak ketemu. Coba cek lagi, ya.",
-          },
-        };
-      }
-      if (link.status !== "PENDING") {
-        return {
-          fieldErrors: {
-            inviteCode:
-              link.status === "ACCEPTED"
-                ? "Kode ini udah dipakai. Minta kode baru ke anak kamu."
-                : "Kode ini udah nggak berlaku.",
-          },
-        };
-      }
-      if (link.expiresAt.getTime() < Date.now()) {
-        return {
-          fieldErrors: {
-            inviteCode: "Kode udah kedaluwarsa. Minta kode baru, ya.",
-          },
-        };
-      }
-
-      const parent = await prisma.user.create({
-        data: {
-          email,
-          name: data.name,
-          passwordHash,
-          image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
-          role: "PARENT",
-          parentProfile: { create: {} },
-        },
-      });
-
-      await prisma.parentStudentLink.update({
-        where: { id: link.id },
-        data: {
-          status: "ACCEPTED",
-          parentId: parent.id,
-        },
-      });
-    }
-
-    await signIn("credentials", {
-      email,
-      password: data.password,
-      redirectTo: SMART_LANDING,
+  if (data.role === "STUDENT") {
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name: data.name,
+        passwordHash,
+        image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
+        role: "STUDENT",
+        studentProfile: { create: {} },
+      },
+      select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
     });
-    return {};
-  } catch (error) {
-    if (error instanceof AuthError) {
+    await setSession(makeSessionUser(user));
+  } else {
+    const link = await prisma.parentStudentLink.findUnique({
+      where: { inviteCode: data.inviteCode },
+      include: { student: { select: { id: true, isOnboarded: true } } },
+    });
+
+    if (!link) {
       return {
-        error:
-          "Akun berhasil dibuat, tapi auto-login gagal. Coba masuk manual, ya.",
+        fieldErrors: {
+          inviteCode: "Kode undangan nggak ketemu. Coba cek lagi, ya.",
+        },
       };
     }
-    throw error;
+    if (link.status !== "PENDING") {
+      return {
+        fieldErrors: {
+          inviteCode:
+            link.status === "ACCEPTED"
+              ? "Kode ini udah dipakai. Minta kode baru ke anak kamu."
+              : "Kode ini udah nggak berlaku.",
+        },
+      };
+    }
+    if (link.expiresAt.getTime() < Date.now()) {
+      return {
+        fieldErrors: {
+          inviteCode: "Kode udah kedaluwarsa. Minta kode baru, ya.",
+        },
+      };
+    }
+
+    const parent = await prisma.user.create({
+      data: {
+        email,
+        name: data.name,
+        passwordHash,
+        image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
+        role: "PARENT",
+        parentProfile: { create: {} },
+      },
+      select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+    });
+
+    await prisma.parentStudentLink.update({
+      where: { id: link.id },
+      data: { status: "ACCEPTED", parentId: parent.id },
+    });
+
+    await setSession(makeSessionUser(parent));
   }
+
+  return {};
 }
 
 export async function logoutAction(): Promise<void> {
-  await signOut({ redirectTo: "/auth/login" });
+  await clearSession();
+}
+
+export async function getIsGoogleEnabled(): Promise<boolean> {
+  return Boolean(
+    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+  );
 }

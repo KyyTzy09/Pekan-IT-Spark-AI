@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateAndStoreDailyChallenges } from "@/server/actions/challenges";
 import { regenerateWeeklyChallenge } from "@/server/actions/weekly-challenge";
@@ -14,10 +14,10 @@ const subjectIdsSchema = z
   .max(MAX_CHALLENGE_SUBJECTS, `Maksimal ${MAX_CHALLENGE_SUBJECTS} mapel`);
 
 async function requireStudent() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: session.id },
   });
   if (!user || user.role !== "STUDENT") throw new Error("FORBIDDEN");
   return user.id;

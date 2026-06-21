@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getSubjectDetail } from "@/server/actions/dashboard";
 
@@ -60,8 +60,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { slug } = await params;
@@ -72,7 +72,7 @@ export async function GET(
   if (!subject) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  const summary = await getSubjectDetail(subject.slug, session.user.id);
+  const summary = await getSubjectDetail(subject.slug, session.id);
   if (!summary) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

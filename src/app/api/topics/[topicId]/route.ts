@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getTopicDetail } from "@/server/actions/dashboard";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ topicId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { topicId } = await params;
-  const summary = await getTopicDetail(topicId, session.user.id);
+  const summary = await getTopicDetail(topicId, session.id);
   if (!summary) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "../../../generated/prisma/client";
 
 async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  if (session.user.role !== "ADMIN") throw new Error("FORBIDDEN");
-  return session.user.id;
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (session.role !== "ADMIN") throw new Error("FORBIDDEN");
+  return session.id;
 }
 
 async function logAdminAction(

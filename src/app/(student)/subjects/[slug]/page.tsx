@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { SubjectDetailView } from "@/components/student/subjects-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getSubjectDetail } from "@/server/actions/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -63,15 +63,15 @@ export default async function SubjectDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
   const { slug } = await params;
   const normalized = normalizeSlug(slug);
 
-  const summary = await getSubjectDetail(normalized, session.user.id);
+  const summary = await getSubjectDetail(normalized, session.id);
   if (!summary) notFound();
 
   return <SubjectDetailView summary={summary} />;

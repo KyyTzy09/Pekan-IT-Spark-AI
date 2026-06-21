@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/use-session";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,7 +122,7 @@ function SidebarContent({
         </div>
         <Button
           variant="ghost"
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
+          onClick={() => signOut()}
           className="w-full justify-start rounded-2xl gap-3 font-bold text-[13px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 py-5"
         >
           <LogOut size={16} strokeWidth={2.3} />

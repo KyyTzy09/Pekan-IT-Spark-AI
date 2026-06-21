@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { computeDifficultyDistribution } from "@/server/ai/curriculum";
 import { extractConceptsFromDocument } from "@/server/ai/extract-document-concepts";
@@ -20,8 +20,8 @@ const submitPretestSchema = z.object({
 });
 
 export async function generateDocumentPretest(documentId: string) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     return { ok: false as const, error: "Kamu harus login dulu." };
   }
 
@@ -29,7 +29,7 @@ export async function generateDocumentPretest(documentId: string) {
     where: { id: documentId },
     select: { id: true, userId: true, content: true },
   });
-  if (!doc || doc.userId !== session.user.id) {
+  if (!doc || doc.userId !== session.id) {
     return { ok: false as const, error: "Dokumen tidak ditemukan." };
   }
 
@@ -42,7 +42,7 @@ export async function generateDocumentPretest(documentId: string) {
   }
 
   const profile = await prisma.studentProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: session.id },
     select: { learningStyle: true },
   });
   const learningStyle = profile?.learningStyle ?? "VISUAL";
@@ -84,8 +84,8 @@ export async function generateDocumentPretest(documentId: string) {
 }
 
 export async function submitDocumentPretest(input: unknown) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     return { ok: false as const, error: "Kamu harus login dulu." };
   }
 
@@ -103,7 +103,7 @@ export async function submitDocumentPretest(input: unknown) {
     where: { id: documentId },
     select: { id: true, userId: true },
   });
-  if (!doc || doc.userId !== session.user.id) {
+  if (!doc || doc.userId !== session.id) {
     return { ok: false as const, error: "Dokumen tidak ditemukan." };
   }
 
@@ -131,7 +131,7 @@ export async function submitDocumentPretest(input: unknown) {
 
     await prisma.studentKnowledgeProfile.upsert({
       where: {
-        userId_conceptId: { userId: session.user.id, conceptId: concept.id },
+        userId_conceptId: { userId: session.id, conceptId: concept.id },
       },
       update: {
         masteryScore,
@@ -141,7 +141,7 @@ export async function submitDocumentPretest(input: unknown) {
         lastAttemptAt: new Date(),
       },
       create: {
-        userId: session.user.id,
+        userId: session.id,
         conceptId: concept.id,
         masteryScore,
         status:

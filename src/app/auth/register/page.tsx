@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Rocket } from "lucide-react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -20,8 +20,7 @@ import {
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { PasswordStrength } from "@/components/auth/password-strength";
 import { Button } from "@/components/ui/button";
-import { sanitizeInternalPath } from "@/lib/auth-utils";
-import { type AuthActionState, registerAction } from "@/server/actions/auth";
+import { type AuthActionState, registerAction, getIsGoogleEnabled } from "@/server/actions/auth";
 
 const studentSchema = z.object({
   role: z.literal("STUDENT"),
@@ -61,13 +60,19 @@ const registerSchema = z.discriminatedUnion("role", [
 type RegisterValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>(
     {},
   );
   const [googleLoading, setGoogleLoading] = React.useState(false);
+  const [googleEnabled, setGoogleEnabled] = React.useState(false);
   const [role, setRole] = React.useState<AuthRole>("STUDENT");
   const [password, setPassword] = React.useState("");
+
+  React.useEffect(() => {
+    getIsGoogleEnabled().then(setGoogleEnabled);
+  }, []);
 
   const {
     register,
@@ -136,10 +141,10 @@ export default function RegisterPage() {
     }
   });
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => {
     setServerError(null);
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/auth/redirect" });
+    window.location.href = "/api/auth/google";
   };
 
   return (
@@ -163,23 +168,25 @@ export default function RegisterPage() {
       </div>
 
       {/* ── Google ── */}
-      <div className="anim-slide-up gpu" style={{ animationDelay: "180ms" }}>
-        <Button
-          type="button"
-          variant="outline"
-          size="xl"
-          disabled={googleLoading || isSubmitting}
-          onClick={handleGoogle}
-          className="group w-full flex items-center justify-center gap-2.5 rounded-2xl border-border/50 bg-card/40 text-[13.5px] font-bold shadow-sm hover:bg-card hover:shadow-md hover:border-border/80 transition-all cursor-pointer active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-[var(--coral)]/20"
-        >
-          {googleLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
-          Daftar dengan Google
-        </Button>
-      </div>
+      {googleEnabled && (
+        <div className="anim-slide-up gpu" style={{ animationDelay: "180ms" }}>
+          <Button
+            type="button"
+            variant="outline"
+            size="xl"
+            disabled={googleLoading || isSubmitting}
+            onClick={handleGoogle}
+            className="group w-full flex items-center justify-center gap-2.5 rounded-2xl border-border/50 bg-card/40 text-[13.5px] font-bold shadow-sm hover:bg-card hover:shadow-md hover:border-border/80 transition-all cursor-pointer active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-[var(--coral)]/20"
+          >
+            {googleLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <GoogleIcon />
+            )}
+            Daftar dengan Google
+          </Button>
+        </div>
+      )}
 
       <div className="anim-slide-up gpu" style={{ animationDelay: "210ms" }}>
         <AuthDivider

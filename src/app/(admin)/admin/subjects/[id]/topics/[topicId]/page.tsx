@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { TopicDetailView } from "@/components/admin/topic-detail-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +10,9 @@ export default async function AdminTopicDetailPage({
 }: {
   params: Promise<{ id: string; topicId: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
-  if (session.user.role !== "ADMIN") redirect("/");
+  const session = await getSession();
+  if (!session?.id) redirect("/auth/login");
+  if (session.role !== "ADMIN") redirect("/");
 
   const { id, topicId } = await params;
 

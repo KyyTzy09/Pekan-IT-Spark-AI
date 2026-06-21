@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getDashboardSummary } from "@/server/actions/dashboard";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const summary = await getDashboardSummary(session.user.id);
+  const summary = await getDashboardSummary(session.id);
   return NextResponse.json(summary);
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { UploadWorkspaceView } from "@/components/student/upload/upload-workspace-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -10,18 +10,18 @@ export default async function UploadWorkspacePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 
   const { id: documentId } = await params;
 
   const doc = await prisma.document.findFirst({
-    where: { id: documentId, userId: session.user.id },
+    where: { id: documentId, userId: session.id },
     select: {
       id: true,
       originalName: true,
@@ -39,7 +39,7 @@ export default async function UploadWorkspacePage({
 
   const [materials, quizzes, chunkCount] = await Promise.all([
     prisma.material.findMany({
-      where: { documentId, userId: session.user.id },
+      where: { documentId, userId: session.id },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { listChatSessions } from "@/server/actions/chat";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const [subjects, sessions] = await Promise.all([
@@ -18,6 +18,6 @@ export async function GET() {
   return NextResponse.json({
     subjects,
     sessions,
-    userName: session.user.name ?? "Teman",
+    userName: session.name ?? "Teman",
   });
 }

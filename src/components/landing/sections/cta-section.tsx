@@ -2,7 +2,7 @@
 
 import { ArrowRight, Check, Heart, Rocket, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "../../shared/reveal";
 

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { ChallengeDetailView } from "@/components/student/challenge/challenge-detail-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import {
   completeChallengeItem,
   getChallengeDetail,
@@ -15,11 +15,11 @@ export default async function ChallengeDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 

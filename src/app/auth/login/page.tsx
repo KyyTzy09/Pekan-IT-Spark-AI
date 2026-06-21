@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { signIn, signOut } from "next-auth/react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,8 +16,7 @@ import {
 import { AuthStreakTeaser } from "@/components/auth/auth-streak-teaser";
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { Button } from "@/components/ui/button";
-import { sanitizeInternalPath } from "@/lib/auth-utils";
-import { type AuthActionState, loginAction } from "@/server/actions/auth";
+import { type AuthActionState, loginAction, getIsGoogleEnabled } from "@/server/actions/auth";
 
 const loginSchema = z.object({
   email: z
@@ -48,20 +46,18 @@ function LoginForm() {
     {},
   );
   const [googleLoading, setGoogleLoading] = React.useState(false);
+  const [googleEnabled, setGoogleEnabled] = React.useState(false);
   const authError = search.get("error");
 
   React.useEffect(() => {
     if (authError) {
-      if (authError === "OAuthAccountNotLinked") {
-        setServerError(
-          "Akun Google ini sudah terhubung dengan email lain. Sesi aktif sebelumnya telah dibersihkan otomatis demi keamanan. Silakan klik 'Lanjut dengan Google' lagi untuk masuk.",
-        );
-        signOut({ redirect: false });
-      } else {
-        setServerError("Gagal masuk dengan Google. Silakan coba lagi.");
-      }
+      setServerError("Gagal masuk dengan Google. Silakan coba lagi.");
     }
   }, [authError]);
+
+  React.useEffect(() => {
+    getIsGoogleEnabled().then(setGoogleEnabled);
+  }, []);
 
   const {
     register,
@@ -106,14 +102,10 @@ function LoginForm() {
     }
   });
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => {
     setServerError(null);
     setGoogleLoading(true);
-    const safe = sanitizeInternalPath(callbackUrl);
-    const target = safe
-      ? `/auth/redirect?callbackUrl=${encodeURIComponent(safe)}`
-      : "/auth/redirect";
-    await signIn("google", { callbackUrl: target });
+    window.location.href = "/api/auth/google";
   };
 
   return (
@@ -149,23 +141,25 @@ function LoginForm() {
       </div>
 
       {/* ── Google ── */}
-      <div className="anim-slide-up gpu" style={{ animationDelay: "140ms" }}>
-        <Button
-          type="button"
-          variant="outline"
-          size="xl"
-          disabled={googleLoading || isSubmitting}
-          onClick={handleGoogle}
-          className="group w-full flex items-center justify-center gap-2.5 rounded-2xl border-border/50 bg-card/40 text-[13.5px] font-bold shadow-sm hover:bg-card hover:shadow-md hover:border-border/80 transition-all cursor-pointer active:scale-[0.98]"
-        >
-          {googleLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
-          Lanjut dengan Google
-        </Button>
-      </div>
+      {googleEnabled && (
+        <div className="anim-slide-up gpu" style={{ animationDelay: "140ms" }}>
+          <Button
+            type="button"
+            variant="outline"
+            size="xl"
+            disabled={googleLoading || isSubmitting}
+            onClick={handleGoogle}
+            className="group w-full flex items-center justify-center gap-2.5 rounded-2xl border-border/50 bg-card/40 text-[13.5px] font-bold shadow-sm hover:bg-card hover:shadow-md hover:border-border/80 transition-all cursor-pointer active:scale-[0.98]"
+          >
+            {googleLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <GoogleIcon />
+            )}
+            Lanjut dengan Google
+          </Button>
+        </div>
+      )}
 
       <div className="anim-slide-up gpu" style={{ animationDelay: "180ms" }}>
         <AuthDivider label="atau pakai email" />
@@ -204,22 +198,6 @@ function LoginForm() {
         <div role="alert" aria-live="polite">
           <AuthError message={serverError ?? undefined} />
         </div>
-
-        {authError === "OAuthAccountNotLinked" && (
-          <div
-            className="flex justify-center anim-slide-up gpu"
-            style={{ animationDelay: "200ms" }}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => signOut({ callbackUrl: "/auth/login" })}
-              className="rounded-2xl border-destructive/30 bg-destructive/5 text-destructive font-bold text-[12px] px-4 py-2 hover:bg-destructive/10 cursor-pointer transition-all active:scale-[0.97] w-full"
-            >
-              Keluar dari Sesi Aktif (Logout)
-            </Button>
-          </div>
-        )}
 
         <Button
           type="submit"

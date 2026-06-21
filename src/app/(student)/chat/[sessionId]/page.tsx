@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { ChatConversationView } from "@/components/student/chat-conversation-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getChatMessages, getChatSession } from "@/server/actions/chat";
 
 export const dynamic = "force-dynamic";
@@ -10,14 +10,14 @@ export default async function ChatSessionPage({
 }: {
   params: Promise<{ sessionId: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
   const { sessionId } = await params;
   const chatSession = await getChatSession(sessionId);
-  if (!chatSession || chatSession.userId !== session.user.id) {
+  if (!chatSession || chatSession.userId !== session.id) {
     notFound();
   }
 

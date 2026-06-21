@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 const updateProfileSchema = z.object({
@@ -13,11 +13,11 @@ const updateProfileSchema = z.object({
 });
 
 export async function updateProfileAction(input: unknown) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     return { ok: false, error: "Akses ditolak" };
   }
-  const userId = session.user.id;
+  const userId = session.id;
 
   const parsed = updateProfileSchema.safeParse(input);
   if (!parsed.success) {

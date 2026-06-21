@@ -2,7 +2,7 @@ import type * as React from "react";
 import { BadgeUnlockProvider } from "@/components/student/badge-unlock-provider";
 import type { NavProfileData } from "@/components/student/student-nav";
 import { StudentNav } from "@/components/student/student-nav";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getDashboardSummary } from "@/server/actions/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +16,9 @@ export default async function StudentLayout({
   // This eliminates the client-side fetch in ProfileWidget
   let profileData: NavProfileData | null = null;
   try {
-    const session = await auth();
-    if (session?.user?.id && session.user.role === "STUDENT") {
-      const summary = await getDashboardSummary(session.user.id);
+    const session = await getSession();
+    if (session?.id && session.role === "STUDENT") {
+      const summary = await getDashboardSummary(session.id);
       profileData = {
         name: summary.student.name,
         school: summary.student.school,

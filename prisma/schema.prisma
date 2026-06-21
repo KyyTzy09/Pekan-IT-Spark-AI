@@ -143,8 +143,6 @@ model User {
   documentAuditLogs   DocumentAuditLog[]
   knowledgeProfiles   StudentKnowledgeProfile[]
   customSubjects      Subject[]                 @relation("CustomSubjects")
-  accounts            Account[]
-  sessions            Session[]
   challenges          Challenge[]
   materials           Material[]
   materialReads       MaterialRead[]
@@ -154,43 +152,6 @@ model User {
   aiQuota             DailyAiQuota?
 
   @@map("users")
-}
-
-model Account {
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@id([identifier, token])
-  @@map("verification_tokens")
 }
 
 model StudentProfile {

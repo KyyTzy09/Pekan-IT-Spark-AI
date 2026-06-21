@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardWithChallengesView } from "@/components/student/dashboard-with-challenges-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import {
   getProgressTimeline,
   getTodayChallenges,
@@ -10,18 +10,18 @@ import { getDashboardSummary } from "@/server/actions/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role === "PARENT") {
+  if (session.role === "PARENT") {
     redirect("/parent");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   const [summary, todayChallenges, timeline] = await Promise.all([
     getDashboardSummary(userId).catch(() => ({

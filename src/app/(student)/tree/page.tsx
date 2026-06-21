@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Tree3DView } from "@/components/student/tree-3d-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getDashboardSummary } from "@/server/actions/dashboard";
 import { getStudyBuddyAction } from "@/server/actions/gamification";
 
@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function TreePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
-  if (session.user.role !== "STUDENT") redirect("/dashboard");
+  const session = await getSession();
+  if (!session?.id) redirect("/auth/login");
+  if (session.role !== "STUDENT") redirect("/dashboard");
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   const [summary, buddyResult] = await Promise.all([
     getDashboardSummary(userId).catch(() => null),

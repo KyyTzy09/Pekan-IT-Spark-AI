@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/use-session";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,7 @@ export function ParentNav() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => signOut({ callbackUrl: "/auth/login" })}
+            onClick={() => signOut()}
             className="rounded-xl gap-2 font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <LogOut size={14} />
@@ -123,7 +123,7 @@ export function ParentNav() {
           <div className="pt-2 border-t border-border/30">
             <Button
               variant="ghost"
-              onClick={() => signOut({ callbackUrl: "/auth/login" })}
+              onClick={() => signOut()}
               className="w-full justify-start rounded-xl gap-2 font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             >
               <LogOut size={14} />

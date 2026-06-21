@@ -3,7 +3,7 @@ import {
   ChallengeListView,
   type SubjectOption,
 } from "@/components/student/challenge";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   getDailyProgress,
@@ -14,15 +14,15 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ChallengePage() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   const [result, progress, profile, weeklyChallenge] = await Promise.all([
     getTodayChallenges(),

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
 
@@ -26,8 +26,8 @@ export async function generateOnDemandMaterial(input: {
   subjectId: string;
   difficulty?: "EASY" | "MEDIUM" | "HARD";
 }): Promise<{ ok: boolean; materialId?: string; error?: string }> {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     return { ok: false, error: "Kamu harus login dulu." };
   }
 
@@ -39,7 +39,7 @@ export async function generateOnDemandMaterial(input: {
     };
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
   const { subjectId, difficulty } = parsed.data;
   const today = startOfToday();
   const tomorrow = startOfNextDay();

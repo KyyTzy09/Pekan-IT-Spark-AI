@@ -1,6 +1,12 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { jwtVerify } from "jose";
+
+interface SessionPayload {
+  id?: string;
+  role?: string;
+  isOnboarded?: boolean;
+}
 
 const STUDENT_ROUTES = [
   "/dashboard",
@@ -11,6 +17,13 @@ const STUDENT_ROUTES = [
   "/plan",
   "/upload",
   "/settings",
+  "/challenge",
+  "/leaderboard",
+  "/materials",
+  "/profile",
+  "/activity",
+  "/tree",
+  "/onboarding",
 ];
 
 const PUBLIC_ROUTES = ["/", "/about", "/help", "/courses"];
@@ -22,53 +35,52 @@ const AUTH_ROUTES = [
   "/auth/verify-email",
 ];
 
+async function getSessionFromCookie(
+  request: NextRequest,
+): Promise<SessionPayload | null> {
+  const token = request.cookies.get("session")?.value;
+  if (!token) return null;
+  try {
+    const secret = process.env.AUTH_SECRET;
+    if (!secret) return null;
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(secret),
+    );
+    return payload as unknown as SessionPayload;
+  } catch {
+    return null;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-  });
+  const session = await getSessionFromCookie(request);
 
-  const isLoggedIn = Boolean(token);
-  const role = (token?.role as string) ?? "STUDENT";
-  const isOnboarded = Boolean(token?.isOnboarded);
+  const isLoggedIn = Boolean(session);
+  const role = session?.role ?? "STUDENT";
+  const isOnboarded = Boolean(session?.isOnboarded);
 
-  // Public routes — no auth required, let logged-in users browse freely
+  // Public routes — no auth required
   if (PUBLIC_ROUTES.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // Auth routes (login/register) — tetap bisa diakses walau udah login,
-  // supaya developer bisa re-test alur registrasi / sign-in (mis. QA session
-  // lama, uji role-switch, dll).
+  // Auth routes (login/register) — pass through
   if (AUTH_ROUTES.some((r) => pathname.startsWith(r))) {
     return NextResponse.next();
   }
 
-  // Not logged in — redirect to login (preserves intended destination)
+  // API auth routes — pass through
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  // Not logged in — redirect to login
   if (!isLoggedIn) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Logged in but not a STUDENT trying to access student routes
-  if (
-    STUDENT_ROUTES.some((r) => pathname.startsWith(r)) &&
-    role !== "STUDENT"
-  ) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  // Logged in STUDENT but not onboarded — force onboarding
-  // (skip if already on /onboarding to avoid redirect loop)
-  if (
-    STUDENT_ROUTES.some((r) => pathname.startsWith(r)) &&
-    role === "STUDENT" &&
-    !isOnboarded &&
-    pathname !== "/onboarding"
-  ) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   // Onboarding page — redirect to dashboard if already onboarded
@@ -78,6 +90,18 @@ export async function proxy(request: NextRequest) {
     }
     if (role !== "STUDENT") {
       return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Student routes — require STUDENT role
+  if (STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
+    if (role !== "STUDENT") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    // Force onboarding if not done
+    if (!isOnboarded && pathname !== "/onboarding") {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
     }
     return NextResponse.next();
   }
@@ -103,14 +127,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder assets
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

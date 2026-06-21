@@ -4,18 +4,18 @@ import {
   type SubjectListItem,
   SubjectsListView,
 } from "@/components/student/subjects-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function SubjectsPage() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   const [profile, subjects, conceptsInSubjects, profiles] = await Promise.all([
     prisma.studentProfile.findUnique({

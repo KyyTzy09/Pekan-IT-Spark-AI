@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { SubjectsTable } from "@/components/admin/subjects-table";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { listAllSubjects } from "@/server/actions/admin-content";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,9 @@ export default async function SubjectsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
-  if (session.user.role !== "ADMIN") redirect("/");
+  const session = await getSession();
+  if (!session?.id) redirect("/auth/login");
+  if (session.role !== "ADMIN") redirect("/");
 
   const params = await searchParams;
   const includeInactive = params.show === "inactive";

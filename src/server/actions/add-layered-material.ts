@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
 
@@ -15,8 +15,8 @@ export type AddLayeredMaterialInput = z.infer<typeof addMaterialSchema>;
 export async function addAdvancedMaterial(
   input: AddLayeredMaterialInput,
 ): Promise<{ ok: boolean; materialId?: string; error?: string }> {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     return { ok: false, error: "Kamu harus login dulu." };
   }
 
@@ -51,13 +51,13 @@ export async function addAdvancedMaterial(
   }
 
   const profile = await prisma.studentKnowledgeProfile.findUnique({
-    where: { userId_conceptId: { userId: session.user.id, conceptId } },
+    where: { userId_conceptId: { userId: session.id, conceptId } },
     select: { masteryScore: true },
   });
   const masteryScore = profile?.masteryScore ?? 0;
 
   const studentProfile = await prisma.studentProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: session.id },
     select: { learningStyle: true },
   });
   const learningStyle = studentProfile?.learningStyle ?? "VISUAL";
@@ -81,7 +81,7 @@ export async function addAdvancedMaterial(
         source: "ADAPTIVE",
         conceptId,
         subjectId: concept.topic.subjectId,
-        userId: session.user.id,
+        userId: session.id,
       },
     });
 

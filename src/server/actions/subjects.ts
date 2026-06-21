@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 import {
@@ -52,9 +52,9 @@ export type AddCustomSubjectResult =
 export async function addCustomSubject(
   input: AddCustomSubjectInput,
 ): Promise<AddCustomSubjectResult> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Kamu harus login dulu." };
-  if (session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Kamu harus login dulu." };
+  if (session.role !== "STUDENT") {
     return { ok: false, error: "Hanya siswa yang bisa menambah mapel." };
   }
 
@@ -66,7 +66,7 @@ export async function addCustomSubject(
     };
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     select: { educationLevel: true, grade: true, focusedSubjects: true },
@@ -361,9 +361,9 @@ export async function recordQuestionAttempt(
   newMastery?: number;
   unlockedBadges?: any[];
 }> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Login dulu" };
-  if (session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Login dulu" };
+  if (session.role !== "STUDENT") {
     return { ok: false, error: "Hanya siswa" };
   }
 
@@ -372,7 +372,7 @@ export async function recordQuestionAttempt(
     return { ok: false, error: "Input tidak valid" };
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
   const { questionId, answer, isCorrect, timeSpent } = parsed.data;
 
   const question = await prisma.question.findUnique({
@@ -458,9 +458,9 @@ export async function selectNextQuestionDifficulty(
   conceptId: string,
   baseline: Difficulty = "EASY",
 ): Promise<Difficulty> {
-  const session = await auth();
-  if (!session?.user?.id) return baseline;
-  const userId = session.user.id;
+  const session = await getSession();
+  if (!session?.id) return baseline;
+  const userId = session.id;
   void userId;
 
   const attempts = await prisma.questionAttempt.findMany({
@@ -488,8 +488,8 @@ export async function selectNextQuestionDifficulty(
 }
 
 export async function getConceptDetail(conceptId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return null;
+  const session = await getSession();
+  if (!session?.id) return null;
 
   const concept = await prisma.concept.findUnique({
     where: { id: conceptId },
@@ -520,7 +520,7 @@ export async function getConceptDetail(conceptId: string) {
   const profile = await prisma.studentKnowledgeProfile.findUnique({
     where: {
       userId_conceptId: {
-        userId: session.user.id,
+        userId: session.id,
         conceptId,
       },
     },
@@ -565,9 +565,9 @@ async function generateUniqueSlug(base: string): Promise<string> {
 export async function markConceptAsRead(
   conceptId: string,
 ): Promise<{ ok: boolean; newStatus: ConceptStatus; earnedXp: number }> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  const userId = session.user.id;
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  const userId = session.id;
 
   const concept = await prisma.concept.findUnique({
     where: { id: conceptId },
@@ -623,9 +623,9 @@ export type ToggleSubjectFavoriteResult =
 export async function toggleSubjectFavorite(
   input: z.infer<typeof toggleSubjectFavoriteSchema>,
 ): Promise<ToggleSubjectFavoriteResult> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Kamu harus login dulu." };
-  if (session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Kamu harus login dulu." };
+  if (session.role !== "STUDENT") {
     return { ok: false, error: "Hanya siswa yang bisa mengatur favorit." };
   }
 
@@ -637,7 +637,7 @@ export async function toggleSubjectFavorite(
     };
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
   const subjectId = parsed.data.subjectId;
 
   const subject = await prisma.subject.findUnique({
@@ -689,13 +689,13 @@ export async function toggleSubjectFavorite(
 export async function generateMaterialsForSubject(
   subjectId: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Kamu harus login dulu." };
-  if (session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id) return { ok: false, error: "Kamu harus login dulu." };
+  if (session.role !== "STUDENT") {
     return { ok: false, error: "Hanya siswa yang bisa generate materi." };
   }
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   // Fetch user profile for learning style
   const profile = await prisma.studentProfile.findUnique({

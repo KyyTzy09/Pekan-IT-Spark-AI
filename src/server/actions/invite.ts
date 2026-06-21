@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -29,14 +29,14 @@ async function uniqueCode(tries = 8) {
 }
 
 async function requireStudent() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/");
   }
-  return { userId: session.user.id };
+  return { userId: session.id };
 }
 
 export type InviteSummary = {
@@ -141,14 +141,14 @@ const linkSchema = z.object({
 });
 
 async function requireParent() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "PARENT") {
+  if (session.role !== "PARENT") {
     redirect("/");
   }
-  return { userId: session.user.id };
+  return { userId: session.id };
 }
 
 export type LinkResult =

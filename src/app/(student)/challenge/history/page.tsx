@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
 import { ChallengeHistoryView } from "@/components/student/challenge/challenge-history-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getChallengeHistory } from "@/server/actions/challenges";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChallengeHistoryPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 

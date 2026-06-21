@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { CustomSubjectsList } from "@/components/admin/custom-subjects-list";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import {
   type CustomSubjectFilter,
   listCustomSubjects,
@@ -22,9 +22,9 @@ export default async function CustomSubjectsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
-  if (session.user.role !== "ADMIN") redirect("/");
+  const session = await getSession();
+  if (!session?.id) redirect("/auth/login");
+  if (session.role !== "ADMIN") redirect("/");
 
   const params = await searchParams;
   const requested = (params.filter ?? "pending") as CustomSubjectFilter;

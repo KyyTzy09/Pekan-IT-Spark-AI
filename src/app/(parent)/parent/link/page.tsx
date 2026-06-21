@@ -1,7 +1,7 @@
 import { Heart, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { ParentLinkForm } from "@/components/parent/link-form";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -10,12 +10,12 @@ export const metadata: Metadata = {
 };
 
 export default async function ParentLinkPage() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
+  const session = await getSession();
+  if (!session?.id) return null;
 
   const linked = await prisma.parentStudentLink.findMany({
     where: {
-      parentId: session.user.id,
+      parentId: session.id,
       status: "ACCEPTED",
     },
     include: {

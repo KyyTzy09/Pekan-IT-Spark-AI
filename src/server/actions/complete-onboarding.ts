@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { auth, unstable_update } from "@/lib/auth";
+import { getSession, refreshSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "../../../generated/prisma/client";
 
@@ -33,14 +33,14 @@ export type CompleteOnboardingInput = z.infer<typeof completeSchema>;
 
 async function requireStudent() {
   console.log("[ONBOARDING_SERVICE] requireStudent verification start");
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/");
   }
-  return { userId: session.user.id };
+  return { userId: session.id };
 }
 
 export type CompleteOnboardingResult = {
@@ -181,7 +181,7 @@ export async function completeOnboarding(
     };
   }
 
-  await unstable_update({});
+  await refreshSession();
 
   return {
     ok: true,

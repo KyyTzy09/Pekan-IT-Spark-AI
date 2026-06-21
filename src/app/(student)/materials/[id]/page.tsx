@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { MaterialReaderClient } from "@/components/student/materials/material-reader-client";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import {
   getMaterialDetail,
   markMaterialRead,
@@ -13,11 +13,11 @@ export default async function MaterialDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 

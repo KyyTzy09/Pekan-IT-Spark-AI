@@ -5,7 +5,7 @@ import { Reveal } from "@/components/shared/reveal";
 import { PracticeEmptyState } from "@/components/student/practice-empty-state";
 import { PracticePlayer } from "@/components/student/practice-player";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import {
@@ -30,8 +30,8 @@ export default async function PracticePage({
 }: {
   searchParams: Promise<{ topicId?: string; subject?: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     redirect("/auth/login");
   }
 
@@ -41,7 +41,7 @@ export default async function PracticePage({
 
   // Fetch student profile to filter subjects they are focused on
   const profile = await prisma.studentProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: session.id },
     select: { focusedSubjects: true },
   });
   const focusedIds = profile?.focusedSubjects ?? [];

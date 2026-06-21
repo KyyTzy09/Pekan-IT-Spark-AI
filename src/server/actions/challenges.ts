@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 import {
@@ -40,9 +40,9 @@ import type {
 } from "../../../generated/prisma/client";
 
 async function requireStudent() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
+  const user = await prisma.user.findUnique({ where: { id: session.id } });
   if (!user || user.role !== "STUDENT") throw new Error("FORBIDDEN");
   return user.id;
 }
@@ -1815,18 +1815,18 @@ export type ProgressTimeline = {
 };
 
 async function requireAccessToStudent(studentId: string): Promise<void> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHORIZED");
+  const session = await getSession();
+  if (!session?.id) throw new Error("UNAUTHORIZED");
 
-  if (session.user.role === "STUDENT") {
-    if (session.user.id !== studentId) throw new Error("FORBIDDEN");
+  if (session.role === "STUDENT") {
+    if (session.id !== studentId) throw new Error("FORBIDDEN");
     return;
   }
 
-  if (session.user.role === "PARENT") {
+  if (session.role === "PARENT") {
     const link = await prisma.parentStudentLink.findFirst({
       where: {
-        parentId: session.user.id,
+        parentId: session.id,
         studentId,
         status: "ACCEPTED",
       },

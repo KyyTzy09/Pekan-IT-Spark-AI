@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { sanitizeInternalPath } from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +11,12 @@ export default async function AuthRedirectPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const session = await auth();
-  if (!session?.user) {
+  const session = await getSession();
+  if (!session) {
     redirect("/auth/login");
   }
 
-  const { role, isOnboarded } = session.user;
+  const { role, isOnboarded } = session;
   const params = await searchParams;
   const safe = sanitizeInternalPath(params.callbackUrl);
   if (safe) {

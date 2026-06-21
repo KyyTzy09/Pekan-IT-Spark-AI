@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateChatTitle, generateTutorStream } from "@/server/ai/tutor";
 import { logDocumentEvent } from "@/server/documents/audit";
@@ -18,14 +18,14 @@ const createSchema = z.object({
 });
 
 async function requireStudent() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     throw new Error("UNAUTHORIZED");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     throw new Error("FORBIDDEN");
   }
-  return session.user.id;
+  return session.id;
 }
 
 export type ChatSessionSummary = {

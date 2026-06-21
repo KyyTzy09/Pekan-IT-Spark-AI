@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/use-session";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -159,7 +159,7 @@ export function AdminNav() {
           )}
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/auth/login" })}
+            onClick={() => signOut()}
             className="grid size-9 place-items-center rounded-xl border border-border/40 bg-card/60 text-muted-foreground transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
             aria-label="Keluar"
           >

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SubjectsManageView } from "@/components/student/subjects-manage-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -10,11 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default async function SubjectsManagePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/auth/login");
-  if (session.user.role !== "STUDENT") redirect("/");
+  const session = await getSession();
+  if (!session?.id) redirect("/auth/login");
+  if (session.role !== "STUDENT") redirect("/");
 
-  const userId = session.user.id;
+  const userId = session.id;
 
   const [profile, subjects, knowledgeProfiles] = await Promise.all([
     prisma.studentProfile.findUnique({

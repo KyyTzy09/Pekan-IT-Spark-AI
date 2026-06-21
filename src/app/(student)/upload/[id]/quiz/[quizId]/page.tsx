@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { UploadQuizPlayerView } from "@/components/student/upload/upload-quiz-player-view";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getDocumentQuizAction } from "@/server/actions/documents";
 
@@ -11,18 +11,18 @@ export default async function UploadQuizPage({
 }: {
   params: Promise<{ id: string; quizId: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session?.id) {
     redirect("/auth/login");
   }
-  if (session.user.role !== "STUDENT") {
+  if (session.role !== "STUDENT") {
     redirect("/dashboard");
   }
 
   const { id: documentId, quizId } = await params;
 
   const doc = await prisma.document.findFirst({
-    where: { id: documentId, userId: session.user.id },
+    where: { id: documentId, userId: session.id },
     select: { id: true, originalName: true },
   });
   if (!doc) {

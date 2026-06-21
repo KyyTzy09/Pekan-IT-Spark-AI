@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { computeDifficultyDistribution } from "@/server/ai/curriculum";
 import { generateQuestionsForConcept } from "@/server/ai/generate-questions";
@@ -21,8 +21,8 @@ export async function generatePracticeQuestionsForSubject(
   subjectName?: string;
   error?: string;
 }> {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "STUDENT") {
+  const session = await getSession();
+  if (!session?.id || session.role !== "STUDENT") {
     return { ok: false, error: "Kamu harus login dulu." };
   }
 
@@ -61,7 +61,7 @@ export async function generatePracticeQuestionsForSubject(
 
   const profiles = await prisma.studentKnowledgeProfile.findMany({
     where: {
-      userId: session.user.id,
+      userId: session.id,
       conceptId: { in: concepts.map((c) => c.id) },
     },
     select: { conceptId: true, masteryScore: true },
@@ -73,7 +73,7 @@ export async function generatePracticeQuestionsForSubject(
   }
 
   const profile = await prisma.studentProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: session.id },
     select: { learningStyle: true },
   });
   const learningStyle = profile?.learningStyle ?? "VISUAL";
