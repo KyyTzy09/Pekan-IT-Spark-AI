@@ -47,9 +47,20 @@ RTK menghemat tokens dengan mengkompresi output sebelum sampai ke LLM context.
 | `bun <script.ts>` | `rtk bun <script.ts>` |
 | `bun --bun <cmd>` | `rtk bun --bun <cmd>` |
 
-**Catatan:** RTK grep pakai syntax berbeda dari GNU grep:
-- Directory sebagai positional argument: `rtk grep "pattern" src/`
-- Bukan pakai `--include` flags
+## ⚠️ Panduan RTK Grep (beda dengan grep biasa!)
+
+RTK grep **TIDAK** support flag GNU grep kayak `--type`, `--include`, `-r`. Ini yang bener:
+
+| ❌ Gagal (GNU syntax) | ✅ Berhasil (RTK syntax) |
+|------------------------|--------------------------|
+| `rtk grep -r "pattern" src/ --type ts` | `rtk grep "pattern" src/` |
+| `rtk grep --include="*.ts" -r "pattern"` | `rtk grep "pattern" src/` |
+| `rtk grep -r "pattern" .` | `rtk grep "pattern" .` |
+
+**Aturan:**
+1. **Gak usah pake** `-r`, `--type`, `--include`, `-l` — RTK udah otomatis recursive
+2. **Directory** cukup taruh di akhir sebagai argument biasa: `rtk grep "kata" src/components/`
+3. File extension filtering: cukup kasih directory aja, RTK udah tau file mana yang relevan
 
 **Cek help:** `rtk --help` atau `rtk <command> --help`
 

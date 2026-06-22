@@ -1,0 +1,1747 @@
+{
+  "C:\\Koding\\spark-ai\\.opencode\\package.json": {
+    "mtime": 1781789633.72078,
+    "ast_hash": "c9442b1dfba4cd254e8dc712cf2d3da8",
+    "semantic_hash": "c9442b1dfba4cd254e8dc712cf2d3da8"
+  },
+  "C:\\Koding\\spark-ai\\biome.json": {
+    "mtime": 1781624511.7731004,
+    "ast_hash": "bf906aeefba6bc9f551ca29ebbbd461d",
+    "semantic_hash": "bf906aeefba6bc9f551ca29ebbbd461d"
+  },
+  "C:\\Koding\\spark-ai\\components.json": {
+    "mtime": 1781456552.5839813,
+    "ast_hash": "9a7b69ced2bfb489205e378ed5e43491",
+    "semantic_hash": "9a7b69ced2bfb489205e378ed5e43491"
+  },
+  "C:\\Koding\\spark-ai\\next.config.ts": {
+    "mtime": 1781674927.87894,
+    "ast_hash": "315739e666f6879a05e72342a6c8d43a",
+    "semantic_hash": "315739e666f6879a05e72342a6c8d43a"
+  },
+  "C:\\Koding\\spark-ai\\package.json": {
+    "mtime": 1782127035.948084,
+    "ast_hash": "595b4071c4c7fb1167071f0d5f9d78cf",
+    "semantic_hash": "595b4071c4c7fb1167071f0d5f9d78cf"
+  },
+  "C:\\Koding\\spark-ai\\postcss.config.mjs": {
+    "mtime": 1781455205.7685554,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "C:\\Koding\\spark-ai\\prisma.config.ts": {
+    "mtime": 1781624511.7731004,
+    "ast_hash": "fe5963abf8fecfdb1a6c4b77047f5a6b",
+    "semantic_hash": "fe5963abf8fecfdb1a6c4b77047f5a6b"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\check-seed.ts": {
+    "mtime": 1781624511.7741024,
+    "ast_hash": "2636e08a66127ecf8a64779440416804",
+    "semantic_hash": "2636e08a66127ecf8a64779440416804"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260615065850_init\\migration.sql": {
+    "mtime": 1781623106.8467648,
+    "ast_hash": "df6fe408f9c60bacc7784f1df6032091",
+    "semantic_hash": "df6fe408f9c60bacc7784f1df6032091"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260615080305_embeddings\\migration.sql": {
+    "mtime": 1781623106.8467648,
+    "ast_hash": "eeb3b446eb163c91a6f5325307e41fb3",
+    "semantic_hash": "eeb3b446eb163c91a6f5325307e41fb3"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260615080400_vectorize\\migration.sql": {
+    "mtime": 1781623106.847765,
+    "ast_hash": "b0f20a3540f864dc44143f8075a608b9",
+    "semantic_hash": "b0f20a3540f864dc44143f8075a608b9"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260615170738_add_iscustom_columns\\migration.sql": {
+    "mtime": 1781623106.847765,
+    "ast_hash": "fecbdec360f69631be543f39df92496e",
+    "semantic_hash": "fecbdec360f69631be543f39df92496e"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260616120000_add_document_chat_session\\migration.sql": {
+    "mtime": 1781623106.8487654,
+    "ast_hash": "bdbfa0a4b04cd924f19f2d2b44eec5b0",
+    "semantic_hash": "bdbfa0a4b04cd924f19f2d2b44eec5b0"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260616130000_document_audit_log\\migration.sql": {
+    "mtime": 1781623106.8487654,
+    "ast_hash": "90eb9533b80f6ab5b3f42b27f0115ff0",
+    "semantic_hash": "90eb9533b80f6ab5b3f42b27f0115ff0"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260617000000_add_streak_freeze_reset\\migration.sql": {
+    "mtime": 1781623106.8487654,
+    "ast_hash": "aa6ae6009fcd59e249b867843fce7487",
+    "semantic_hash": "aa6ae6009fcd59e249b867843fce7487"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260617000000_admin_foundation\\migration.sql": {
+    "mtime": 1781623106.8497648,
+    "ast_hash": "72290b83a12f09df0c182a6588de2966",
+    "semantic_hash": "72290b83a12f09df0c182a6588de2966"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260617111312_change_slug_to_string\\migration.sql": {
+    "mtime": 1781694792.7736886,
+    "ast_hash": "89509d2a0e61ddff782aba3aba9b6ad2",
+    "semantic_hash": "89509d2a0e61ddff782aba3aba9b6ad2"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260617155858_add_db_indexes_for_performance\\migration.sql": {
+    "mtime": 1781711938.0409925,
+    "ast_hash": "7c17d0cd8be40fcde12bee0e723b0c7a",
+    "semantic_hash": "7c17d0cd8be40fcde12bee0e723b0c7a"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260618024545_add_challenge_type_and_weekly_link\\migration.sql": {
+    "mtime": 1781750745.2517593,
+    "ast_hash": "9a5abd250f6dd44671358cbed3d4cc7c",
+    "semantic_hash": "9a5abd250f6dd44671358cbed3d4cc7c"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\migrations\\20260620000000_challenge_redesign_2026_06_20\\migration.sql": {
+    "mtime": 1781943842.9670365,
+    "ast_hash": "b7fcc1cf24b040c96be3135b0762af5b",
+    "semantic_hash": "b7fcc1cf24b040c96be3135b0762af5b"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\seed-parent.ts": {
+    "mtime": 1781624511.7741024,
+    "ast_hash": "76ceead0db2a4b0fe4e75678074eca8f",
+    "semantic_hash": "76ceead0db2a4b0fe4e75678074eca8f"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\seed-student.ts": {
+    "mtime": 1781624511.7776122,
+    "ast_hash": "7c59a24d0cf7d182c229e1c864020099",
+    "semantic_hash": "7c59a24d0cf7d182c229e1c864020099"
+  },
+  "C:\\Koding\\spark-ai\\prisma\\seed.ts": {
+    "mtime": 1781962323.738821,
+    "ast_hash": "1fbf5547bee4ec2885da742f8ab79592",
+    "semantic_hash": "1fbf5547bee4ec2885da742f8ab79592"
+  },
+  "C:\\Koding\\spark-ai\\scripts\\check-users.ts": {
+    "mtime": 1782098631.2453156,
+    "ast_hash": "5dd15442a47a285dde7900515c3e75a8",
+    "semantic_hash": "5dd15442a47a285dde7900515c3e75a8"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\custom-subjects\\[id]\\page.tsx": {
+    "mtime": 1782071295.57605,
+    "ast_hash": "900f9b1cef0d987f18d63b7fed781fad",
+    "semantic_hash": "900f9b1cef0d987f18d63b7fed781fad"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\custom-subjects\\page.tsx": {
+    "mtime": 1782071295.5599258,
+    "ast_hash": "f43dcab5d31334fddabb748de32015e3",
+    "semantic_hash": "f43dcab5d31334fddabb748de32015e3"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\error.tsx": {
+    "mtime": 1781675114.2797945,
+    "ast_hash": "940f43ea9a52a36cc73880473352f8b7",
+    "semantic_hash": "940f43ea9a52a36cc73880473352f8b7"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\layout.tsx": {
+    "mtime": 1781675114.2772722,
+    "ast_hash": "760cd2a4fe852455a40ab98e2e69edfd",
+    "semantic_hash": "760cd2a4fe852455a40ab98e2e69edfd"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\loading.tsx": {
+    "mtime": 1781675114.2772722,
+    "ast_hash": "55ca76ef2dad433ed097f35e852b58e5",
+    "semantic_hash": "55ca76ef2dad433ed097f35e852b58e5"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\page.tsx": {
+    "mtime": 1782071295.5894604,
+    "ast_hash": "b9af6ff57707d2bf30e49e2ba75e581b",
+    "semantic_hash": "b9af6ff57707d2bf30e49e2ba75e581b"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\subjects\\[id]\\page.tsx": {
+    "mtime": 1782071295.6436207,
+    "ast_hash": "699a3b27955d3c681c978d7fe3a2545b",
+    "semantic_hash": "699a3b27955d3c681c978d7fe3a2545b"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\subjects\\[id]\\topics\\[topicId]\\page.tsx": {
+    "mtime": 1782071295.6613648,
+    "ast_hash": "ff4a915ee229dac9f36722971d84840a",
+    "semantic_hash": "ff4a915ee229dac9f36722971d84840a"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\subjects\\new\\page.tsx": {
+    "mtime": 1782071295.6097343,
+    "ast_hash": "a42350dfb810972949bccc583595805c",
+    "semantic_hash": "a42350dfb810972949bccc583595805c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(admin)\\admin\\subjects\\page.tsx": {
+    "mtime": 1782071295.6290183,
+    "ast_hash": "497b117411b52ef18b7607cfb382b29c",
+    "semantic_hash": "497b117411b52ef18b7607cfb382b29c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(onboarding)\\onboarding\\error.tsx": {
+    "mtime": 1781714353.1269436,
+    "ast_hash": "64da24b0bfd2451a9190b5dff22418a2",
+    "semantic_hash": "64da24b0bfd2451a9190b5dff22418a2"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(onboarding)\\onboarding\\loading.tsx": {
+    "mtime": 1782068959.3058932,
+    "ast_hash": "60306da09d73494d0011118712817ac6",
+    "semantic_hash": "60306da09d73494d0011118712817ac6"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(onboarding)\\onboarding\\page.tsx": {
+    "mtime": 1782071295.6817062,
+    "ast_hash": "ce2bbc4c44d54fdf5399deb253d60abc",
+    "semantic_hash": "ce2bbc4c44d54fdf5399deb253d60abc"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\error.tsx": {
+    "mtime": 1781675114.2813106,
+    "ast_hash": "439e969b12dd7f8519a42dbbd2344b88",
+    "semantic_hash": "439e969b12dd7f8519a42dbbd2344b88"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\guide\\page.tsx": {
+    "mtime": 1781677829.0701897,
+    "ast_hash": "5db201d8647116f63bd0a39703f6cfd7",
+    "semantic_hash": "5db201d8647116f63bd0a39703f6cfd7"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\history\\page.tsx": {
+    "mtime": 1781677525.9989202,
+    "ast_hash": "7b22952d4e48331a8653e43795da2a66",
+    "semantic_hash": "7b22952d4e48331a8653e43795da2a66"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\layout.tsx": {
+    "mtime": 1782071295.702669,
+    "ast_hash": "db0f284ccdde8d3c2656706b0bea9a93",
+    "semantic_hash": "db0f284ccdde8d3c2656706b0bea9a93"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\link\\page.tsx": {
+    "mtime": 1782071295.7206683,
+    "ast_hash": "646ac0c675b8a82b321fe7dffa2f3504",
+    "semantic_hash": "646ac0c675b8a82b321fe7dffa2f3504"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\loading.tsx": {
+    "mtime": 1781675114.2823098,
+    "ast_hash": "83dd7e6b8cd03d91f5ac12e4ada45438",
+    "semantic_hash": "83dd7e6b8cd03d91f5ac12e4ada45438"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(parent)\\parent\\page.tsx": {
+    "mtime": 1781865337.993889,
+    "ast_hash": "19bb06f83fa95894cec5732b65673886",
+    "semantic_hash": "19bb06f83fa95894cec5732b65673886"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(public)\\layout.tsx": {
+    "mtime": 1781624511.7786252,
+    "ast_hash": "4ffd0adea9a5a9618a7513c8f4d845ae",
+    "semantic_hash": "4ffd0adea9a5a9618a7513c8f4d845ae"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(public)\\page.tsx": {
+    "mtime": 1781624511.7836208,
+    "ast_hash": "b573b1630156529f9a2750bdad073ecb",
+    "semantic_hash": "b573b1630156529f9a2750bdad073ecb"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\activity\\loading.tsx": {
+    "mtime": 1781678127.6055548,
+    "ast_hash": "dc1b8436f1efdb59d952886514a2af3e",
+    "semantic_hash": "dc1b8436f1efdb59d952886514a2af3e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\activity\\page.tsx": {
+    "mtime": 1782071295.7376778,
+    "ast_hash": "4b5b5302157835937799b5daba571382",
+    "semantic_hash": "4b5b5302157835937799b5daba571382"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\challenge\\[id]\\page.tsx": {
+    "mtime": 1782071295.802631,
+    "ast_hash": "af2c0941f33f6aa198025dca84fd65b0",
+    "semantic_hash": "af2c0941f33f6aa198025dca84fd65b0"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\challenge\\history\\page.tsx": {
+    "mtime": 1782071295.762566,
+    "ast_hash": "3234e32f608bd79f34452010f6dde6e9",
+    "semantic_hash": "3234e32f608bd79f34452010f6dde6e9"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\challenge\\loading.tsx": {
+    "mtime": 1781678120.9198341,
+    "ast_hash": "d73a1ce2c73d32a578c6b4233d730790",
+    "semantic_hash": "d73a1ce2c73d32a578c6b4233d730790"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\challenge\\page.tsx": {
+    "mtime": 1782071295.7822998,
+    "ast_hash": "90879783234ae70e41e84dfb1eaafe71",
+    "semantic_hash": "90879783234ae70e41e84dfb1eaafe71"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\chat\\[sessionId]\\page.tsx": {
+    "mtime": 1782071375.1521945,
+    "ast_hash": "d922b711cfaa56f09dcce083f92d44b5",
+    "semantic_hash": "d922b711cfaa56f09dcce083f92d44b5"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\chat\\loading.tsx": {
+    "mtime": 1781678125.0048268,
+    "ast_hash": "6a0354406e44e8ce2f0bc45da455de4a",
+    "semantic_hash": "6a0354406e44e8ce2f0bc45da455de4a"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\chat\\page.tsx": {
+    "mtime": 1782071295.8258896,
+    "ast_hash": "d88c10b98cc49eeeb4e77f10cd17cd12",
+    "semantic_hash": "d88c10b98cc49eeeb4e77f10cd17cd12"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\dashboard\\loading.tsx": {
+    "mtime": 1781678118.2394238,
+    "ast_hash": "51717ef55a394416ac357ee31811d86e",
+    "semantic_hash": "51717ef55a394416ac357ee31811d86e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\dashboard\\page.tsx": {
+    "mtime": 1782071295.8665476,
+    "ast_hash": "2ea0b3faa9eec4dc31e8a89a479c9347",
+    "semantic_hash": "2ea0b3faa9eec4dc31e8a89a479c9347"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\error.tsx": {
+    "mtime": 1781624511.781625,
+    "ast_hash": "0c925a9b1a6a895c02939938fe6f2783",
+    "semantic_hash": "0c925a9b1a6a895c02939938fe6f2783"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\layout.tsx": {
+    "mtime": 1782071295.882577,
+    "ast_hash": "1d980aea822aba305f046eb55de78f61",
+    "semantic_hash": "1d980aea822aba305f046eb55de78f61"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\leaderboard\\loading.tsx": {
+    "mtime": 1781678130.4589734,
+    "ast_hash": "57bfd455bdd57934ebb141a72a1ef65c",
+    "semantic_hash": "57bfd455bdd57934ebb141a72a1ef65c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\leaderboard\\page.tsx": {
+    "mtime": 1782071295.90231,
+    "ast_hash": "0f40db9c1657ca96478245fa90743510",
+    "semantic_hash": "0f40db9c1657ca96478245fa90743510"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\loading.tsx": {
+    "mtime": 1781624511.7856236,
+    "ast_hash": "6aeb29acfe69444f2e5f77f360f00f91",
+    "semantic_hash": "6aeb29acfe69444f2e5f77f360f00f91"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\materials\\[id]\\page.tsx": {
+    "mtime": 1782071295.941786,
+    "ast_hash": "87ef2dba59e8656f76096460a8f5ff20",
+    "semantic_hash": "87ef2dba59e8656f76096460a8f5ff20"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\materials\\loading.tsx": {
+    "mtime": 1781678128.7182894,
+    "ast_hash": "ba9602a357a754d40a3fe62e71b82249",
+    "semantic_hash": "ba9602a357a754d40a3fe62e71b82249"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\materials\\page.tsx": {
+    "mtime": 1782071295.9193232,
+    "ast_hash": "be03d7d0a6b6528006c85b5867bd788e",
+    "semantic_hash": "be03d7d0a6b6528006c85b5867bd788e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\not-found.tsx": {
+    "mtime": 1781624511.7856236,
+    "ast_hash": "0952f6cb4b91dcf0c30b18decb881907",
+    "semantic_hash": "0952f6cb4b91dcf0c30b18decb881907"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\practice\\loading.tsx": {
+    "mtime": 1781795226.782227,
+    "ast_hash": "c0a0c22cae3f5d2d4da3c9572f6695e6",
+    "semantic_hash": "c0a0c22cae3f5d2d4da3c9572f6695e6"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\practice\\page.tsx": {
+    "mtime": 1782071295.965068,
+    "ast_hash": "5aeae9507d2e539d2cc50dc0ec8cf0e9",
+    "semantic_hash": "5aeae9507d2e539d2cc50dc0ec8cf0e9"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\practice\\pretest\\[subjectId]\\page.tsx": {
+    "mtime": 1782071295.9913082,
+    "ast_hash": "759fc9644b31534aa55af3fbf12f93c7",
+    "semantic_hash": "759fc9644b31534aa55af3fbf12f93c7"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\practice\\quiz\\[topicId]\\page.tsx": {
+    "mtime": 1782071296.0205693,
+    "ast_hash": "7e06f9ef2270214f97f8b40828e6ce4b",
+    "semantic_hash": "7e06f9ef2270214f97f8b40828e6ce4b"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\practice\\quiz\\result\\page.tsx": {
+    "mtime": 1781624511.7931483,
+    "ast_hash": "5e7dd6ba93704592dbbb2daaa6f3c34a",
+    "semantic_hash": "5e7dd6ba93704592dbbb2daaa6f3c34a"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\profile\\[id]\\loading.tsx": {
+    "mtime": 1781957409.0571702,
+    "ast_hash": "6ca42dfcc65858eade42c0095a9e97aa",
+    "semantic_hash": "6ca42dfcc65858eade42c0095a9e97aa"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\profile\\[id]\\page.tsx": {
+    "mtime": 1782071296.0636618,
+    "ast_hash": "e0277870ea8add42d04322f68c74d018",
+    "semantic_hash": "e0277870ea8add42d04322f68c74d018"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\profile\\loading.tsx": {
+    "mtime": 1781795226.782227,
+    "ast_hash": "c661220f416d85d36973d096cefb3bc5",
+    "semantic_hash": "c661220f416d85d36973d096cefb3bc5"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\profile\\page.tsx": {
+    "mtime": 1782071296.0451136,
+    "ast_hash": "600a26bff6624efc8bcda942b6bd8302",
+    "semantic_hash": "600a26bff6624efc8bcda942b6bd8302"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\settings\\invite\\page.tsx": {
+    "mtime": 1782071296.0897853,
+    "ast_hash": "9d75209a34d4bd070980004558c4352e",
+    "semantic_hash": "9d75209a34d4bd070980004558c4352e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\subjects\\[slug]\\page.tsx": {
+    "mtime": 1782071296.1434584,
+    "ast_hash": "039ce1fb7b6ef28ea1131c64fdb03dca",
+    "semantic_hash": "039ce1fb7b6ef28ea1131c64fdb03dca"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\subjects\\loading.tsx": {
+    "mtime": 1781678119.5044918,
+    "ast_hash": "5ad239e3beb3759cfe5e446c59d8d9c1",
+    "semantic_hash": "5ad239e3beb3759cfe5e446c59d8d9c1"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\subjects\\manage\\page.tsx": {
+    "mtime": 1782071296.1081917,
+    "ast_hash": "a1d4b4cd59d1b5e4a2848591b7be927e",
+    "semantic_hash": "a1d4b4cd59d1b5e4a2848591b7be927e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\subjects\\page.tsx": {
+    "mtime": 1782071296.1279216,
+    "ast_hash": "2d001b7f0b0ff2fff0e8afcb4168d7b9",
+    "semantic_hash": "2d001b7f0b0ff2fff0e8afcb4168d7b9"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\topics\\[topicId]\\page.tsx": {
+    "mtime": 1782071296.1683629,
+    "ast_hash": "1ef79168330d79f8e6fb3571edc54a5d",
+    "semantic_hash": "1ef79168330d79f8e6fb3571edc54a5d"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\tree\\page.tsx": {
+    "mtime": 1782071296.190035,
+    "ast_hash": "994048b6a9ce2d2f8ee28bc7277f61df",
+    "semantic_hash": "994048b6a9ce2d2f8ee28bc7277f61df"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\material\\[materialId]\\loading.tsx": {
+    "mtime": 1781962966.46474,
+    "ast_hash": "ddb91e946ccdf716dc60cbec2589318e",
+    "semantic_hash": "ddb91e946ccdf716dc60cbec2589318e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\material\\[materialId]\\page.tsx": {
+    "mtime": 1782071296.2562768,
+    "ast_hash": "0622d5734bb2f2b6973da6fe74a8ffba",
+    "semantic_hash": "0622d5734bb2f2b6973da6fe74a8ffba"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\material\\new\\page.tsx": {
+    "mtime": 1782071296.237273,
+    "ast_hash": "0869641aa15cab0d77dee2d24aadcfe4",
+    "semantic_hash": "0869641aa15cab0d77dee2d24aadcfe4"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\page.tsx": {
+    "mtime": 1782071296.2769296,
+    "ast_hash": "e6b7128a062d5f0028d5290b0c61bb84",
+    "semantic_hash": "e6b7128a062d5f0028d5290b0c61bb84"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\quiz\\[quizId]\\page.tsx": {
+    "mtime": 1782071296.3283002,
+    "ast_hash": "77063e826d62b833ddfd2cb6437a5e2a",
+    "semantic_hash": "77063e826d62b833ddfd2cb6437a5e2a"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\quiz\\new\\page.tsx": {
+    "mtime": 1782071296.310998,
+    "ast_hash": "c90cdb9ac5b1175f174b390020834cd8",
+    "semantic_hash": "c90cdb9ac5b1175f174b390020834cd8"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\[id]\\share\\page.tsx": {
+    "mtime": 1782071296.356826,
+    "ast_hash": "5fe7a3318c8ab13edd6a26e1cea16979",
+    "semantic_hash": "5fe7a3318c8ab13edd6a26e1cea16979"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\loading.tsx": {
+    "mtime": 1781678124.1542382,
+    "ast_hash": "f2e98807ec6d4c1093d4e9d02ad9ae1d",
+    "semantic_hash": "f2e98807ec6d4c1093d4e9d02ad9ae1d"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\(student)\\upload\\page.tsx": {
+    "mtime": 1782071296.2156968,
+    "ast_hash": "68efa38ab1fb4f3c73a98b38627aa09e",
+    "semantic_hash": "68efa38ab1fb4f3c73a98b38627aa09e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\auth\\google\\callback\\route.ts": {
+    "mtime": 1782098540.6182745,
+    "ast_hash": "0d43cc48a474a4eba310b02ab2456f35",
+    "semantic_hash": "0d43cc48a474a4eba310b02ab2456f35"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\auth\\google\\route.ts": {
+    "mtime": 1782098460.6266296,
+    "ast_hash": "29338262b957bce9f0e388ca20ee7f19",
+    "semantic_hash": "29338262b957bce9f0e388ca20ee7f19"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\auth\\logout\\route.ts": {
+    "mtime": 1782071427.9627259,
+    "ast_hash": "cfd4baba37ed803028ef6d9853f7dcba",
+    "semantic_hash": "cfd4baba37ed803028ef6d9853f7dcba"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\auth\\register\\route.ts": {
+    "mtime": 1782098584.2282526,
+    "ast_hash": "fc6f5cc796795ba5d3450ff6e0e33672",
+    "semantic_hash": "fc6f5cc796795ba5d3450ff6e0e33672"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\auth\\session\\route.ts": {
+    "mtime": 1782071428.0095224,
+    "ast_hash": "84ecf4f2b330a89d5575b8b606802db4",
+    "semantic_hash": "84ecf4f2b330a89d5575b8b606802db4"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\[id]\\item\\[itemId]\\route.ts": {
+    "mtime": 1782071428.0820525,
+    "ast_hash": "f02a47f4452a5aac7af296e43e1cdd9b",
+    "semantic_hash": "f02a47f4452a5aac7af296e43e1cdd9b"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\[id]\\reflect\\route.ts": {
+    "mtime": 1782071428.1055691,
+    "ast_hash": "e91fd0c3aa334dfccd2f3c589ce0b237",
+    "semantic_hash": "e91fd0c3aa334dfccd2f3c589ce0b237"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\[id]\\route.ts": {
+    "mtime": 1782071428.1285937,
+    "ast_hash": "3bd37ffe3e02c57817b3c2fbe941bee1",
+    "semantic_hash": "3bd37ffe3e02c57817b3c2fbe941bee1"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\[id]\\submit\\route.ts": {
+    "mtime": 1782071428.1461058,
+    "ast_hash": "babc69605dd2eeb73ca59f78bd96a60a",
+    "semantic_hash": "babc69605dd2eeb73ca59f78bd96a60a"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\generate\\route.ts": {
+    "mtime": 1782071428.0215268,
+    "ast_hash": "d1c4deb5734c0a581a00461a5631040c",
+    "semantic_hash": "d1c4deb5734c0a581a00461a5631040c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\history\\route.ts": {
+    "mtime": 1782071428.0380385,
+    "ast_hash": "2540decbef46d2eabc159230510ccf3d",
+    "semantic_hash": "2540decbef46d2eabc159230510ccf3d"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\progress\\route.ts": {
+    "mtime": 1782071428.0570443,
+    "ast_hash": "15189b95a65c7f0f78cc1bfa0c54a352",
+    "semantic_hash": "15189b95a65c7f0f78cc1bfa0c54a352"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\challenge\\today\\route.ts": {
+    "mtime": 1782071428.078051,
+    "ast_hash": "5a8f071cd99729404e2b8a2487d7641f",
+    "semantic_hash": "5a8f071cd99729404e2b8a2487d7641f"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\chat\\[sessionId]\\route.ts": {
+    "mtime": 1782071428.166106,
+    "ast_hash": "8ceb1be5d1f5ccb2a467bb6432a0c98e",
+    "semantic_hash": "8ceb1be5d1f5ccb2a467bb6432a0c98e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\chat\\route.ts": {
+    "mtime": 1782071428.1611056,
+    "ast_hash": "c332ea612b0c89205419bfc20e69e7e2",
+    "semantic_hash": "c332ea612b0c89205419bfc20e69e7e2"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\dashboard\\route.ts": {
+    "mtime": 1782071428.1711068,
+    "ast_hash": "907a6ad918fb72be2652b955f31d3966",
+    "semantic_hash": "907a6ad918fb72be2652b955f31d3966"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\documents\\route.ts": {
+    "mtime": 1782071428.1741135,
+    "ast_hash": "46ebf678dbe662107e4cd6a31b97dddb",
+    "semantic_hash": "46ebf678dbe662107e4cd6a31b97dddb"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\material\\[id]\\read\\route.ts": {
+    "mtime": 1782071428.1931288,
+    "ast_hash": "5949bfbe8fa7a4ae3930aea20a4d43e6",
+    "semantic_hash": "5949bfbe8fa7a4ae3930aea20a4d43e6"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\material\\[id]\\route.ts": {
+    "mtime": 1782071428.2161593,
+    "ast_hash": "3fbfa90a3f49018f311aa40a2db469cf",
+    "semantic_hash": "3fbfa90a3f49018f311aa40a2db469cf"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\materials\\generate\\route.ts": {
+    "mtime": 1782071428.231164,
+    "ast_hash": "016a5ae9160a0c598a907e070d7f352e",
+    "semantic_hash": "016a5ae9160a0c598a907e070d7f352e"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\materials\\route.ts": {
+    "mtime": 1782071428.249183,
+    "ast_hash": "13d435f387e003d54ebd9a8aae2fd974",
+    "semantic_hash": "13d435f387e003d54ebd9a8aae2fd974"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\practice\\quiz\\route.ts": {
+    "mtime": 1782071428.2691817,
+    "ast_hash": "d0a944adddb7fd17edb1ee4076d52105",
+    "semantic_hash": "d0a944adddb7fd17edb1ee4076d52105"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\practice\\route.ts": {
+    "mtime": 1782071428.2880666,
+    "ast_hash": "d2977e805a8077095109833e24c6afcb",
+    "semantic_hash": "d2977e805a8077095109833e24c6afcb"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\settings\\invite\\route.ts": {
+    "mtime": 1782071428.3051014,
+    "ast_hash": "c332ac4dbbc0f0f69fdc700effe63189",
+    "semantic_hash": "c332ac4dbbc0f0f69fdc700effe63189"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\subjects\\[slug]\\route.ts": {
+    "mtime": 1782071428.3151028,
+    "ast_hash": "80dca7ffcf4bc032a3edfbedf1e2be6b",
+    "semantic_hash": "80dca7ffcf4bc032a3edfbedf1e2be6b"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\subjects\\route.ts": {
+    "mtime": 1782071428.3101027,
+    "ast_hash": "ea582c9523caea869e5d284b445e0ec9",
+    "semantic_hash": "ea582c9523caea869e5d284b445e0ec9"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\api\\topics\\[topicId]\\route.ts": {
+    "mtime": 1782071428.3201017,
+    "ast_hash": "fd6823c5277f5876b5a0e78ecd0add5c",
+    "semantic_hash": "fd6823c5277f5876b5a0e78ecd0add5c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\error.tsx": {
+    "mtime": 1781675114.308156,
+    "ast_hash": "68f5b6ce096ac9cd49b5d4f0a4e8268c",
+    "semantic_hash": "68f5b6ce096ac9cd49b5d4f0a4e8268c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\layout.tsx": {
+    "mtime": 1781624511.7981472,
+    "ast_hash": "67a098a6d0a659ecb95ec32767a529a4",
+    "semantic_hash": "67a098a6d0a659ecb95ec32767a529a4"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\loading.tsx": {
+    "mtime": 1781675114.3061411,
+    "ast_hash": "b88e1b486a26cff82a0349503c33a4cc",
+    "semantic_hash": "b88e1b486a26cff82a0349503c33a4cc"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\login\\page.tsx": {
+    "mtime": 1782127419.5448756,
+    "ast_hash": "73afae6c6fa6257c1970f7f6b5c9649c",
+    "semantic_hash": "73afae6c6fa6257c1970f7f6b5c9649c"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\redirect\\page.tsx": {
+    "mtime": 1782070892.8265543,
+    "ast_hash": "e154e760dcee7070191f4b930c457b84",
+    "semantic_hash": "e154e760dcee7070191f4b930c457b84"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\register\\page.tsx": {
+    "mtime": 1782127341.6487937,
+    "ast_hash": "6265d6d4526e2253991eb8e2bd9dd958",
+    "semantic_hash": "6265d6d4526e2253991eb8e2bd9dd958"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\auth\\verify-email\\[token]\\page.tsx": {
+    "mtime": 1781624511.8021603,
+    "ast_hash": "5097d7eb35bf52f6548d68196096dafc",
+    "semantic_hash": "5097d7eb35bf52f6548d68196096dafc"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\error.tsx": {
+    "mtime": 1781675114.308156,
+    "ast_hash": "6ec35a734054e417e79970d91be0f771",
+    "semantic_hash": "6ec35a734054e417e79970d91be0f771"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\layout.tsx": {
+    "mtime": 1782037438.7527688,
+    "ast_hash": "d37f6a5f9f7931025ce9f4b1f75bc12f",
+    "semantic_hash": "d37f6a5f9f7931025ce9f4b1f75bc12f"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\not-found.tsx": {
+    "mtime": 1781675114.308156,
+    "ast_hash": "414b99bf08684df8f228d661c950069f",
+    "semantic_hash": "414b99bf08684df8f228d661c950069f"
+  },
+  "C:\\Koding\\spark-ai\\src\\app\\providers.tsx": {
+    "mtime": 1782070834.5450165,
+    "ast_hash": "013c65b63ded1fb558afed39a1b0dd11",
+    "semantic_hash": "013c65b63ded1fb558afed39a1b0dd11"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\admin-dashboard.tsx": {
+    "mtime": 1781624511.806169,
+    "ast_hash": "b62f24ade5b9761e66acb8e29239a6e5",
+    "semantic_hash": "b62f24ade5b9761e66acb8e29239a6e5"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\admin-nav.tsx": {
+    "mtime": 1782071191.7229533,
+    "ast_hash": "911d9fc407543a7f45660933dabd93f4",
+    "semantic_hash": "911d9fc407543a7f45660933dabd93f4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\custom-subject-card.tsx": {
+    "mtime": 1781624511.8071644,
+    "ast_hash": "b4f9a8c6a69904e50493fc46f059dfa4",
+    "semantic_hash": "b4f9a8c6a69904e50493fc46f059dfa4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\custom-subject-detail-view.tsx": {
+    "mtime": 1781624511.8071644,
+    "ast_hash": "2ef1f86dbe09de405d36b41c4a5bfac4",
+    "semantic_hash": "2ef1f86dbe09de405d36b41c4a5bfac4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\custom-subjects-list.tsx": {
+    "mtime": 1781624511.8071644,
+    "ast_hash": "3607e97d1b527100cf66b197dae0484f",
+    "semantic_hash": "3607e97d1b527100cf66b197dae0484f"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\subject-edit-view.tsx": {
+    "mtime": 1781624511.815683,
+    "ast_hash": "61c8f8e78ebfd07fb2676104ef32ca72",
+    "semantic_hash": "61c8f8e78ebfd07fb2676104ef32ca72"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\subject-form.tsx": {
+    "mtime": 1781624511.8177042,
+    "ast_hash": "ebdcd620f67b14f54c2756f953be2a8f",
+    "semantic_hash": "ebdcd620f67b14f54c2756f953be2a8f"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\subjects-table.tsx": {
+    "mtime": 1781624511.8192234,
+    "ast_hash": "fe4d8f7065af1c4b76bc414869fee7b3",
+    "semantic_hash": "fe4d8f7065af1c4b76bc414869fee7b3"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\admin\\topic-detail-view.tsx": {
+    "mtime": 1781624511.8242424,
+    "ast_hash": "0ec53cdcb03826927cab1ac063024cd7",
+    "semantic_hash": "0ec53cdcb03826927cab1ac063024cd7"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\auth\\auth-branding.tsx": {
+    "mtime": 1782128523.7734563,
+    "ast_hash": "060111ef87bb6b3d8a8c3931566bb84e",
+    "semantic_hash": "060111ef87bb6b3d8a8c3931566bb84e"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\auth\\auth-form.tsx": {
+    "mtime": 1781624511.8578136,
+    "ast_hash": "99032e9dad17c2132142efbaacbb5f42",
+    "semantic_hash": "99032e9dad17c2132142efbaacbb5f42"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\auth\\auth-role-selector.tsx": {
+    "mtime": 1781795226.798836,
+    "ast_hash": "49394bac3e713b4150b3b3d970bf4398",
+    "semantic_hash": "49394bac3e713b4150b3b3d970bf4398"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\auth\\auth-streak-teaser.tsx": {
+    "mtime": 1781715948.170532,
+    "ast_hash": "aa6c4e07aba206dc841fe619a1058567",
+    "semantic_hash": "aa6c4e07aba206dc841fe619a1058567"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\auth\\auth-trust-badges.tsx": {
+    "mtime": 1781715941.9632459,
+    "ast_hash": "1c8a7528b0ac04c7f8c01b9271d2d73f",
+    "semantic_hash": "1c8a7528b0ac04c7f8c01b9271d2d73f"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\ContactForm.tsx": {
+    "mtime": 1781624511.815163,
+    "ast_hash": "a81abb31a8c53221bab4ced23b242910",
+    "semantic_hash": "a81abb31a8c53221bab4ced23b242910"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\back-to-top.tsx": {
+    "mtime": 1781624511.815683,
+    "ast_hash": "c48b7604ff3189092b019283ce1b0998",
+    "semantic_hash": "c48b7604ff3189092b019283ce1b0998"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\courses.tsx": {
+    "mtime": 1782037438.7552874,
+    "ast_hash": "f802936961dd61b1b7824af2050bf81f",
+    "semantic_hash": "f802936961dd61b1b7824af2050bf81f"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\cta-section.tsx": {
+    "mtime": 1782071170.6644268,
+    "ast_hash": "569d60a6ec3e18f9ea7274a5acdca283",
+    "semantic_hash": "569d60a6ec3e18f9ea7274a5acdca283"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\enroll-context.tsx": {
+    "mtime": 1781950019.8413885,
+    "ast_hash": "5082d78c8535e2cbbeb67f70d4a5580a",
+    "semantic_hash": "5082d78c8535e2cbbeb67f70d4a5580a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\features.tsx": {
+    "mtime": 1782037438.758368,
+    "ast_hash": "a303a3a669d2f716d04ff14112c8bd5d",
+    "semantic_hash": "a303a3a669d2f716d04ff14112c8bd5d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\floating-background.tsx": {
+    "mtime": 1781624511.8262398,
+    "ast_hash": "e87e154f3faa4bb0ce2352c231cac4e3",
+    "semantic_hash": "e87e154f3faa4bb0ce2352c231cac4e3"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\floating-emojis.tsx": {
+    "mtime": 1781624511.8272455,
+    "ast_hash": "c5c854b755e10d1b4f794f2e57c01d2b",
+    "semantic_hash": "c5c854b755e10d1b4f794f2e57c01d2b"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\footer.tsx": {
+    "mtime": 1782128531.9242783,
+    "ast_hash": "9bb5a8b9e06b22c7bbe2e2f5418024ce",
+    "semantic_hash": "9bb5a8b9e06b22c7bbe2e2f5418024ce"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\hero.tsx": {
+    "mtime": 1782128477.205526,
+    "ast_hash": "48468aa8eab4993a2914b9d37abb5991",
+    "semantic_hash": "48468aa8eab4993a2914b9d37abb5991"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\how-it-works.tsx": {
+    "mtime": 1782037438.7603846,
+    "ast_hash": "c7dfbc20acfd1dff5e5208f6f94a2ee2",
+    "semantic_hash": "c7dfbc20acfd1dff5e5208f6f94a2ee2"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\navbar.tsx": {
+    "mtime": 1782128510.6719563,
+    "ast_hash": "c9f060db18f2ba8c0e7ac6adf93ed101",
+    "semantic_hash": "c9f060db18f2ba8c0e7ac6adf93ed101"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\progress-demo.tsx": {
+    "mtime": 1782037438.7629998,
+    "ast_hash": "a7252347bf8555a4be3e04e06388fd3a",
+    "semantic_hash": "a7252347bf8555a4be3e04e06388fd3a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\scroll-progress.tsx": {
+    "mtime": 1781624511.8312378,
+    "ast_hash": "439a6c654e0370c6e910317b19ee2b7d",
+    "semantic_hash": "439a6c654e0370c6e910317b19ee2b7d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\landing\\sections\\testimonials.tsx": {
+    "mtime": 1782128492.2268896,
+    "ast_hash": "7ac94a34e2fc40ea6e7fa60223c9dbb8",
+    "semantic_hash": "7ac94a34e2fc40ea6e7fa60223c9dbb8"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\CustomPretestStep.tsx": {
+    "mtime": 1782068735.1594112,
+    "ast_hash": "10e2921635b61648b4c4b40e68610eb7",
+    "semantic_hash": "10e2921635b61648b4c4b40e68610eb7"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\CustomSubjectStep.tsx": {
+    "mtime": 1782068712.9481952,
+    "ast_hash": "25a17383b6fbeec146af317866484de0",
+    "semantic_hash": "25a17383b6fbeec146af317866484de0"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\OnboardingShell.tsx": {
+    "mtime": 1782068513.1415505,
+    "ast_hash": "3c071c303092fbe277148d08eeb2d889",
+    "semantic_hash": "3c071c303092fbe277148d08eeb2d889"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\OnboardingWizardClient.tsx": {
+    "mtime": 1782128149.686939,
+    "ast_hash": "d7b2980d0ddee2d9df0d365f6733ad00",
+    "semantic_hash": "d7b2980d0ddee2d9df0d365f6733ad00"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\PretestStep.tsx": {
+    "mtime": 1782068676.998792,
+    "ast_hash": "9dc063eb962976024c6e2e94dc51a39a",
+    "semantic_hash": "9dc063eb962976024c6e2e94dc51a39a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\ProfileStep.tsx": {
+    "mtime": 1782068585.1777835,
+    "ast_hash": "f9052fcaa33eea8ec17688c6f83f1a26",
+    "semantic_hash": "f9052fcaa33eea8ec17688c6f83f1a26"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\StepIndicator.tsx": {
+    "mtime": 1782068531.024647,
+    "ast_hash": "f25f5ac3486cfc2b0bc0ae1a5d122871",
+    "semantic_hash": "f25f5ac3486cfc2b0bc0ae1a5d122871"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\StyleReminderStep.tsx": {
+    "mtime": 1782068648.1728723,
+    "ast_hash": "bd082ff925e43e540c32b93f095949c4",
+    "semantic_hash": "bd082ff925e43e540c32b93f095949c4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\SubjectSearchDialog.tsx": {
+    "mtime": 1782068775.6276486,
+    "ast_hash": "25b3ffbd22b7b574bc62c36aa8cee88b",
+    "semantic_hash": "25b3ffbd22b7b574bc62c36aa8cee88b"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\SubjectsStep.tsx": {
+    "mtime": 1782068611.4053836,
+    "ast_hash": "7d5e1e5080086f60c92c383f94369280",
+    "semantic_hash": "7d5e1e5080086f60c92c383f94369280"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\onboarding\\WelcomeStep.tsx": {
+    "mtime": 1782068563.3010612,
+    "ast_hash": "6b035a36c2b67d90bd994fd1a0226f1f",
+    "semantic_hash": "6b035a36c2b67d90bd994fd1a0226f1f"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\ParentAiRecommendation.tsx": {
+    "mtime": 1781880333.632606,
+    "ast_hash": "5ea303b727edd48211e7ee22ed1052dc",
+    "semantic_hash": "5ea303b727edd48211e7ee22ed1052dc"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\alerts-section.tsx": {
+    "mtime": 1781865370.1278658,
+    "ast_hash": "dbadce4cc74627c1587fe24d7fdd0c2a",
+    "semantic_hash": "dbadce4cc74627c1587fe24d7fdd0c2a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\link-form.tsx": {
+    "mtime": 1781624511.8272455,
+    "ast_hash": "666125d2f2717f97fdcf1d536686590a",
+    "semantic_hash": "666125d2f2717f97fdcf1d536686590a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\metrics-overview.tsx": {
+    "mtime": 1781865371.3591263,
+    "ast_hash": "fe1fb4198f5c6ae3b5d575fbb2b2a1cb",
+    "semantic_hash": "fe1fb4198f5c6ae3b5d575fbb2b2a1cb"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\parent-nav.tsx": {
+    "mtime": 1782071191.7574062,
+    "ast_hash": "d816ee5fa3b4449949da21c8c7ca2847",
+    "semantic_hash": "d816ee5fa3b4449949da21c8c7ca2847"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\parent-sidebar.tsx": {
+    "mtime": 1782071191.783886,
+    "ast_hash": "b7b316a596f34a299ddacc4123fe96ca",
+    "semantic_hash": "b7b316a596f34a299ddacc4123fe96ca"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\subject-progress.tsx": {
+    "mtime": 1781865373.1921656,
+    "ast_hash": "c3d9ace8a776dc0fa9474c33fc892866",
+    "semantic_hash": "c3d9ace8a776dc0fa9474c33fc892866"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\weekly-chart-impl.tsx": {
+    "mtime": 1781673619.1339126,
+    "ast_hash": "0085e386d875cc0a353eca666ca89950",
+    "semantic_hash": "0085e386d875cc0a353eca666ca89950"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\weekly-chart.tsx": {
+    "mtime": 1781673626.3050125,
+    "ast_hash": "46e4aee4fa80fba99d469e786610f6e5",
+    "semantic_hash": "46e4aee4fa80fba99d469e786610f6e5"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\parent\\weekly-timeline.tsx": {
+    "mtime": 1781795226.8125494,
+    "ast_hash": "9ece9ac09de9aba18bbcca1271d6a60d",
+    "semantic_hash": "9ece9ac09de9aba18bbcca1271d6a60d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\providers\\query-client.tsx": {
+    "mtime": 1781624511.830245,
+    "ast_hash": "ddcfa970ef95db756e20118d5254a935",
+    "semantic_hash": "ddcfa970ef95db756e20118d5254a935"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\shared\\document-markdown.tsx": {
+    "mtime": 1781788943.3592052,
+    "ast_hash": "f2fb22482da276012863a1417ca2863a",
+    "semantic_hash": "f2fb22482da276012863a1417ca2863a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\shared\\loading-skeleton.tsx": {
+    "mtime": 1781624511.830245,
+    "ast_hash": "5208a810a76c2ee6f4e7347d2672ffa4",
+    "semantic_hash": "5208a810a76c2ee6f4e7347d2672ffa4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\shared\\mermaid-renderer.tsx": {
+    "mtime": 1782039408.313905,
+    "ast_hash": "49f9d6e1f78a6598d88847ede3a32e3a",
+    "semantic_hash": "49f9d6e1f78a6598d88847ede3a32e3a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\shared\\reveal.tsx": {
+    "mtime": 1782039202.8058739,
+    "ast_hash": "58749ce999e023879f500087fa5646d3",
+    "semantic_hash": "58749ce999e023879f500087fa5646d3"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\activity\\activity-heatmap-detail.tsx": {
+    "mtime": 1781880379.2071974,
+    "ast_hash": "b82497a1fc1a996d6ae614aab5bd1165",
+    "semantic_hash": "b82497a1fc1a996d6ae614aab5bd1165"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\activity\\activity-heatmap.tsx": {
+    "mtime": 1781958772.616396,
+    "ast_hash": "bdbadf34ea56d5b4a7dee020e4102ce8",
+    "semantic_hash": "bdbadf34ea56d5b4a7dee020e4102ce8"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\activity\\activity-line-chart.tsx": {
+    "mtime": 1781881966.8323474,
+    "ast_hash": "a6aee2232418634d1ec6506b86dc5a41",
+    "semantic_hash": "a6aee2232418634d1ec6506b86dc5a41"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\activity\\activity-list.tsx": {
+    "mtime": 1781961175.8390028,
+    "ast_hash": "f18eeb5a892caa1c7fecc50a144e81e2",
+    "semantic_hash": "f18eeb5a892caa1c7fecc50a144e81e2"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\activity\\activity-stats.tsx": {
+    "mtime": 1781624511.8392737,
+    "ast_hash": "b39981595401d6f1ccb9f20389290586",
+    "semantic_hash": "b39981595401d6f1ccb9f20389290586"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\activity\\activity-view.tsx": {
+    "mtime": 1781961171.392722,
+    "ast_hash": "87f6ca347cb11825a3e1374fce8b88e1",
+    "semantic_hash": "87f6ca347cb11825a3e1374fce8b88e1"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\add-subject-dialog.tsx": {
+    "mtime": 1781950208.4934962,
+    "ast_hash": "4603fd79b00294e19694c97afa8535d5",
+    "semantic_hash": "4603fd79b00294e19694c97afa8535d5"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\avatar-customizer-widget.tsx": {
+    "mtime": 1781675114.3424537,
+    "ast_hash": "2e648276bf8352dd8b7f18b9de5fbcdf",
+    "semantic_hash": "2e648276bf8352dd8b7f18b9de5fbcdf"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\avatar-upload.tsx": {
+    "mtime": 1781957409.0591733,
+    "ast_hash": "ad6525051a03f37404bae9fde1c2ab7d",
+    "semantic_hash": "ad6525051a03f37404bae9fde1c2ab7d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\badge-unlock-provider.tsx": {
+    "mtime": 1781950018.6030514,
+    "ast_hash": "ce0717d549755418b56a1f74891eba08",
+    "semantic_hash": "ce0717d549755418b56a1f74891eba08"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\AiGeneratedBadge.tsx": {
+    "mtime": 1781957409.06018,
+    "ast_hash": "50ea796bf0265eb3f82c5e30e96cb6ad",
+    "semantic_hash": "50ea796bf0265eb3f82c5e30e96cb6ad"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\ChallengeSubjectPicker.tsx": {
+    "mtime": 1782037438.7680058,
+    "ast_hash": "536ceb73a621eda87de54e812248e088",
+    "semantic_hash": "536ceb73a621eda87de54e812248e088"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\WeeklyChallengeCard.tsx": {
+    "mtime": 1781957409.0657156,
+    "ast_hash": "6b53465cb1d9d350a75dcaa76c79e2db",
+    "semantic_hash": "6b53465cb1d9d350a75dcaa76c79e2db"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-card.tsx": {
+    "mtime": 1781751947.5572925,
+    "ast_hash": "b81e2b5bd3cb261b0d210e6a6ea9f487",
+    "semantic_hash": "b81e2b5bd3cb261b0d210e6a6ea9f487"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-detail-view.tsx": {
+    "mtime": 1781751949.839576,
+    "ast_hash": "a877e3f3e646e9044c619adfc704d1a8",
+    "semantic_hash": "a877e3f3e646e9044c619adfc704d1a8"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-history-view.tsx": {
+    "mtime": 1781751949.0594056,
+    "ast_hash": "d51a3a3ac91f983b3d9694ff6cab5008",
+    "semantic_hash": "d51a3a3ac91f983b3d9694ff6cab5008"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-item-renderer.tsx": {
+    "mtime": 1781624511.8482652,
+    "ast_hash": "95286ec8278047ff16c4e5166cfa9d05",
+    "semantic_hash": "95286ec8278047ff16c4e5166cfa9d05"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-list-view.tsx": {
+    "mtime": 1782039851.9500353,
+    "ast_hash": "95fcde1ec958e706eeec8469df9efe59",
+    "semantic_hash": "95fcde1ec958e706eeec8469df9efe59"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-material-view.tsx": {
+    "mtime": 1782037438.7690046,
+    "ast_hash": "4bbe998c045cc6f8f267146475996dba",
+    "semantic_hash": "4bbe998c045cc6f8f267146475996dba"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-question-form.tsx": {
+    "mtime": 1781950208.499023,
+    "ast_hash": "1f0eb37db3b49f551bfb9f1ab1cc3b9d",
+    "semantic_hash": "1f0eb37db3b49f551bfb9f1ab1cc3b9d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\challenge-reflection-form.tsx": {
+    "mtime": 1781624511.8472712,
+    "ast_hash": "dde2961f97170f8b57c67565818a6e7e",
+    "semantic_hash": "dde2961f97170f8b57c67565818a6e7e"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\daily-challenge-summary.tsx": {
+    "mtime": 1782037438.7690046,
+    "ast_hash": "c27c8fb3f71dcc1cc563c89bd6e84a59",
+    "semantic_hash": "c27c8fb3f71dcc1cc563c89bd6e84a59"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\index.ts": {
+    "mtime": 1781957409.0802965,
+    "ast_hash": "5ee0a4cfb471ab7fc4d2c5234d410b6b",
+    "semantic_hash": "5ee0a4cfb471ab7fc4d2c5234d410b6b"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\challenge\\on-demand-generator.tsx": {
+    "mtime": 1781623556.112153,
+    "ast_hash": "1fd8684d3899c0d838d819c454b03afa",
+    "semantic_hash": "1fd8684d3899c0d838d819c454b03afa"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\chat-conversation-view.tsx": {
+    "mtime": 1781680805.3930614,
+    "ast_hash": "85c92850222773a6a84dd8eccf0bd7f5",
+    "semantic_hash": "85c92850222773a6a84dd8eccf0bd7f5"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\chat-list-view.tsx": {
+    "mtime": 1781624511.856824,
+    "ast_hash": "573bc165941c8de0c0e9d9e0b78934fa",
+    "semantic_hash": "573bc165941c8de0c0e9d9e0b78934fa"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\concept-detail-dialog.tsx": {
+    "mtime": 1781957409.0879946,
+    "ast_hash": "d5641f8c939dc51c54ccdcbbbaf8ea4a",
+    "semantic_hash": "d5641f8c939dc51c54ccdcbbbaf8ea4a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\constellation-view.tsx": {
+    "mtime": 1781684513.499499,
+    "ast_hash": "172f10a6d336291a962b2bd6681473a4",
+    "semantic_hash": "172f10a6d336291a962b2bd6681473a4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\dashboard-view.tsx": {
+    "mtime": 1781795226.8253362,
+    "ast_hash": "70b14ab8dfed929c736f920ba88e2572",
+    "semantic_hash": "70b14ab8dfed929c736f920ba88e2572"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\dashboard-with-challenges-view.tsx": {
+    "mtime": 1781950208.4934962,
+    "ast_hash": "e05934e8bb3c36d4480b5a4f89185236",
+    "semantic_hash": "e05934e8bb3c36d4480b5a4f89185236"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\document-pretest-view.tsx": {
+    "mtime": 1781962342.8343136,
+    "ast_hash": "e47650305cd135ee7a5cba0e294fe958",
+    "semantic_hash": "e47650305cd135ee7a5cba0e294fe958"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\generate-practice-dialog.tsx": {
+    "mtime": 1781957409.0890095,
+    "ast_hash": "9e796d34776cc48832f448bd3e608cc4",
+    "semantic_hash": "9e796d34776cc48832f448bd3e608cc4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\invite-manager.tsx": {
+    "mtime": 1781950208.4944944,
+    "ast_hash": "65096b78377d3dd46a0d0bb79341ac4c",
+    "semantic_hash": "65096b78377d3dd46a0d0bb79341ac4c"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\leaderboard-view.tsx": {
+    "mtime": 1781957436.9662156,
+    "ast_hash": "d5db95f0820b5b2ff100fc8740deb38d",
+    "semantic_hash": "d5db95f0820b5b2ff100fc8740deb38d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\material-levels-view.tsx": {
+    "mtime": 1781957409.0960708,
+    "ast_hash": "3d483accfdba41ea731625e3000ebe8a",
+    "semantic_hash": "3d483accfdba41ea731625e3000ebe8a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\materials\\index.ts": {
+    "mtime": 1781624511.8658168,
+    "ast_hash": "89f5e8575110c1dafb57f35db6edcdeb",
+    "semantic_hash": "89f5e8575110c1dafb57f35db6edcdeb"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\materials\\material-card.tsx": {
+    "mtime": 1781679161.6440785,
+    "ast_hash": "b2951a6af9c5713d09069390acf2071d",
+    "semantic_hash": "b2951a6af9c5713d09069390acf2071d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\materials\\material-reader-client.tsx": {
+    "mtime": 1781624511.8708284,
+    "ast_hash": "92fc670b5aa38040e32306139746c158",
+    "semantic_hash": "92fc670b5aa38040e32306139746c158"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\materials\\material-reader.tsx": {
+    "mtime": 1781624511.8748357,
+    "ast_hash": "019399d08507c5fa65185877fd2b7a17",
+    "semantic_hash": "019399d08507c5fa65185877fd2b7a17"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\materials\\materials-library-view.tsx": {
+    "mtime": 1781957409.1154056,
+    "ast_hash": "92c59f02f93afe5e8a5db26f5bd9028c",
+    "semantic_hash": "92c59f02f93afe5e8a5db26f5bd9028c"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\practice-empty-state.tsx": {
+    "mtime": 1781957409.117502,
+    "ast_hash": "eb2cbf99fd8a1397e845aa5b1068a3e8",
+    "semantic_hash": "eb2cbf99fd8a1397e845aa5b1068a3e8"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\practice-player.tsx": {
+    "mtime": 1781950150.6594048,
+    "ast_hash": "be4bf08f2dea1337673003950f81a7c5",
+    "semantic_hash": "be4bf08f2dea1337673003950f81a7c5"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\profile-form.tsx": {
+    "mtime": 1781950208.4944944,
+    "ast_hash": "46ab3289007800aed22a023e86b84820",
+    "semantic_hash": "46ab3289007800aed22a023e86b84820"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\quiz-player.tsx": {
+    "mtime": 1781624511.898592,
+    "ast_hash": "8e33bdcb51597fc44418711f8c4b7f12",
+    "semantic_hash": "8e33bdcb51597fc44418711f8c4b7f12"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\quiz-result-view.tsx": {
+    "mtime": 1781624511.900218,
+    "ast_hash": "de3b1738a503ce9825af119209ae50fc",
+    "semantic_hash": "de3b1738a503ce9825af119209ae50fc"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\spark-character.tsx": {
+    "mtime": 1781678719.7171035,
+    "ast_hash": "bf605beeea34f7ad94e75cc22cbeb0c4",
+    "semantic_hash": "bf605beeea34f7ad94e75cc22cbeb0c4"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\student-charts.tsx": {
+    "mtime": 1781624511.9068787,
+    "ast_hash": "81c3217bd202a437af2c12984b3dbe1a",
+    "semantic_hash": "81c3217bd202a437af2c12984b3dbe1a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\student-nav.tsx": {
+    "mtime": 1782071191.8120005,
+    "ast_hash": "25c937e507eddd31d2a272fa7fd0eb2c",
+    "semantic_hash": "25c937e507eddd31d2a272fa7fd0eb2c"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\student-profile-chart.tsx": {
+    "mtime": 1781957369.8928638,
+    "ast_hash": "e70da10645bdca75854a5de27d79f184",
+    "semantic_hash": "e70da10645bdca75854a5de27d79f184"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\subjects-manage-view.tsx": {
+    "mtime": 1781880333.6411345,
+    "ast_hash": "d11bcbccf851e0946d2bbcca24f9fa1e",
+    "semantic_hash": "d11bcbccf851e0946d2bbcca24f9fa1e"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\subjects-view.tsx": {
+    "mtime": 1781950208.5135498,
+    "ast_hash": "e3a99530172372f2d353258dc16b9919",
+    "semantic_hash": "e3a99530172372f2d353258dc16b9919"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\tree-3d-view.tsx": {
+    "mtime": 1781957103.2556834,
+    "ast_hash": "cd9d1366d6f3c8e65f5e47200ada1afe",
+    "semantic_hash": "cd9d1366d6f3c8e65f5e47200ada1afe"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload-page-client.tsx": {
+    "mtime": 1781678819.429662,
+    "ast_hash": "401ac20ffb85554dd2bb3aaa8d84a38d",
+    "semantic_hash": "401ac20ffb85554dd2bb3aaa8d84a38d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload-view.tsx": {
+    "mtime": 1781950208.5075488,
+    "ast_hash": "bcf1f2f981eb5488c4c1a2a9089e190d",
+    "semantic_hash": "bcf1f2f981eb5488c4c1a2a9089e190d"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload\\upload-material-generator-view.tsx": {
+    "mtime": 1781795226.8288448,
+    "ast_hash": "bc4d87bdef7c92386a8e88547251ea8c",
+    "semantic_hash": "bc4d87bdef7c92386a8e88547251ea8c"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload\\upload-material-reader-view.tsx": {
+    "mtime": 1782037438.7700067,
+    "ast_hash": "4222cfe365aaa9ba811c760f9831a678",
+    "semantic_hash": "4222cfe365aaa9ba811c760f9831a678"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload\\upload-quiz-generator-view.tsx": {
+    "mtime": 1781795226.879771,
+    "ast_hash": "cc315fd6d0243e18d9b6cbda55dca04c",
+    "semantic_hash": "cc315fd6d0243e18d9b6cbda55dca04c"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload\\upload-quiz-player-view.tsx": {
+    "mtime": 1781795226.8701246,
+    "ast_hash": "456e5a58938baa9cda503a7abe7d9bbc",
+    "semantic_hash": "456e5a58938baa9cda503a7abe7d9bbc"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload\\upload-share-view.tsx": {
+    "mtime": 1781950208.4964938,
+    "ast_hash": "eb7d53ad59e940b79ee0dd7e926d97e0",
+    "semantic_hash": "eb7d53ad59e940b79ee0dd7e926d97e0"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\upload\\upload-workspace-view.tsx": {
+    "mtime": 1781962985.5378683,
+    "ast_hash": "7aaffdf130d169ac22169870c8a93e59",
+    "semantic_hash": "7aaffdf130d169ac22169870c8a93e59"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\student\\weekly-activity-chart.tsx": {
+    "mtime": 1781624511.910766,
+    "ast_hash": "bb1a95ba3ebf7366aec166b8894cdb5a",
+    "semantic_hash": "bb1a95ba3ebf7366aec166b8894cdb5a"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\avatar.tsx": {
+    "mtime": 1781624511.9102013,
+    "ast_hash": "84d4023c2b81dfed37ccbe227a27f26b",
+    "semantic_hash": "84d4023c2b81dfed37ccbe227a27f26b"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\badge.tsx": {
+    "mtime": 1781624511.911356,
+    "ast_hash": "8673e0399d188829abb4fc7a2cd74ee9",
+    "semantic_hash": "8673e0399d188829abb4fc7a2cd74ee9"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\button.tsx": {
+    "mtime": 1781624511.9135666,
+    "ast_hash": "444052231935a10728046ed113876703",
+    "semantic_hash": "444052231935a10728046ed113876703"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\card.tsx": {
+    "mtime": 1781624511.9135666,
+    "ast_hash": "04143b17c863a1f7d4d8daa11c6eb4ab",
+    "semantic_hash": "04143b17c863a1f7d4d8daa11c6eb4ab"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\dialog.tsx": {
+    "mtime": 1781624511.9163349,
+    "ast_hash": "d02bdfaf78dc2308c0aeb75df66af688",
+    "semantic_hash": "d02bdfaf78dc2308c0aeb75df66af688"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\input.tsx": {
+    "mtime": 1781624511.9146645,
+    "ast_hash": "4b276584b009c9bcb5e0b0ce5e1daffd",
+    "semantic_hash": "4b276584b009c9bcb5e0b0ce5e1daffd"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\progress.tsx": {
+    "mtime": 1781624511.9152257,
+    "ast_hash": "cb491cb9b465f090ca01bdf478528f56",
+    "semantic_hash": "cb491cb9b465f090ca01bdf478528f56"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\sheet.tsx": {
+    "mtime": 1781624511.9163349,
+    "ast_hash": "50198cc8116de3b0368549010cc23893",
+    "semantic_hash": "50198cc8116de3b0368549010cc23893"
+  },
+  "C:\\Koding\\spark-ai\\src\\components\\ui\\tabs.tsx": {
+    "mtime": 1781624511.9192986,
+    "ast_hash": "0bba859f49711d5128da16f81b3d2ce7",
+    "semantic_hash": "0bba859f49711d5128da16f81b3d2ce7"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\ai.ts": {
+    "mtime": 1782038774.3501549,
+    "ast_hash": "cfe56a953f1215bcfda48a232a46bb5f",
+    "semantic_hash": "cfe56a953f1215bcfda48a232a46bb5f"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\auth-utils.ts": {
+    "mtime": 1782098568.293983,
+    "ast_hash": "2ecc31054468a6686fdf124bf16bed69",
+    "semantic_hash": "2ecc31054468a6686fdf124bf16bed69"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\cloudinary.ts": {
+    "mtime": 1781624511.9635677,
+    "ast_hash": "56e635d5d7eb3fd69717e03b5c60bd36",
+    "semantic_hash": "56e635d5d7eb3fd69717e03b5c60bd36"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\format.ts": {
+    "mtime": 1781624511.9440174,
+    "ast_hash": "219cde9ca78fb13d71901b7a23a40925",
+    "semantic_hash": "219cde9ca78fb13d71901b7a23a40925"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\gamification.ts": {
+    "mtime": 1781951825.732457,
+    "ast_hash": "4ad91eeb7070f4d1a96419bf46772b19",
+    "semantic_hash": "4ad91eeb7070f4d1a96419bf46772b19"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\prisma.ts": {
+    "mtime": 1781795226.8399317,
+    "ast_hash": "d424884c7d4875d6ea6201c091fb4261",
+    "semantic_hash": "d424884c7d4875d6ea6201c091fb4261"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\rate-limit.ts": {
+    "mtime": 1782098548.4143896,
+    "ast_hash": "ba6bdea9b86f1d17020cf11db47af99e",
+    "semantic_hash": "ba6bdea9b86f1d17020cf11db47af99e"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\session.ts": {
+    "mtime": 1782098299.5404093,
+    "ast_hash": "5cfb38e61895dfadbb2909e1cfb85a6c",
+    "semantic_hash": "5cfb38e61895dfadbb2909e1cfb85a6c"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\use-session.ts": {
+    "mtime": 1782071147.7448688,
+    "ast_hash": "11d0fa08a2a951efc3c1a5e7d1238f76",
+    "semantic_hash": "11d0fa08a2a951efc3c1a5e7d1238f76"
+  },
+  "C:\\Koding\\spark-ai\\src\\lib\\utils.ts": {
+    "mtime": 1781624511.9460316,
+    "ast_hash": "618d00bf4537ce84f9ba62c5b215fb30",
+    "semantic_hash": "618d00bf4537ce84f9ba62c5b215fb30"
+  },
+  "C:\\Koding\\spark-ai\\src\\proxy.ts": {
+    "mtime": 1782070807.9576666,
+    "ast_hash": "895d42cc90d2a0d0237f13274493a248",
+    "semantic_hash": "895d42cc90d2a0d0237f13274493a248"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\__tests__\\ai-quota.test.ts": {
+    "mtime": 1781962323.8092608,
+    "ast_hash": "4f8315012e77822a90db39d0828c9b52",
+    "semantic_hash": "4f8315012e77822a90db39d0828c9b52"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\activity.ts": {
+    "mtime": 1782071296.5306132,
+    "ast_hash": "c5e90c60138694677ac84197eba968dd",
+    "semantic_hash": "c5e90c60138694677ac84197eba968dd"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\add-layered-material.ts": {
+    "mtime": 1782071296.5622668,
+    "ast_hash": "e30e6867592ac39b1be3cb9e237964b0",
+    "semantic_hash": "e30e6867592ac39b1be3cb9e237964b0"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\admin-content.ts": {
+    "mtime": 1782071296.5802217,
+    "ast_hash": "13df863560f3fa9ae5e8cd576851b7e1",
+    "semantic_hash": "13df863560f3fa9ae5e8cd576851b7e1"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\admin.ts": {
+    "mtime": 1782071296.6080606,
+    "ast_hash": "9c06c333bd1a2ca0b705bdea0bd12777",
+    "semantic_hash": "9c06c333bd1a2ca0b705bdea0bd12777"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\auth.ts": {
+    "mtime": 1782098563.7897923,
+    "ast_hash": "71482ab5140cd414f7442473f1f9e00c",
+    "semantic_hash": "71482ab5140cd414f7442473f1f9e00c"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\avatar.ts": {
+    "mtime": 1782071296.6330826,
+    "ast_hash": "73e170151713b141fbbb1a486c8a2f8f",
+    "semantic_hash": "73e170151713b141fbbb1a486c8a2f8f"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\challenge-subjects.ts": {
+    "mtime": 1782071296.6582744,
+    "ast_hash": "f485e9a74aeef5c45f5169ea06c1cc6a",
+    "semantic_hash": "f485e9a74aeef5c45f5169ea06c1cc6a"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\challenges.ts": {
+    "mtime": 1782071296.6893196,
+    "ast_hash": "8472e2513bae449b243ed09415e45a84",
+    "semantic_hash": "8472e2513bae449b243ed09415e45a84"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\chat.ts": {
+    "mtime": 1782071296.7257564,
+    "ast_hash": "e7abf937b055ec1cee374830e9eead40",
+    "semantic_hash": "e7abf937b055ec1cee374830e9eead40"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\complete-onboarding-custom.ts": {
+    "mtime": 1782071296.7581203,
+    "ast_hash": "dd6c395f65d908c41f85b14775c48f83",
+    "semantic_hash": "dd6c395f65d908c41f85b14775c48f83"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\complete-onboarding.ts": {
+    "mtime": 1782071296.788773,
+    "ast_hash": "9af34928a66c7b34a957f4a09b9ce98c",
+    "semantic_hash": "9af34928a66c7b34a957f4a09b9ce98c"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\dashboard.ts": {
+    "mtime": 1781948486.7704265,
+    "ast_hash": "22d51024879f24f58296c552b7b19dbe",
+    "semantic_hash": "22d51024879f24f58296c552b7b19dbe"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\document-pretest.ts": {
+    "mtime": 1782071296.8186967,
+    "ast_hash": "eb78ab3759baf9846faa4f8e8b957c62",
+    "semantic_hash": "eb78ab3759baf9846faa4f8e8b957c62"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\documents.ts": {
+    "mtime": 1782071296.8529537,
+    "ast_hash": "d7be650db3a4eb3e6e98340050b58ad8",
+    "semantic_hash": "d7be650db3a4eb3e6e98340050b58ad8"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\fetch-pretest.ts": {
+    "mtime": 1781880333.6496644,
+    "ast_hash": "ae4e39c073ec56e0ef864b057435177f",
+    "semantic_hash": "ae4e39c073ec56e0ef864b057435177f"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\gamification.ts": {
+    "mtime": 1782071296.8851707,
+    "ast_hash": "17d89ffa7ee369e2ee5143f15bf78a02",
+    "semantic_hash": "17d89ffa7ee369e2ee5143f15bf78a02"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\generate-onboarding-pretest.ts": {
+    "mtime": 1782071449.7623343,
+    "ast_hash": "5784bc7d3340a45269f517c026cf1935",
+    "semantic_hash": "5784bc7d3340a45269f517c026cf1935"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\generate-practice-questions.ts": {
+    "mtime": 1782071296.9165647,
+    "ast_hash": "e6ef80f83479f4393e656c2c3dc02cea",
+    "semantic_hash": "e6ef80f83479f4393e656c2c3dc02cea"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\invite.ts": {
+    "mtime": 1782071296.94685,
+    "ast_hash": "ad79192b7eceb1c4f20d60f6c7a945cc",
+    "semantic_hash": "ad79192b7eceb1c4f20d60f6c7a945cc"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\materials.ts": {
+    "mtime": 1782071296.9804204,
+    "ast_hash": "8c516712728e7685532c16eff05cfb83",
+    "semantic_hash": "8c516712728e7685532c16eff05cfb83"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\parent.ts": {
+    "mtime": 1782071297.0099375,
+    "ast_hash": "fea6f1ce65cda5a3120c3face642ec53",
+    "semantic_hash": "fea6f1ce65cda5a3120c3face642ec53"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\practice.ts": {
+    "mtime": 1782071297.0409782,
+    "ast_hash": "5547a53413bf1cfd722a89401ba46310",
+    "semantic_hash": "5547a53413bf1cfd722a89401ba46310"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\profile.ts": {
+    "mtime": 1782071297.0727873,
+    "ast_hash": "e5d12e01440a4b160a4fa592097514eb",
+    "semantic_hash": "e5d12e01440a4b160a4fa592097514eb"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\subjects.ts": {
+    "mtime": 1782071297.1018417,
+    "ast_hash": "5781aed9d98c079b5712792e1a00e469",
+    "semantic_hash": "5781aed9d98c079b5712792e1a00e469"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\actions\\weekly-challenge.ts": {
+    "mtime": 1781951843.2239296,
+    "ast_hash": "c7d0b70f68c2202ae04ab4916bd05820",
+    "semantic_hash": "c7d0b70f68c2202ae04ab4916bd05820"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai-quota.ts": {
+    "mtime": 1781962323.802143,
+    "ast_hash": "dcd62390f4bfec9655508f55006c04ef",
+    "semantic_hash": "dcd62390f4bfec9655508f55006c04ef"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\__tests__\\challenge.test.ts": {
+    "mtime": 1782069727.0874443,
+    "ast_hash": "895070b9570c17db72b00365efed8319",
+    "semantic_hash": "895070b9570c17db72b00365efed8319"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\__tests__\\generate-adaptive-material.test.ts": {
+    "mtime": 1781962323.8211572,
+    "ast_hash": "a6223dadcee9d42aeb3f96fecf4d76ec",
+    "semantic_hash": "a6223dadcee9d42aeb3f96fecf4d76ec"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\__tests__\\generate-questions.test.ts": {
+    "mtime": 1781962323.8201535,
+    "ast_hash": "eed00eb1f54ef9d290ac25192c50998f",
+    "semantic_hash": "eed00eb1f54ef9d290ac25192c50998f"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\challenge.ts": {
+    "mtime": 1782069775.5892026,
+    "ast_hash": "b15454e7839bd01a2ee927ba4300e50f",
+    "semantic_hash": "b15454e7839bd01a2ee927ba4300e50f"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\curriculum.ts": {
+    "mtime": 1781884561.73902,
+    "ast_hash": "0f1d28b82e7957ff328f05f0b6a841d3",
+    "semantic_hash": "0f1d28b82e7957ff328f05f0b6a841d3"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\evaluator.ts": {
+    "mtime": 1781624511.913026,
+    "ast_hash": "a7f9f41c2109a558fe3aae87df0fe690",
+    "semantic_hash": "a7f9f41c2109a558fe3aae87df0fe690"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\extract-document-concepts.ts": {
+    "mtime": 1781962191.6775367,
+    "ast_hash": "065ffc32ea148e0bf8e7032fa01a80cc",
+    "semantic_hash": "065ffc32ea148e0bf8e7032fa01a80cc"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\generate-adaptive-material.ts": {
+    "mtime": 1782037718.80607,
+    "ast_hash": "878ac7008db6557e0627e903d399d360",
+    "semantic_hash": "878ac7008db6557e0627e903d399d360"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\generate-questions.ts": {
+    "mtime": 1781962178.8148983,
+    "ast_hash": "adb59857113c87135563111b7d879ddb",
+    "semantic_hash": "adb59857113c87135563111b7d879ddb"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\rag.ts": {
+    "mtime": 1781960775.2170665,
+    "ast_hash": "86b86569cf6f0b296d103857f91c9a41",
+    "semantic_hash": "86b86569cf6f0b296d103857f91c9a41"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\ai\\tutor.ts": {
+    "mtime": 1781960295.885856,
+    "ast_hash": "d5b3b0431692d118a4b75a177e02a785",
+    "semantic_hash": "d5b3b0431692d118a4b75a177e02a785"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\documents\\audit.ts": {
+    "mtime": 1781624511.894131,
+    "ast_hash": "073dee80424471771339fec9bfa610d4",
+    "semantic_hash": "073dee80424471771339fec9bfa610d4"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\documents\\content-check.ts": {
+    "mtime": 1781624511.8908663,
+    "ast_hash": "1b55bc1b68f8414503a154524857e21c",
+    "semantic_hash": "1b55bc1b68f8414503a154524857e21c"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\documents\\embeddings.ts": {
+    "mtime": 1781951042.2583234,
+    "ast_hash": "98634d0c95eab2d7cdf729226b406331",
+    "semantic_hash": "98634d0c95eab2d7cdf729226b406331"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\documents\\extract.ts": {
+    "mtime": 1781624511.8718204,
+    "ast_hash": "e63ba003169556b2d441196d8cda8c03",
+    "semantic_hash": "e63ba003169556b2d441196d8cda8c03"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\documents\\features.ts": {
+    "mtime": 1782037504.5799234,
+    "ast_hash": "e1edad350e18cab0d148bd9955bd4011",
+    "semantic_hash": "e1edad350e18cab0d148bd9955bd4011"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\__tests__\\mix.test.ts": {
+    "mtime": 1781962323.7551324,
+    "ast_hash": "50bcd5fb2222a222dd485fa3b0f9edd6",
+    "semantic_hash": "50bcd5fb2222a222dd485fa3b0f9edd6"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\__tests__\\strength.test.ts": {
+    "mtime": 1781962323.7478738,
+    "ast_hash": "cfcbf2932bdcf6d5a43a9f34d3ebdbe0",
+    "semantic_hash": "cfcbf2932bdcf6d5a43a9f34d3ebdbe0"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\__tests__\\weekly.test.ts": {
+    "mtime": 1781962328.3732862,
+    "ast_hash": "f5f87582d9bf7d01d71d5ffaa82740bd",
+    "semantic_hash": "f5f87582d9bf7d01d71d5ffaa82740bd"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\adaptive.ts": {
+    "mtime": 1781624511.7901502,
+    "ast_hash": "8e72300b40e32e3ffcd4fb8b7b1503da",
+    "semantic_hash": "8e72300b40e32e3ffcd4fb8b7b1503da"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\mix.ts": {
+    "mtime": 1781962323.7302315,
+    "ast_hash": "2d0a74e7e881cf753a7724633342e28f",
+    "semantic_hash": "2d0a74e7e881cf753a7724633342e28f"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\strength.ts": {
+    "mtime": 1781962323.7252097,
+    "ast_hash": "79ac0027e8aeed037d246e2cf21af6f2",
+    "semantic_hash": "79ac0027e8aeed037d246e2cf21af6f2"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\learning\\weekly.ts": {
+    "mtime": 1781962323.7236235,
+    "ast_hash": "4e0c63607c6eb19a51bde1a4330c9867",
+    "semantic_hash": "4e0c63607c6eb19a51bde1a4330c9867"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\utils\\ai-retry.ts": {
+    "mtime": 1781958952.1505377,
+    "ast_hash": "8b0d1bfc4f3071e199b16ced06479f88",
+    "semantic_hash": "8b0d1bfc4f3071e199b16ced06479f88"
+  },
+  "C:\\Koding\\spark-ai\\src\\server\\utils\\word-count.ts": {
+    "mtime": 1781958558.2980754,
+    "ast_hash": "1309b445dde40fb4f84ad734dbf3fcb7",
+    "semantic_hash": "1309b445dde40fb4f84ad734dbf3fcb7"
+  },
+  "C:\\Koding\\spark-ai\\tsconfig.json": {
+    "mtime": 1782127636.126662,
+    "ast_hash": "f8453813b85b5c947640aba66833a598",
+    "semantic_hash": "f8453813b85b5c947640aba66833a598"
+  },
+  "C:\\Koding\\spark-ai\\vitest.config.ts": {
+    "mtime": 1781962323.7159374,
+    "ast_hash": "2ec26962f18453a2e5ec3b9dc0d7c06d",
+    "semantic_hash": "2ec26962f18453a2e5ec3b9dc0d7c06d"
+  },
+  "C:\\Koding\\spark-ai\\.agents\\rules\\antigravity-rtk-rules.md": {
+    "mtime": 1781779718.2494986,
+    "ast_hash": "f35bc5f83b89536ea1788c5c86377968",
+    "semantic_hash": "f35bc5f83b89536ea1788c5c86377968"
+  },
+  "C:\\Koding\\spark-ai\\.opencode\\plans\\2026-06-20-tree-3d.md": {
+    "mtime": 1781953007.2228336,
+    "ast_hash": "0ee4dc191df360df335899201575e65f",
+    "semantic_hash": "0ee4dc191df360df335899201575e65f"
+  },
+  "C:\\Koding\\spark-ai\\.opencode\\plans\\fix-custom-subject-pretest.md": {
+    "mtime": 1781748363.3749785,
+    "ast_hash": "08b0212a5e2fa56dfc36124f8bf88f6a",
+    "semantic_hash": "08b0212a5e2fa56dfc36124f8bf88f6a"
+  },
+  "C:\\Koding\\spark-ai\\.opencode\\tasks\\task-1-brief.md": {
+    "mtime": 1781953106.9923747,
+    "ast_hash": "89c5e8f9b09e342a709808ec5f8dd073",
+    "semantic_hash": "89c5e8f9b09e342a709808ec5f8dd073"
+  },
+  "C:\\Koding\\spark-ai\\.opencode\\tasks\\task-1-report.md": {
+    "mtime": 1781953246.951349,
+    "ast_hash": "626895e9548a64627cb870407492674d",
+    "semantic_hash": "626895e9548a64627cb870407492674d"
+  },
+  "C:\\Koding\\spark-ai\\.opencode\\tasks\\task-2-brief.md": {
+    "mtime": 1781953276.5755746,
+    "ast_hash": "27b1f4ffa527df3a93e4f38e38008265",
+    "semantic_hash": "27b1f4ffa527df3a93e4f38e38008265"
+  },
+  "C:\\Koding\\spark-ai\\.sdd\\progress.md": {
+    "mtime": 1781885554.6338267,
+    "ast_hash": "5272f191ba0eb84239981409cb27bf2c",
+    "semantic_hash": "5272f191ba0eb84239981409cb27bf2c"
+  },
+  "C:\\Koding\\spark-ai\\AGENTS.md": {
+    "mtime": 1782128777.2658758,
+    "ast_hash": "a04479247455c47654d1ad345facb747",
+    "semantic_hash": "a04479247455c47654d1ad345facb747"
+  },
+  "C:\\Koding\\spark-ai\\CLAUDE.md": {
+    "mtime": 1781455627.2343516,
+    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
+    "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
+  },
+  "C:\\Koding\\spark-ai\\README.md": {
+    "mtime": 1781783101.2033608,
+    "ast_hash": "72f2bd184a1054b5fd00fd3f244f7739",
+    "semantic_hash": "72f2bd184a1054b5fd00fd3f244f7739"
+  },
+  "C:\\Koding\\spark-ai\\SparkAi.md": {
+    "mtime": 1781945338.5615256,
+    "ast_hash": "0c761c7ac1719d47e8de266790f60f0c",
+    "semantic_hash": "0c761c7ac1719d47e8de266790f60f0c"
+  },
+  "C:\\Koding\\spark-ai\\auth_shell_diff.txt": {
+    "mtime": 1781623106.7685604,
+    "ast_hash": "cd937ba8e2117087f6d94574facb2a68",
+    "semantic_hash": "cd937ba8e2117087f6d94574facb2a68"
+  },
+  "C:\\Koding\\spark-ai\\docs\\design\\auth-pages-spec.md": {
+    "mtime": 1781715816.0773783,
+    "ast_hash": "14fa35829535e317f1efb069da61f4ae",
+    "semantic_hash": "14fa35829535e317f1efb069da61f4ae"
+  },
+  "C:\\Koding\\spark-ai\\docs\\superpowers\\plans\\2026-06-18-onboarding-ui-redesign.md": {
+    "mtime": 1781791487.2466474,
+    "ast_hash": "3f2f956239fb55c1df9262903629337c",
+    "semantic_hash": "3f2f956239fb55c1df9262903629337c"
+  },
+  "C:\\Koding\\spark-ai\\docs\\superpowers\\plans\\2026-06-19-adaptive-learning-system.md": {
+    "mtime": 1781884315.7427557,
+    "ast_hash": "5d989204a4b465eccc7d289c4e663ee3",
+    "semantic_hash": "5d989204a4b465eccc7d289c4e663ee3"
+  },
+  "C:\\Koding\\spark-ai\\docs\\superpowers\\plans\\2026-06-19-student-activity-heatmap-plan.md": {
+    "mtime": 1781880080.6333985,
+    "ast_hash": "521dd1c35ded8b7078cf7f87b8ea5224",
+    "semantic_hash": "521dd1c35ded8b7078cf7f87b8ea5224"
+  },
+  "C:\\Koding\\spark-ai\\docs\\superpowers\\specs\\2026-06-18-onboarding-ui-redesign-design.md": {
+    "mtime": 1781791423.8527777,
+    "ast_hash": "10085ba42b7b4ebd7e9095c054d243b2",
+    "semantic_hash": "10085ba42b7b4ebd7e9095c054d243b2"
+  },
+  "C:\\Koding\\spark-ai\\docs\\superpowers\\specs\\2026-06-19-custom-subjects-challenges-materials-design.md": {
+    "mtime": 1781867245.7039604,
+    "ast_hash": "af6e3014387c8aec3e7929414e75cac5",
+    "semantic_hash": "af6e3014387c8aec3e7929414e75cac5"
+  },
+  "C:\\Koding\\spark-ai\\docs\\superpowers\\specs\\2026-06-19-student-activity-heatmap-design.md": {
+    "mtime": 1781879900.9976835,
+    "ast_hash": "61b257ffe656d6f71a47923701ae80f2",
+    "semantic_hash": "61b257ffe656d6f71a47923701ae80f2"
+  },
+  "C:\\Koding\\spark-ai\\proposal\\diagrams\\activity-adaptive-difficulty.md": {
+    "mtime": 1782067729.7322383,
+    "ast_hash": "5e539bfa22a20350282ba70eb3df8e69",
+    "semantic_hash": "5e539bfa22a20350282ba70eb3df8e69"
+  },
+  "C:\\Koding\\spark-ai\\proposal\\diagrams\\activity-socratic-tutor.md": {
+    "mtime": 1782067726.1449406,
+    "ast_hash": "f6b45168926098fe6db363354e1f35ce",
+    "semantic_hash": "f6b45168926098fe6db363354e1f35ce"
+  },
+  "C:\\Koding\\spark-ai\\proposal\\diagrams\\use-case-admin.md": {
+    "mtime": 1782094341.7675354,
+    "ast_hash": "a81d58277e458055401e88d08defcd63",
+    "semantic_hash": "a81d58277e458055401e88d08defcd63"
+  },
+  "C:\\Koding\\spark-ai\\proposal\\diagrams\\use-case-siswa-ortu.md": {
+    "mtime": 1782094341.7675354,
+    "ast_hash": "e027dfe6caf7938d40ce13d16d2d50bf",
+    "semantic_hash": "e027dfe6caf7938d40ce13d16d2d50bf"
+  },
+  "C:\\Koding\\spark-ai\\todo.md": {
+    "mtime": 1781943842.992813,
+    "ast_hash": "16e19376f2e9433376d1319b0f63f1fb",
+    "semantic_hash": "16e19376f2e9433376d1319b0f63f1fb"
+  },
+  "C:\\Koding\\spark-ai\\public\\file.svg": {
+    "mtime": 1781455205.775553,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "C:\\Koding\\spark-ai\\public\\globe.svg": {
+    "mtime": 1781455205.7795515,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "C:\\Koding\\spark-ai\\public\\landing_page_hero.png": {
+    "mtime": 1781782573.534242,
+    "ast_hash": "d9c05521105af4d987d898ca3689891e",
+    "semantic_hash": "d9c05521105af4d987d898ca3689891e"
+  },
+  "C:\\Koding\\spark-ai\\public\\next.svg": {
+    "mtime": 1781455205.7825563,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "C:\\Koding\\spark-ai\\public\\vercel.svg": {
+    "mtime": 1781455205.7845492,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "C:\\Koding\\spark-ai\\public\\window.svg": {
+    "mtime": 1781455205.7865496,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  }
+}
