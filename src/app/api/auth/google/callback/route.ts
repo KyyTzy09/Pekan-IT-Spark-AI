@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { setSession } from "@/lib/session";
 
@@ -15,6 +16,16 @@ interface GoogleUserInfo {
 }
 
 export async function GET(request: NextRequest) {
+  // ── CSRF check: verify state parameter ──
+  const returnedState = request.nextUrl.searchParams.get("state");
+  const cookieStore = await cookies();
+  const savedState = cookieStore.get("oauth_state")?.value;
+  if (!savedState || !returnedState || returnedState !== savedState) {
+    return NextResponse.redirect(new URL("/auth/login?error=google_csrf", request.url));
+  }
+  // Clear state cookie immediately
+  cookieStore.delete("oauth_state");
+
   const code = request.nextUrl.searchParams.get("code");
   if (!code) {
     return NextResponse.redirect(new URL("/auth/login?error=google", request.url));

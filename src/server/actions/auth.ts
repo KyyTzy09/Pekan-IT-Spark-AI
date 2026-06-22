@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clearSession, setSession, type SessionUser } from "@/lib/session";
 import { sanitizeInternalPath } from "@/lib/auth-utils";
+import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 
 const SMART_LANDING = "/auth/redirect";
 
@@ -92,6 +93,14 @@ export async function loginAction(
   }
 
   const emailStr = parsed.data.email.toLowerCase();
+
+  // Rate limit check
+  if (!checkRateLimit(`login:${emailStr}`)) {
+    return {
+      error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit.",
+    };
+  }
+
   const user = await prisma.user.findUnique({
     where: { email: emailStr },
     select: {
@@ -113,6 +122,9 @@ export async function loginAction(
   if (!isValid) {
     return { error: "Email atau password salah. Coba dicek kembali ya." };
   }
+
+  // Clear rate limit on successful login
+  clearRateLimit(`login:${emailStr}`);
 
   await setSession(makeSessionUser(user));
   return {};
@@ -144,6 +156,13 @@ export async function registerAction(
   const data = parsed.data;
   const email = data.email.toLowerCase();
 
+  // Rate limit check
+  if (!checkRateLimit(`register:${email}`)) {
+    return {
+      error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit.",
+    };
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return { error: "Email sudah terdaftar. Coba masuk aja, yuk." };
@@ -164,6 +183,7 @@ export async function registerAction(
       select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
     });
     await setSession(makeSessionUser(user));
+    clearRateLimit(`register:${email}`);
   } else {
     const link = await prisma.parentStudentLink.findUnique({
       where: { inviteCode: data.inviteCode },
@@ -195,24 +215,29 @@ export async function registerAction(
       };
     }
 
-    const parent = await prisma.user.create({
-      data: {
-        email,
-        name: data.name,
-        passwordHash,
-        image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
-        role: "PARENT",
-        parentProfile: { create: {} },
-      },
-      select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+    // Wrap in transaction to prevent orphan parent account
+    await prisma.$transaction(async (tx) => {
+      const parent = await tx.user.create({
+        data: {
+          email,
+          name: data.name,
+          passwordHash,
+          image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
+          role: "PARENT",
+          parentProfile: { create: {} },
+        },
+        select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+      });
+
+      await tx.parentStudentLink.update({
+        where: { id: link.id },
+        data: { status: "ACCEPTED", parentId: parent.id },
+      });
+
+      await setSession(makeSessionUser(parent));
     });
 
-    await prisma.parentStudentLink.update({
-      where: { id: link.id },
-      data: { status: "ACCEPTED", parentId: parent.id },
-    });
-
-    await setSession(makeSessionUser(parent));
+    clearRateLimit(`register:${email}`);
   }
 
   return {};

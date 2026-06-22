@@ -38,7 +38,25 @@ export async function signToken(payload: SessionUser): Promise<string> {
 export async function verifyToken(token: string): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    return payload as unknown as SessionUser;
+    
+    // Validate required fields
+    if (
+      typeof payload.id !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.role !== "string" ||
+      typeof payload.isOnboarded !== "boolean"
+    ) {
+      return null;
+    }
+    
+    return {
+      id: payload.id,
+      email: payload.email,
+      name: typeof payload.name === "string" ? payload.name : null,
+      role: payload.role,
+      isOnboarded: payload.isOnboarded,
+      image: typeof payload.image === "string" ? payload.image : null,
+    };
   } catch {
     return null;
   }
@@ -77,7 +95,13 @@ export async function refreshSession(): Promise<void> {
     where: { id: session.id },
     select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
   });
-  if (!user) return;
+  
+  // Clear session if user was deleted
+  if (!user) {
+    await clearSession();
+    return;
+  }
+  
   await setSession({
     id: user.id,
     email: user.email,
@@ -88,11 +112,11 @@ export async function refreshSession(): Promise<void> {
   });
 }
 
-// ── Cookie header parser (untuk middleware yang butuh sync) ─────────────────────
+// ── Cookie header parser (untuk middleware yang butuh async) ─────────────────────
 
-export function parseSessionFromCookieHeader(
+export async function parseSessionFromCookieHeader(
   cookieHeader: string | undefined,
-): SessionUser | null {
+): Promise<SessionUser | null> {
   if (!cookieHeader) return null;
   const match = cookieHeader
     .split(";")
@@ -100,6 +124,5 @@ export function parseSessionFromCookieHeader(
     .find((c) => c.startsWith(`${COOKIE_NAME}=`));
   if (!match) return null;
   const token = match.split("=").slice(1).join("=");
-  // jwtVerify async, jadi ini dipanggil dari middleware yang juga async
-  return null; // placeholder, middleware pakai verifyToken langsung
+  return verifyToken(token);
 }

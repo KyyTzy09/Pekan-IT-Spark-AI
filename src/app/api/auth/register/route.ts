@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { setSession } from "@/lib/session";
 
 const studentBody = z.object({
   role: z.literal("STUDENT"),
@@ -58,14 +59,26 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     if (data.role === "STUDENT") {
-      await prisma.user.create({
+      const user = await prisma.user.create({
         data: {
           email,
           name: data.name,
           passwordHash,
+          image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
           role: "STUDENT",
           studentProfile: { create: {} },
         },
+        select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+      });
+
+      // Set session agar langsung login (konsisten dengan server action)
+      await setSession({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isOnboarded: user.isOnboarded,
+        image: user.image,
       });
     } else {
       const link = await prisma.parentStudentLink.findUnique({
@@ -97,22 +110,36 @@ export async function POST(req: Request) {
         );
       }
 
-      const parent = await prisma.user.create({
-        data: {
-          email,
-          name: data.name,
-          passwordHash,
-          role: "PARENT",
-          parentProfile: { create: {} },
-        },
-      });
+      // Wrap in transaction untuk mencegah orphan parent account
+      await prisma.$transaction(async (tx) => {
+        const parent = await tx.user.create({
+          data: {
+            email,
+            name: data.name,
+            passwordHash,
+            image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
+            role: "PARENT",
+            parentProfile: { create: {} },
+          },
+          select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+        });
 
-      await prisma.parentStudentLink.update({
-        where: { id: link.id },
-        data: {
-          status: "ACCEPTED",
-          parentId: parent.id,
-        },
+        await tx.parentStudentLink.update({
+          where: { id: link.id },
+          data: {
+            status: "ACCEPTED",
+            parentId: parent.id,
+          },
+        });
+
+        await setSession({
+          id: parent.id,
+          email: parent.email,
+          name: parent.name,
+          role: parent.role,
+          isOnboarded: parent.isOnboarded,
+          image: parent.image,
+        });
       });
     }
 
