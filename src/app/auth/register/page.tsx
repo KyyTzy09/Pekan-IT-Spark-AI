@@ -135,10 +135,15 @@ export default function RegisterPage() {
 
     if (result?.error) {
       setServerError(result.error);
+      return;
     }
     if (result?.fieldErrors) {
       setFieldErrors(result.fieldErrors);
+      return;
     }
+
+    // Sukses — redirect langsung
+    router.push("/auth/redirect");
   });
 
   const handleGoogle = () => {

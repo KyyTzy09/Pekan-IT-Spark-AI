@@ -7,9 +7,9 @@ import {
   GraduationCap,
   LogIn,
   Menu,
-  MessageCircle,
   Rocket,
   Sparkles,
+  Star,
   User,
   X,
 } from "lucide-react";
@@ -25,7 +25,7 @@ const NAV_LINKS = [
   { href: "#katalog", label: "Kursus", id: "katalog", icon: BookMarked },
   { href: "#cara-kerja", label: "Cara Kerja", id: "cara-kerja", icon: Compass },
   { href: "#progress", label: "Progress", id: "progress", icon: GraduationCap },
-  { href: "#cerita", label: "Cerita Siswa", id: "cerita", icon: MessageCircle },
+  { href: "#keunggulan", label: "Keunggulan", id: "keunggulan", icon: Star },
 ] as const;
 
 const ROLE_HOME: Record<string, string> = {

@@ -5,7 +5,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## RTK (Rust Token Killer)
 
-**Gunakan `rtk` untuk semua operasi sistem operasi.** RTK menghemat tokens dengan mengkompresi output sebelum sampai ke LLM context.
+> **🔴 ATURAN WAJIB: SEMUA command line WAJIB diawali `rtk`. Tidak ada pengecualian. Setiap command yang gue tulis atau execute di terminal HARUS pake `rtk` di depannya.**
+
+RTK menghemat tokens dengan mengkompresi output sebelum sampai ke LLM context.
 
 | Standar | RTK |
 |---------|-----|
@@ -20,9 +22,30 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `cat package.json` | `rtk read package.json` |
 | `read` | `rtk read` |
 
-**Perintah yang TIDAK perlu RTK:**
+**Perintah yang TIDAK perlu RTK (rtk gak mempan):**
 - `cd`, `mkdir`, `rm`, `cp`, `mv` (file operations, bukan output-heavy)
 - `rtk` sendiri (meta commands)
+
+### ⚡ Aturan Khusus Bun
+
+> **Proyek ini pakai Bun. SEMUA perintah `bun` WAJIB pakai `rtk`. Tidak ada alasan untuk lupa.**
+
+| Standar | RTK |
+|---------|-----|
+| `bun run build` | `rtk bun run build` |
+| `bun run dev` | `rtk bun run dev` |
+| `bun run <script>` | `rtk bun run <script>` |
+| `bun test` | `rtk bun test` |
+| `bun install` | `rtk bun install` |
+| `bun add <pkg>` | `rtk bun add <pkg>` |
+| `bun remove <pkg>` | `rtk bun remove <pkg>` |
+| `bun update` | `rtk bun update` |
+| `bun x <pkg>` | `rtk bun x <pkg>` |
+| `bun create <template>` | `rtk bun create <template>` |
+| `bun pm <cmd>` | `rtk bun pm <cmd>` |
+| `bun prisma <cmd>` | `rtk bun prisma <cmd>` |
+| `bun <script.ts>` | `rtk bun <script.ts>` |
+| `bun --bun <cmd>` | `rtk bun --bun <cmd>` |
 
 **Catatan:** RTK grep pakai syntax berbeda dari GNU grep:
 - Directory sebagai positional argument: `rtk grep "pattern" src/`

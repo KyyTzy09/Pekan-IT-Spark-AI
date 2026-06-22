@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -37,6 +37,7 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
+  const router = useRouter();
   const search = useSearchParams();
   const callbackUrl = search.get("callbackUrl") || "/dashboard";
   const justRegistered = search.get("registered") === "1";
@@ -96,10 +97,15 @@ function LoginForm() {
 
     if (result?.error) {
       setServerError(result.error);
+      return;
     }
     if (result?.fieldErrors) {
       setFieldErrors(result.fieldErrors);
+      return;
     }
+
+    // Sukses — redirect
+    router.push(callbackUrl);
   });
 
   const handleGoogle = () => {

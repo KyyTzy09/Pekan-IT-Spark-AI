@@ -1,10 +1,6 @@
 import {
   GraduationCap,
   Heart,
-  Instagram,
-  Mail,
-  Twitter,
-  Youtube,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -48,22 +44,11 @@ export function Footer() {
               paham, makin seru, dan gak ngebosenin.
             </p>
             <div className="flex items-center gap-2">
-              {[
-                { Icon: Instagram, label: "Instagram" },
-                { Icon: Twitter, label: "Twitter" },
-                { Icon: Youtube, label: "YouTube" },
-                { Icon: Mail, label: "Email" },
-              ].map(({ Icon, label }) => (
-                <Link
-                  key={label}
-                  href="#"
-                  aria-label={label}
-                  className="grid size-9 place-items-center rounded-xl border border-border/40 bg-card/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <Icon size={15} />
-                </Link>
-              ))}
-            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/30 bg-card/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+              <GraduationCap size={13} />
+              spark-ai.vercel.app
+            </span>
+          </div>
           </div>
 
           {Object.entries(links).map(([title, items]) => (

@@ -220,12 +220,12 @@ export function OnboardingWizardClient({
 
   const handleChooseNational = () => {
     setFlow("national");
-    setStep(0);
+    setStep(1);
   };
 
   const handleChooseCustom = () => {
     setFlow("custom");
-    setStep(0);
+    setStep(1);
   };
 
   const handleCustomGenerate = async () => {
@@ -397,7 +397,7 @@ export function OnboardingWizardClient({
     return "";
   };
 
-  const isWelcomeScreen = flow === null || step === 0;
+  const isWelcomeScreen = flow === null;
 
   React.useEffect(() => {
     router.prefetch("/dashboard");

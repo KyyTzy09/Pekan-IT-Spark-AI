@@ -1,156 +1,112 @@
-import { MessageCircle, Quote, Star } from "lucide-react";
+import { CheckCircle2, MessageCircle, Star } from "lucide-react";
 import { Reveal } from "../../shared/reveal";
 
-const featured = {
-  quote:
-    "Dulu aku malu nanya ke guru kalau gak ngerti. Pake Spark, aku bisa nanya kapan aja tanpa dihakimi. Nilai matematika aku naik dari 70 ke 85, dan sekarang aku malah bantu temen-temen yang lain.",
-  name: "Rina Aulia",
-  role: "Kelas 11 SMK • TKJ",
-  initials: "RA",
-  color: "from-[var(--coral)] to-[var(--orange)]",
-  rating: 5,
-};
-
-const testimonials = [
+const keunggulan = [
   {
-    quote:
-      "Yang aku suka, Spark gak langsung kasih jawaban. Dia nanya balik dulu, jadi aku mikir sendiri. Belajarnya jadi nempel di otak.",
-    name: "Bagas Pratama",
-    role: "Kelas 10 SMA",
-    initials: "BP",
+    icon: CheckCircle2,
+    title: "Belajar Adaptif",
+    desc: "Materi dan soal menyesuaikan level pemahaman kamu — bukan sekadar soal acak. Makin sering kamu jawab, makin tepat rekomendasi belajarnya.",
     color: "from-[var(--teal)] to-[var(--green)]",
   },
   {
-    quote:
-      "Aku upload PDF rangkuman dari guru, terus Spark bikinin kuis otomatis. PR selesai dalam 20 menit dan aku beneran paham materinya.",
-    name: "Salsabila P.",
-    role: "Kelas 12 SMA",
-    initials: "SP",
-    color: "from-[var(--yellow)] to-[var(--orange)]",
+    icon: MessageCircle,
+    title: "Tutor AI 24/7",
+    desc: "Nanya kapan aja, dijawab dengan metode Socratic — bukan dikasih jawaban instan, tapi dituntun nemuin jawabannya sendiri.",
+    color: "from-[var(--coral)] to-[var(--orange)]",
   },
   {
-    quote:
-      "Sebagai anak daerah 3T, guru les privat susah banget dicari. Spark kayak punya guru privat sendiri yang bisa diajak ngobrol 24 jam.",
-    name: "Yosua M.",
-    role: "Kelas 11 SMK",
-    initials: "YM",
-    color: "from-[var(--blue)] to-[var(--teal)]",
-  },
-  {
-    quote:
-      "Streak-nya ngebantu banget buat konsisten. Aku jadi belajar setiap hari walau cuma 15 menit. Nagih positif!",
-    name: "Aisha R.",
-    role: "Kelas 10 SMA",
-    initials: "AR",
+    icon: Star,
+    title: "Gratis Selamanya",
+    desc: "Semua fitur bisa dipakai gratis — pretest, latihan soal, progress tracking, sampe upload dokumen. Tanpa batas waktu, tanpa iklan.",
     color: "from-[var(--purple)] to-[var(--pink)]",
   },
+];
+
+const fiturTambahan = [
   {
-    quote:
-      "Aku tipe yang cepet bosen. Tapi Spark kasih variasi — kadang latihan, kadang ngobrol, kadang kuis. Gak monoton.",
-    name: "Dimas A.",
-    role: "Kelas 12 SMK",
-    initials: "DA",
-    color: "from-[var(--pink)] to-[var(--purple)]",
+    title: "Upload Materi Sekolah",
+    desc: "Upload PDF rangkuman dari guru, Spark bikin kuis dan rangkuman otomatis.",
+  },
+  {
+    title: "Gamifikasi & Streak",
+    desc: "XP, badge, leaderboard — bikin belajar jadi kebiasaan harian yang nagih.",
+  },
+  {
+    title: "Progress Real-time",
+    desc: "Lihat perkembangan kamu per topik per mapel — tau persis bagian mana yang harus diperkuat.",
+  },
+  {
+    title: "Orang Tua Bisa Pantau",
+    desc: "Orang tua dapat laporan aktivitas belajar lewat dashboard khusus.",
   },
 ];
 
 export function Testimonials() {
   return (
-    <section id="cerita" className="container-px py-16 md:py-24">
+    <section id="keunggulan" className="container-px py-16 md:py-24">
       <Reveal className="mx-auto max-w-3xl text-center">
         <div className="mb-3.5 inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_oklch,var(--purple)_22%,transparent)] bg-[color-mix(in_oklch,var(--purple)_10%,transparent)] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--purple)]">
-          <Star size={13} /> Cerita Siswa
+          <Star size={13} /> Kenapa Spark?
         </div>
         <h2 className="mb-3 font-heading text-3xl font-bold tracking-tight md:text-[44px]">
-          Ribuan siswa udah{" "}
-          <span className="text-gradient">ngerasain bedanya.</span>
+          Dibuat buat kamu yang{" "}
+          <span className="text-gradient">pengen beneran paham.</span>
         </h2>
         <p className="mx-auto max-w-[600px] text-sm text-muted-foreground md:text-base">
-          Bukan cuma nilai yang naik — tapi cara belajar mereka yang berubah
-          jadi lebih pede dan seru.
+          Bukan sekadar bikin nilai naik — Spark bantu cara belajarmu jadi lebih
+          efektif, konsisten, dan menyenangkan.
         </p>
       </Reveal>
 
       <div className="mx-auto mt-12 grid max-w-6xl gap-4 lg:grid-cols-3">
-        <Reveal className="lg:row-span-2">
-          <figure className="clay relative h-full overflow-hidden p-7">
-            <div
-              aria-hidden
-              className="absolute -right-20 -top-20 size-48 rounded-full opacity-20 blur-3xl"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--coral), var(--orange))",
-              }}
-            />
-            <Quote className="relative mb-4 size-8 text-[var(--coral)]" />
-            <div
-              className="mb-4 flex items-center gap-0.5"
-              aria-label="Rating 5 dari 5"
-            >
-              {Array.from({ length: 5 }).map((_, j) => (
-                <Star
-                  key={j}
-                  className="size-4 fill-[var(--yellow)] text-[var(--yellow)]"
-                />
-              ))}
-            </div>
-            <blockquote className="relative mb-6 text-[15px] leading-relaxed text-foreground/85">
-              {featured.quote}
-            </blockquote>
-            <figcaption className="relative flex items-center gap-3 border-t border-dashed border-border/60 pt-5">
+        {keunggulan.map((k, i) => (
+          <Reveal
+            key={k.title}
+            delay={i * 80}
+            className={i === 0 ? "lg:row-span-2" : ""}
+          >
+            <div className="clay relative h-full overflow-hidden p-7">
               <div
-                className={`grid size-12 place-items-center rounded-full bg-gradient-to-br ${featured.color} text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.1)]`}
                 aria-hidden
+                className="absolute -right-20 -top-20 size-48 rounded-full opacity-10 blur-3xl"
+                style={{
+                  background: `linear-gradient(135deg, var(--${k.color.includes("teal") ? "teal" : k.color.includes("coral") ? "coral" : "purple"}), var(--orange))`,
+                }}
+              />
+              <div
+                className={`mb-4 grid size-12 place-items-center rounded-xl bg-gradient-to-br ${k.color} text-white shadow-lg`}
               >
-                {featured.initials}
+                <k.icon size={22} strokeWidth={2.5} />
               </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">
-                  {featured.name}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {featured.role}
-                </p>
-              </div>
-            </figcaption>
-          </figure>
-        </Reveal>
+              <h3 className="mb-3 font-heading text-[18px] font-bold text-foreground">
+                {k.title}
+              </h3>
+              <p className="text-[14px] leading-relaxed text-muted-foreground">
+                {k.desc}
+              </p>
 
-        {testimonials.map((t, i) => (
-          <Reveal key={t.name} delay={i * 50} className="lg:col-span-1">
-            <figure className="clay h-full p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <Quote className="size-6 text-[var(--coral)]" />
-                <div
-                  className="flex items-center gap-0.5"
-                  aria-label="Rating 5 dari 5"
-                >
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star
-                      key={j}
-                      className="size-3 fill-[var(--yellow)] text-[var(--yellow)]"
-                    />
+              {i === 0 && (
+                <div className="mt-6 space-y-2.5 border-t border-dashed border-border/40 pt-5">
+                  {fiturTambahan.map((f) => (
+                    <div key={f.title} className="flex items-start gap-2.5">
+                      <CheckCircle2
+                        size={15}
+                        className="mt-0.5 shrink-0 text-[var(--teal)]"
+                        strokeWidth={2.5}
+                      />
+                      <div>
+                        <p className="text-[13px] font-bold text-foreground">
+                          {f.title}
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {f.desc}
+                        </p>
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </div>
-              <blockquote className="mb-4 text-[13px] leading-relaxed text-foreground/85">
-                {t.quote}
-              </blockquote>
-              <figcaption className="flex items-center gap-3 border-t border-dashed border-border/60 pt-4">
-                <div
-                  className={`grid size-9 place-items-center rounded-full bg-gradient-to-br ${t.color} text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.08)]`}
-                  aria-hidden
-                >
-                  {t.initials}
-                </div>
-                <div>
-                  <p className="text-[13px] font-bold text-foreground">
-                    {t.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{t.role}</p>
-                </div>
-              </figcaption>
-            </figure>
+              )}
+            </div>
           </Reveal>
         ))}
       </div>
@@ -166,13 +122,10 @@ export function Testimonials() {
               className="size-4 fill-[var(--yellow)] text-[var(--yellow)]"
             />
           ))}
-          <span className="ml-2 font-heading text-base font-bold text-foreground">
-            4.9 / 5.0
-          </span>
         </div>
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground">
           <MessageCircle size={13} />
-          Dari 12.000+ siswa aktif di seluruh Indonesia
+          Siap dipakai — gratis, tanpa daftar ribet
         </p>
       </Reveal>
     </section>

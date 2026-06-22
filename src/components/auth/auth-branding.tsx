@@ -315,24 +315,16 @@ export function AuthBranding() {
 
         {/* Bottom */}
         <div className="flex items-center gap-3">
-          <div className="flex -space-x-1.5">
-            {[
-              "from-rose-400 to-orange-400",
-              "from-violet-400 to-pink-400",
-              "from-teal-400 to-emerald-400",
-            ].map((g, i) => (
-              <div
-                key={g}
-                className={`grid size-6 place-items-center rounded-full border-2 border-white bg-gradient-to-br ${g} text-[8px] font-bold text-white shadow-sm`}
-              >
-                {["R", "B", "S"][i]}
-              </div>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--coral)]/10 to-[var(--orange)]/10 px-3 py-1.5 text-[11px] font-bold text-[var(--coral)]">
+              <Sparkles size={12} strokeWidth={2.5} />
+              {isRegister ? "Gratis" : "Siap Belajar"}
+            </span>
           </div>
           <p className="text-[11.5px] font-medium text-slate-400">
             {isRegister
               ? "Buat akun gratis — tanpa kartu kredit 🎁"
-              : "12K+ siswa sudah belajar bareng Spark 🇮🇩"}
+              : "Belajar bareng Spark — kapan aja, di mana aja 🚀"}
           </p>
         </div>
       </div>

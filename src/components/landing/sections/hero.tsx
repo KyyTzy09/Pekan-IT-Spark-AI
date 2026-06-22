@@ -141,34 +141,16 @@ export function Hero() {
             </Button>
 
             <div className="flex items-center gap-2.5">
-              <div className="flex -space-x-2">
-                {[
-                  "from-[var(--coral)] to-[var(--orange)]",
-                  "from-[var(--purple)] to-[var(--pink)]",
-                  "from-[var(--teal)] to-[var(--green)]",
-                ].map((g, i) => (
-                  <div
-                    key={i}
-                    className={`grid size-8 place-items-center rounded-full border-2 border-background bg-gradient-to-br ${g} text-[10px] font-bold text-white shadow-[0_2px_6px_rgba(0,0,0,0.1)]`}
-                  >
-                    {["RA", "BP", "SP"][i]}
-                  </div>
-                ))}
+              <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 px-3 py-1.5">
+                <TrendingUp size={14} className="text-[var(--teal)]" />
+                <span className="text-[11px] font-bold text-foreground">
+                  Gratis & Terbuka
+                </span>
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className="size-3 fill-[var(--yellow)] text-[var(--yellow)]"
-                    />
-                  ))}
-                  <span className="ml-1 text-[11px] font-bold text-foreground">
-                    4.9
-                  </span>
-                </div>
-                <span className="text-[10px] font-semibold text-muted-foreground">
-                  12K+ siswa aktif
+              <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 px-3 py-1.5">
+                <Zap size={14} className="text-[var(--yellow)]" />
+                <span className="text-[11px] font-bold text-foreground">
+                  Tanpa Batas Waktu
                 </span>
               </div>
             </div>
