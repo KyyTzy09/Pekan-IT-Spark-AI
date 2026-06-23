@@ -262,12 +262,15 @@ export async function completeOnboardingCustom(
     });
 
     // Generate materials, practice questions, and embeddings AFTER transaction
+    // Fire-and-forget — ga di-await biar server action cepet return dan redirect langsung jalan
     if (subjectId) {
-      await generateMaterialsForSubject(
+      generateMaterialsForSubject(
         subjectId,
         data.subjectData.topics,
         userId,
         data.profile.learningStyle,
+      ).catch((err) =>
+        console.error("[ONBOARDING_SERVICE] background materials generation failed:", err),
       );
     }
 
