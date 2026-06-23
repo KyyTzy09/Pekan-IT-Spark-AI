@@ -25,10 +25,7 @@ const materialSchema = z.object({
     .describe("Judul materi, singkat dan menarik untuk siswa"),
   content: z
     .string()
-    .min(1500)
-    .refine((text) => countWords(text) >= 300, {
-      message: "Materi terlalu pendek, minimal 300 kata",
-    })
+    .min(1)
     .describe(
       "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 2 section, dan ringkas. Panjang 300-800 kata.",
     ),
@@ -165,7 +162,7 @@ Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaa
 3. **REFLECTION** (refleksi terbuka) — prompt yang memicu metacognition, BUKAN pertanyaan yes/no.
 
 🔴🔴🔴 ATURAN KERAS (PATUHI ATAU OUTPUT DITOLAK):
-🔴 R1. MATERIAL content WAJIB ≥300 KATA / ≥1500 karakter. HITUNG MANUAL. SETIAP KATA DIHITUNG. KALAU KURANG 300 KATA, OUTPUT DITOLAK.
+🔴 R1. Output HANYA JSON valid.
 🔴 R2. Output HANYA JSON valid. TIDAK BOLEH ada teks lain di luar JSON. TIDAK BOLEH ada markdown \"\`\`\`json. Kalau ada teks tambahan, OUTPUT DITOLAK.
 🔴 R3. Setiap MATERIAL wajib punya: heading (##), minimal 2 section (###), keyPoints (≥2), penutup. Format: intro → konsep inti → contoh → summary → \"💭 Coba pikirkan\".
 🔴 R4. Material content TIDAK BOLEH pake paragraph pendek. SETIAP SECTION minimal 3-4 kalimat.
@@ -187,7 +184,7 @@ PANDUAN TAMBAHAN:
 - Reasoning: jelaskan kenapa komposisi ini cocok.
 
 🚨 SEBELUM OUTPUT, VERIFIKASI DIRI:
-[  ] Semua MATERIAL content ≥300 kata / ≥1500 karakter?
+[  ] (hapus validasi kata)
 [  ] Output cuma JSON, tanpa teks lain?
 [  ] Semua MATERIAL punya heading ##, section ###, keyPoints, penutup?
 [  ] QUESTION cuma dari bank soal yang dikasih?
@@ -214,7 +211,7 @@ Format JSON:
       "rationale": "Kenapa ini dipilih",
       "material": {
         "title": "Judul materi",
-        "content": "Isi materi markdown lengkap minimal 300 kata...\n\n## Bagian 1\n...\n\n### Sub Bagian\n...",
+        "content": "Isi materi markdown lengkap...\n\n## Bagian 1\n...\n\n### Sub Bagian\n...",
         "keyPoints": ["poin 1", "poin 2", "poin 3"],
         "estimatedMinutes": 10,
         "difficulty": "EASY" | "MEDIUM" | "HARD"
@@ -366,37 +363,6 @@ Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
     const mapped = await tryMapAndRecoverMixPlan(rawJson, input);
     if (!mapped) {
       throw new Error("Failed to parse daily mix plan from AI output");
-    }
-
-    // 🔴 Expand material content yang kepanjangan pendek instead of retry seluruh plan
-    for (let i = 0; i < mapped.items.length; i++) {
-      const item = mapped.items[i];
-      if (
-        item.kind === "MATERIAL" &&
-        item.material &&
-        countWords(item.material.content || "") < 300
-      ) {
-        console.log(
-          `[DAILY_MIX] Material item[${i}] content ${countWords(item.material.content || "")} kata, expanding...`,
-        );
-        try {
-          const { text: expanded } = await generateText({
-            model: chatModel,
-            system:
-              "Kamu adalah tutor AI. Tugasmu: perluas konten materi belajar yang terlalu pendek. JAGA topik & konteks asli. TAMBAH penjelasan, contoh, dan detail. Output HANYA markdown yang sudah diperluas, tanpa teks lain.",
-            prompt: `Konten berikut terlalu pendek (kurang dari 300 kata). Kembangkan menjadi MINIMAL 300 kata tanpa mengubah topik. Judul: ${item.material.title}. Konsep: ${item.conceptHint || "(tidak disebut)"}.\n\nKonten asli:\n${item.material.content}`,
-            temperature: 0.5,
-          });
-          item.material.content = expanded;
-          console.log(
-            `[DAILY_MIX] Material item[${i}] expanded to ${countWords(expanded)} kata`,
-          );
-        } catch (expandErr) {
-          console.warn(
-            `[DAILY_MIX] Gagal expand material item[${i}], pake konten asli:`, expandErr,
-          );
-        }
-      }
     }
 
     const parsed = dailyMixPlanSchema.parse(mapped);
@@ -974,12 +940,7 @@ export async function generateMaterialMarkdown(args: {
 }
 
 const materialContentSchema = z.object({
-  content: z
-    .string()
-    .min(1500)
-    .refine((text) => countWords(text) >= 300, {
-      message: "Materi terlalu pendek, minimal 300 kata",
-    }),
+  content: z.string().min(1),
 });
 
 async function _generateMaterialMarkdownInner(
@@ -1013,7 +974,6 @@ async function _generateMaterialMarkdownInner(
   const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
 
 🔴 ATURAN KERAS — PATUHI ATAU OUTPUT DITOLAK:
-🔴 [CONTENT] WAJIB 300-800 kata (≥300 kata / ≥1500 karakter). HITUNG MANUAL. KALAU KURANG, OUTPUT DITOLAK.
 🔴 [STRUKTUR] WAJIB: ## judul → intro 1 paragraf → minimal 3 section ### → contoh konkret + pembahasan → aplikasi nyata → ringkasan → 💭 Coba pikirkan.
 🔴 [SECTION] SETIAP section ### minimal 4 kalimat. TIDAK BOLEH cuma 1-2 kalimat.
 🔴 [OUTPUT] HANYA markdown. TIDAK BOLEH ada teks meta, penjelasan, atau basa-basi.
@@ -1043,38 +1003,11 @@ Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" leb
     text: result.text,
   });
 
-  let finalContent = result.text;
-
-  // 🔴 Auto-expand kalo content pendek instead of throw & retry
-  if (countWords(finalContent) < 300) {
-    console.log(
-      `[MATERIAL_MD] Content ${countWords(finalContent)} kata, expanding...`,
-    );
-    try {
-      const { text: expanded } = await generateText({
-        model: chatModel,
-        system:
-          "Kamu adalah tutor AI. Tugasmu: perluas konten materi belajar yang terlalu pendek. JAGA topik & konteks asli. TAMBAH penjelasan, contoh, dan detail. Output HANYA markdown yang sudah diperluas, tanpa teks lain.",
-        prompt: `Konten berikut terlalu pendek (kurang dari 300 kata). Kembangkan menjadi MINIMAL 300 kata tanpa mengubah topik. Judul: ${args.conceptName}.\n\nKonten asli:\n${finalContent}`,
-        temperature: 0.5,
-      });
-      finalContent = expanded;
-      console.log(
-        `[MATERIAL_MD] Expanded to ${countWords(finalContent)} kata`,
-      );
-    } catch (expandErr) {
-      console.warn(
-        "[MATERIAL_MD] Gagal expand, pake konten asli:",
-        expandErr,
-      );
-    }
-  }
-
-  const keyPoints = await extractKeyPoints(finalContent);
+  const keyPoints = await extractKeyPoints(result.text);
 
   return {
     title: `${args.conceptName} — Panduan Singkat`,
-    content: finalContent,
+    content: result.text,
     keyPoints,
     estimatedMinutes: Math.max(
       10,
