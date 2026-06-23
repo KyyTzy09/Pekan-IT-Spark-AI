@@ -164,32 +164,39 @@ Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaa
 2. **MATERIAL** (materi bacaan markdown) — generate materi pembelajaran yang kontekstual. Markdown dengan heading, section, dan penutup.
 3. **REFLECTION** (refleksi terbuka) — prompt yang memicu metacognition, BUKAN pertanyaan yes/no.
 
-ATURAN WAJIB:
+🔴🔴🔴 ATURAN KERAS (PATUHI ATAU OUTPUT DITOLAK):
+🔴 R1. MATERIAL content WAJIB ≥300 KATA / ≥1500 karakter. HITUNG MANUAL. SETIAP KATA DIHITUNG. KALAU KURANG 300 KATA, OUTPUT DITOLAK.
+🔴 R2. Output HANYA JSON valid. TIDAK BOLEH ada teks lain di luar JSON. TIDAK BOLEH ada markdown \"\`\`\`json. Kalau ada teks tambahan, OUTPUT DITOLAK.
+🔴 R3. Setiap MATERIAL wajib punya: heading (##), minimal 2 section (###), keyPoints (≥2), penutup. Format: intro → konsep inti → contoh → summary → \"💭 Coba pikirkan\".
+🔴 R4. Material content TIDAK BOLEH pake paragraph pendek. SETIAP SECTION minimal 3-4 kalimat.
+🔴 R5. QUESTION hanya pilih dari bank soal yang dikasih. JANGAN generate soal baru.
+🔴 R6. Reflection HARUS pertanyaan terbuka (bukan yes/no).
+🔴 R7. subjectSlug HARUS dari focusedSubjects atau weakConcepts siswa.
+🔴 R8. Variasi: jangan ulang subject/concept yang sama seperti 5 hari terakhir.
+
+PANDUAN TAMBAHAN:
 - Output dalam Bahasa Indonesia.
-- Subjek (subjectSlug) HARUS dari focusedSubjects siswa ATAU subject dari weakConcepts. Untuk mapel nasional, gunakan slug uppercase: "MATEMATIKA", "BAHASA_INDONESIA", "BAHASA_INGGRIS", "IPA", "SEJARAH", "GEOGRAFI", "EKONOMI", "SOSIOLOGI", "PPKN", "SENI_BUDAYA", "PJOK", "PRAKARYA", "BAHASA_DAERAH", "CODING". Untuk mapel CUSTOM, gunakan NAMA MAPEL PERSIS seperti yang terdaftar di focusedSubjects (contoh: "Bahasa Jawa", "Coding", "Musik"). JANGAN gunakan "CUSTOM" — gunakan nama asli mapelnya.
-- Jika availableQuestions ada, PLAN QUESTION items dengan subjectSlug + conceptHint yang ada di sana (sistem akan pilih soalnya).
-- 🔴🔴🔴 MATERIAL CONTENT WAJIB >= 300 KATA (minimal 1500 karakter). HITUNG MANUAL setiap kata di content. SETIAP KALI SELESAI nulis content, PASTIKAN sudah ≥300 kata. KALAU KURANG, TULIS LAGI SAMPAI CUKUP. Output yang <300 kata akan DITOLAK DAN ANDA HARUS GENERATE ULANG — buang-buang token!
-- Material markdown WAJIB: ada heading (##), minimal 2 section, 300-800 kata, ada keyPoints, ada penutup. Format: intro → konsep inti → contoh → summary → callout "Coba pikirkan".
-- Reflection prompt HARUS terbuka (tidak yes/no) dan memicu siswa berpikir, bukan menjawab fakta.
-- Difficulty MATERIAL/REFLECTION: jika siswa lemah di konsep (mastery < 0.4) → EASY/explainer; jika sedang → MEDIUM; jika kuat (mastery > 0.7) → HARD/push further.
-- Sesuaikan gaya penulisan MATERIAL dengan gaya belajar siswa (learningStyle):
-  * VISUAL: Wajib sertakan visualisasi konsep menggunakan diagram alir atau peta konsep dengan sintaks Mermaid.js (misal: \`\`\`mermaid\ngraph TD\n...\n\`\`\`). Gunakan analogi visual yang kuat.
-  * EXAMPLE_HEAVY: Struktur materi wajib dimulai dengan Studi Kasus nyata atau contoh soal konkret, diikuti bedah solusi langkah-demi-langkah (Step-by-Step Walkthrough).
-  * SOCRATIC: Sajikan materi dalam bentuk dialog tanya-jawab interaktif antara "Siswa" dan "Spark" untuk memandu siswa menemukan konsepnya secara mandiri.
-  * TEXTUAL: Berikan penjelasan akademis terstruktur yang mendalam dengan glosarium istilah dan referensi teori formal.
-- Sesuaikan kedalaman dan kompleksitas materi dengan jenjang kelas (grade) siswa agar menantang namun dapat dipahami.
-- Variasi: kalau kemarin ada MATERIAL tentang Trigonometri, hari ini ganti ke materi berbeda.
-- Reasoning: jelaskan kenapa komposisi ini cocok untuk siswa.
+- Untuk mapel nasional, slug uppercase: "MATEMATIKA", "BAHASA_INDONESIA", "BAHASA_INGGRIS", "IPA", "SEJARAH", "GEOGRAFI", "EKONOMI", "SOSIOLOGI", "PPKN", "SENI_BUDAYA", "PJOK", "PRAKARYA", "BAHASA_DAERAH", "CODING". Untuk CUSTOM, gunakan NAMA MAPEL PERSIS dari focusedSubjects.
+- Difficulty: mastery < 0.4 → EASY, mastery > 0.7 → HARD, sisanya MEDIUM.
+- Sesuaikan gaya penulisan dengan learningStyle:
+  * VISUAL: Wajib diagram Mermaid.js.
+  * EXAMPLE_HEAVY: Studi kasus nyata + bedah langkah demi langkah.
+  * SOCRATIC: Dialog tanya-jawab "Siswa" dan "Spark".
+  * TEXTUAL: Akademis, glosarium, referensi formal.
+- Sesuaikan kedalaman dengan grade siswa.
+- Reasoning: jelaskan kenapa komposisi ini cocok.
 
-JANGAN:
-- Generate soal baru (pakai bank soal existing)
-- Pakai subjectSlug yang tidak ada di focusedSubjects ATAU weakConcepts siswa
-- Buat refleksi yang berupa pertanyaan tertutup (ya/tidak)
-- Membungkus output JSON dengan key luar seperti "challengePackage". Output harus langsung berupa object JSON sesuai schema.
-- Menuliskan teks obrolan, penjelasan, basa-basi, atau kalimat pengantar di luar JSON. Output Anda HARUS berupa string JSON valid saja.
-- Menggunakan karakter baris baru asli di dalam nilai string JSON. Semua baris baru dalam teks markdown materi ("content") harus di-escape menjadi '\\n' literal.
+🚨 SEBELUM OUTPUT, VERIFIKASI DIRI:
+[  ] Semua MATERIAL content ≥300 kata / ≥1500 karakter?
+[  ] Output cuma JSON, tanpa teks lain?
+[  ] Semua MATERIAL punya heading ##, section ###, keyPoints, penutup?
+[  ] QUESTION cuma dari bank soal yang dikasih?
+[  ] Reflection bukan yes/no?
+[  ] subjectSlug sesuai data siswa?
 
-Format JSON yang wajib diikuti:
+Kalau ada yang belum centang, JANGAN OUTPUT. Perbaiki dulu.
+
+Format JSON:
 {
   "title": "Judul paket",
   "description": "Deskripsi singkat",
@@ -198,26 +205,31 @@ Format JSON yang wajib diikuti:
       "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
       "conceptHint": "Nama konsep",
       "difficultyHint": "EASY" | "MEDIUM" | "HARD",
-      "rationale": "Kenapa ini dipilih",
+      "rationale": "Kenapa ini dipilih"
+    ,{
       "kind": "MATERIAL",
       "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
       "conceptHint": "Nama konsep",
       "difficultyHint": "EASY" | "MEDIUM" | "HARD",
       "rationale": "Kenapa ini dipilih",
-      "material": 
+      "material": {
         "title": "Judul materi",
-        "content": "Isi materi markdown lengkap minimal 300 kata...",
-        "keyPoints": ["poin 1", "poin 2"],
-        "estimatedMinutes": 5,
-        "difficulty": "EASY" | "MEDIUM" | "HARD",
+        "content": "Isi materi markdown lengkap minimal 300 kata...\n\n## Bagian 1\n...\n\n### Sub Bagian\n...",
+        "keyPoints": ["poin 1", "poin 2", "poin 3"],
+        "estimatedMinutes": 10,
+        "difficulty": "EASY" | "MEDIUM" | "HARD"
+      }
+    },{
       "kind": "REFLECTION",
       "subjectSlug": "MATEMATIKA" | "BAHASA_INDONESIA" | ...,
       "conceptHint": "Nama konsep",
       "difficultyHint": "EASY" | "MEDIUM" | "HARD",
       "rationale": "Kenapa ini dipilih",
-      "reflection": 
+      "reflection": {
         "prompt": "Pertanyaan refleksi terbuka",
         "context": "Konteks refleksi"
+      }
+    }
   ],
   "reasoning": "Alasan komposisi"
 }`;
@@ -968,28 +980,14 @@ async function _generateMaterialMarkdownInner(
 
   const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
 
-Buat materi bacaan dalam format Markdown. Struktur WAJIB:
-- Heading ## untuk judul
-- Intro 1 paragraf (kaitkan dengan kehidupan siswa / apa yang akan dipelajari)
-- Minimal 3 section dengan subheading (###)
-- Penjelasan konsep utama secara mendalam dan komprehensif
-- Contoh konkret dan studi kasus nyata
-- Contoh soal beserta pembahasan langkah demi langkah
-- Aplikasi konsep di dunia nyata
-- Ringkasan poin-poin penting
-- Callout "💭 Coba pikirkan: <pertanyaan>"
-
-${styleNote}
-
-Difficulty: ${difficulty}. ${
-    difficulty === "EASY"
-      ? "Bahasa sederhana, analogi kehidupan sehari-hari, definisi dulu baru contoh."
-      : difficulty === "HARD"
-        ? "Lebih dalam, bisa pakai terminologi advanced, dorong berpikir analitis."
-        : "Seimbang, definisi + contoh + sedikit insight."
-  }
-
-🔴 PANJANG: WAJIB 300-800 kata (≥300 kata, ≥1500 karakter). HITUNG KATA MANUAL — pastikan sudah ≥300 kata sebelum selesai. KALAU KURANG, TULIS LAGI SAMPAI 300 KATA. Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat. Output HANYA markdown, jangan ada penjelasan meta.`;
+🔴 ATURAN KERAS — PATUHI ATAU OUTPUT DITOLAK:
+🔴 [CONTENT] WAJIB 300-800 kata (≥300 kata / ≥1500 karakter). HITUNG MANUAL. KALAU KURANG, OUTPUT DITOLAK.
+🔴 [STRUKTUR] WAJIB: ## judul → intro 1 paragraf → minimal 3 section ### → contoh konkret + pembahasan → aplikasi nyata → ringkasan → 💭 Coba pikirkan.
+🔴 [SECTION] SETIAP section ### minimal 4 kalimat. TIDAK BOLEH cuma 1-2 kalimat.
+🔴 [OUTPUT] HANYA markdown. TIDAK BOLEH ada teks meta, penjelasan, atau basa-basi.
+🔴 [GAYA] Sesuai gaya belajar siswa:
+${styleNote.replace(/^/gm, '   ')}
+🔴 [DIFFICULTY] ${difficulty === "EASY" ? "Bahasa sederhana, analogi sehari-hari, definisi dulu baru contoh." : difficulty === "HARD" ? "Terminologi advanced, dorong analitis." : "Definisi + contoh + insight."}`;
 
   const userPrompt = `Mapel: ${args.subjectName}
 Topik: ${args.topicName}
