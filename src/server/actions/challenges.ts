@@ -1,6 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
+// 🔴 Lock in-progress generation per userId — biar polling ga dobel-dobel generate
+const generationLocks = new Set<string>();
+
+async function acquireGenerationLock(userId: string): Promise<boolean> {
+  if (generationLocks.has(userId)) return false;
+  generationLocks.add(userId);
+  return true;
+}
+
+function releaseGenerationLock(userId: string) {
+  generationLocks.delete(userId);
+}
+
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { XP_REWARDS } from "@/lib/gamification";
@@ -240,7 +254,17 @@ export async function generateAndStoreDailyChallenges(
     return;
   }
 
-  const profile = await prisma.studentProfile.findUnique({
+  // 🔴 Lock: cegah generation dobel dari polling simultan
+  if (!(await acquireGenerationLock(userId))) {
+    console.log(
+      "[DAILY_CHALLENGE] Skip — generation udah berjalan, tunggu selesai",
+      { userId, date: date.toISOString() },
+    );
+    return;
+  }
+
+  try {
+    const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     select: {
       grade: true,
@@ -321,6 +345,9 @@ export async function generateAndStoreDailyChallenges(
     failCount,
     total: distributedSubjects.length,
   });
+  } finally {
+    releaseGenerationLock(userId);
+  }
 }
 
 async function generateOneDailyChallenge(
