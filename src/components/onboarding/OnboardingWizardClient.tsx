@@ -309,12 +309,14 @@ export function OnboardingWizardClient({
       setSubmitting(false);
       return;
     }
+    console.log("[ONBOARDING_CLIENT] National submit OK, redirecting to /dashboard");
     router.replace("/dashboard");
   };
 
   const handleCustomSubmit = async () => {
     if (submitting) return;
     if (!generatedQuestions || !generatedSubjectData) return;
+    console.log("[ONBOARDING_CLIENT] handleCustomSubmit called, submitting:", submitting);
     setSubmitting(true);
     setError(null);
 
@@ -355,11 +357,14 @@ export function OnboardingWizardClient({
         pretestAnswers,
       });
 
+    console.log("[ONBOARDING_CLIENT] Custom submit result:", result);
     if (!result.ok) {
+      console.log("[ONBOARDING_CLIENT] Custom submit NOT ok, showing error:", result.message);
       setError(result.message ?? "Gagal menyimpan. Coba lagi, ya.");
       setSubmitting(false);
       return;
     }
+    console.log("[ONBOARDING_CLIENT] Custom submit OK, redirecting to /dashboard");
     router.replace("/dashboard");
   };
 

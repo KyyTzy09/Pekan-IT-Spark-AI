@@ -256,9 +256,16 @@ export async function completeOnboardingCustom(
 
     await refreshSession();
 
+    // Log session setelah di-refresh buat debugging
+    const refreshedSession = await getSession();
     console.log("[ONBOARDING_SERVICE] completeOnboardingCustom success", {
       userId,
       subjectName: data.subjectName,
+      sessionAfterRefresh: {
+        id: refreshedSession?.id,
+        isOnboarded: refreshedSession?.isOnboarded,
+        role: refreshedSession?.role,
+      },
     });
 
     // Generate materials, practice questions, and embeddings AFTER transaction
