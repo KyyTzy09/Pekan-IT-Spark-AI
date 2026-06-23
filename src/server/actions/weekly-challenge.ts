@@ -7,7 +7,23 @@ import {
   generateWeeklyPerSubjectAI,
   generateWeeklyTitleAI,
 } from "@/server/ai/challenge";
-import { incrementAiQuota } from "@/server/ai-quota";
+import { decrementAiQuota, incrementAiQuota } from "@/server/ai-quota";
+
+// Lock: cegah regenerasi dobel
+const weeklyGenerationLocks = new Set<string>();
+
+async function acquireWeeklyLock(userId: string): Promise<boolean> {
+  if (weeklyGenerationLocks.has(userId)) return false;
+  weeklyGenerationLocks.add(userId);
+  return true;
+}
+
+function releaseWeeklyLock(userId: string) {
+  weeklyGenerationLocks.delete(userId);
+}
+
+const MAX_RETRIES = 3;
+
 import {
   computeGrowthTrend,
   computeMasteryAverage,
@@ -106,7 +122,29 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     monday: monday.toISOString(),
   });
 
-  const profile = await prisma.studentProfile.findUnique({
+  // 🔴 Cek apakah udah ada weekly challenge buat minggu ini
+  const existingWeekly = await prisma.weeklyChallenge.findUnique({
+    where: { userId_weekStart: { userId, weekStart: monday } },
+  });
+  if (existingWeekly) {
+    console.log(
+      "[WEEKLY_CHALLENGE] Skip — udah ada weekly challenge minggu ini",
+      { userId, weekStart: monday.toISOString() },
+    );
+    return { ok: true, weeklyChallengeId: existingWeekly.id };
+  }
+
+  // 🔴 Lock: cegah regenerasi dobel
+  if (!(await acquireWeeklyLock(userId))) {
+    console.log(
+      "[WEEKLY_CHALLENGE] Skip — regenerasi udah berjalan, tunggu selesai",
+      { userId },
+    );
+    return { ok: false, error: "Regenerasi sedang berjalan" };
+  }
+
+  try {
+    const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     select: {
       grade: true,
@@ -257,7 +295,9 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       .filter((m) => m.title && m.content)
       .slice(0, counts.materials);
 
-    while (validQuestions.length < counts.questions) {
+    let retries = 0;
+    while (validQuestions.length < counts.questions && retries < MAX_RETRIES) {
+      retries++;
       const quota = await incrementAiQuota(userId, "questions", 1);
       if (!quota.allowed) break;
       const fallback = await generateWeeklyPerSubjectAI({
@@ -280,11 +320,15 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       if (q && q.options?.includes(q.correctAnswer)) {
         validQuestions.push(q);
       } else {
+        // 🔴 Kembalikan quota kalo gagal
+        await decrementAiQuota(userId, "questions", 1);
         break;
       }
     }
 
-    while (validMaterials.length < counts.materials) {
+    retries = 0;
+    while (validMaterials.length < counts.materials && retries < MAX_RETRIES) {
+      retries++;
       const quota = await incrementAiQuota(userId, "materials", 1);
       if (!quota.allowed) break;
       const conceptSeed = validMaterials[0]?.title ?? input.subjectName;
@@ -302,6 +346,9 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
           estimatedMinutes: material.estimatedMinutes,
         });
       } else {
+        // 🔴 Kembalikan quota kalo gagal
+        await decrementAiQuota(userId, "materials", 1);
+
         break;
       }
     }
@@ -452,11 +499,14 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   revalidatePath("/challenge", "layout");
   revalidatePath("/dashboard", "layout");
 
-  console.log("[WEEKLY_CHALLENGE] ✓ Complete", {
-    userId,
-    weeklyChallengeId: weeklyId,
-    totalChallenges: challengesCreated.length,
-  });
+    console.log("[WEEKLY_CHALLENGE] ✓ Complete", {
+      userId,
+      weeklyChallengeId: weeklyId,
+      totalChallenges: challengesCreated.length,
+    });
 
-  return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
+    return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
+  } finally {
+    releaseWeeklyLock(userId);
+  }
 }
