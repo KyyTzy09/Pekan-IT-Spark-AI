@@ -217,6 +217,29 @@ export async function generateAndStoreDailyChallenges(
     date: date.toISOString(),
   });
 
+  // 🔴 Cek apakah udah ada challenge buat hari ini — kalo udah, skip
+  const existingCount = await prisma.challenge.count({
+    where: {
+      userId,
+      type: "DAILY",
+      scheduledFor: {
+        gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+        lt: new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate() + 1,
+        ),
+      },
+    },
+  });
+  if (existingCount > 0) {
+    console.log(
+      `[DAILY_CHALLENGE] Skip — udah ada ${existingCount} challenge buat hari ini`,
+      { userId, date: date.toISOString() },
+    );
+    return;
+  }
+
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     select: {
