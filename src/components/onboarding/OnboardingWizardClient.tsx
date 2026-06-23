@@ -204,7 +204,14 @@ export function OnboardingWizardClient({
   };
 
   const goBack = () => {
-    if (step === 0 && flow !== null) {
+    if (step === 0) {
+      if (flow !== null) {
+        setFlow(null);
+        setStep(0);
+      }
+      return;
+    }
+    if (step === 1 && flow !== null) {
       setFlow(null);
       setStep(0);
       return;
@@ -447,6 +454,15 @@ export function OnboardingWizardClient({
         key={`step-${flow}-${step}`}
         className="mt-6 flex-1 animate-step-fade-in"
       >
+        {/* Step 0: Welcome (catch-all for any flow so it never shows blank) */}
+        {step === 0 && (
+          <WelcomeStep
+            userName={userName}
+            onChooseNational={handleChooseNational}
+            onChooseCustom={handleChooseCustom}
+          />
+        )}
+
         {/* National flow */}
         {flow === "national" && step === 1 && (
           <ProfileStep
