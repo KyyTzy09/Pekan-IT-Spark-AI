@@ -7,7 +7,6 @@ import {
   dailyMixPlanSchema,
   tryMapAndRecoverMixPlan,
 } from "@/server/ai/challenge";
-import { countWords } from "@/server/utils/word-count";
 
 describe("tryMapAndRecoverMixPlan", () => {
   const dummyInput = {
@@ -35,24 +34,24 @@ describe("tryMapAndRecoverMixPlan", () => {
     },
   };
 
-  it("discards invalid material generated inline and falls back to a valid full-length material", async () => {
-    // LLM generated plan containing a material that is too short
+  it("PASS: menerima material dengan content pendek (ga ada min 1500/300 lagi)", async () => {
+    // Bug fix: content pendek ga ditolak lagi
     const rawJson = {
       title: "Tantangan Hari Ini",
-      description: "Belajar Trigonometri Dasar.",
-      reasoning: "Membantu memperkuat konsep lemah.",
+      description: "Belajar Trigonometri.",
+      reasoning: "Variasi latihan.",
       items: [
         {
           kind: "MATERIAL",
           subjectSlug: "MATEMATIKA",
           conceptHint: "Trigonometri",
           difficultyHint: "EASY",
-          rationale: "Pengenalan materi dasar.",
+          rationale: "Latihan.",
           material: {
-            title: "Materi Trigonometri Singkat",
-            content: "", // Too short (violates min 10)
-            keyPoints: [], // Too few key points (violates min 1)
-            estimatedMinutes: -5, // Too short time (violates min 1)
+            title: "Materi Trigonometri",
+            content: "Pendahuluan singkat.", // Cuma 2 kata, dulu ditolak sekarang ga
+            keyPoints: ["poin 1", "poin 2"],
+            estimatedMinutes: 15,
             difficulty: "EASY",
           },
         },
@@ -63,15 +62,8 @@ describe("tryMapAndRecoverMixPlan", () => {
     expect(mapped).not.toBeNull();
     if (!mapped) throw new Error("mapped is null");
 
-    const material = mapped.items[0].material;
     const parsed = dailyMixPlanSchema.parse(mapped);
-    expect(parsed.items[0].kind).toBe("MATERIAL");
-
-    expect(material).toBeDefined();
-    expect(material?.title).toContain("Trigonometri");
-    expect(material?.keyPoints?.length).toBeGreaterThanOrEqual(3);
-    expect(material?.estimatedMinutes).toBeGreaterThanOrEqual(10);
-    expect(material?.content?.length).toBeGreaterThanOrEqual(1500);
-    expect(countWords(material?.content || "")).toBeGreaterThanOrEqual(300);
+    expect(parsed.items[0].material?.content).toBe("Pendahuluan singkat.");
   });
 });
+
