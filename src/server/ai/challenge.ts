@@ -25,9 +25,9 @@ const materialSchema = z.object({
     .describe("Judul materi, singkat dan menarik untuk siswa"),
   content: z
     .string()
-    .min(1000)
-    .refine((text) => countWords(text) >= 200, {
-      message: "Materi terlalu pendek, minimal 200 kata",
+    .min(1500)
+    .refine((text) => countWords(text) >= 300, {
+      message: "Materi terlalu pendek, minimal 300 kata",
     })
     .describe(
       "Konten materi dalam format Markdown. WAJIB ada heading (##), minimal 2 section, dan ringkas. Panjang 300-800 kata.",
@@ -168,8 +168,8 @@ ATURAN WAJIB:
 - Output dalam Bahasa Indonesia.
 - Subjek (subjectSlug) HARUS dari focusedSubjects siswa ATAU subject dari weakConcepts. Untuk mapel nasional, gunakan slug uppercase: "MATEMATIKA", "BAHASA_INDONESIA", "BAHASA_INGGRIS", "IPA", "SEJARAH", "GEOGRAFI", "EKONOMI", "SOSIOLOGI", "PPKN", "SENI_BUDAYA", "PJOK", "PRAKARYA", "BAHASA_DAERAH", "CODING". Untuk mapel CUSTOM, gunakan NAMA MAPEL PERSIS seperti yang terdaftar di focusedSubjects (contoh: "Bahasa Jawa", "Coding", "Musik"). JANGAN gunakan "CUSTOM" — gunakan nama asli mapelnya.
 - Jika availableQuestions ada, PLAN QUESTION items dengan subjectSlug + conceptHint yang ada di sana (sistem akan pilih soalnya).
-- Material markdown WAJIB: ada heading (##), minimal 2 section, 400-800 kata, ada keyPoints, ada penutup. Format: intro → konsep inti → contoh → summary → callout "Coba pikirkan".
-- ⚠️ MATERIAL content WAJIB minimal 1500 karakter / 300 kata. HITUNG sendiri kata-katanya. Kalau kurang, akan ditolak dan kamu harus generate ulang.
+- 🔴🔴🔴 MATERIAL CONTENT WAJIB >= 300 KATA (minimal 1500 karakter). HITUNG MANUAL setiap kata di content. SETIAP KALI SELESAI nulis content, PASTIKAN sudah ≥300 kata. KALAU KURANG, TULIS LAGI SAMPAI CUKUP. Output yang <300 kata akan DITOLAK DAN ANDA HARUS GENERATE ULANG — buang-buang token!
+- Material markdown WAJIB: ada heading (##), minimal 2 section, 300-800 kata, ada keyPoints, ada penutup. Format: intro → konsep inti → contoh → summary → callout "Coba pikirkan".
 - Reflection prompt HARUS terbuka (tidak yes/no) dan memicu siswa berpikir, bukan menjawab fakta.
 - Difficulty MATERIAL/REFLECTION: jika siswa lemah di konsep (mastery < 0.4) → EASY/explainer; jika sedang → MEDIUM; jika kuat (mastery > 0.7) → HARD/push further.
 - Sesuaikan gaya penulisan MATERIAL dengan gaya belajar siswa (learningStyle):
@@ -206,7 +206,7 @@ Format JSON yang wajib diikuti:
       "rationale": "Kenapa ini dipilih",
       "material": 
         "title": "Judul materi",
-        "content": "Isi materi markdown lengkap minimal 400 kata...",
+        "content": "Isi materi markdown lengkap minimal 300 kata...",
         "keyPoints": ["poin 1", "poin 2"],
         "estimatedMinutes": 5,
         "difficulty": "EASY" | "MEDIUM" | "HARD",
@@ -932,9 +932,9 @@ export async function generateMaterialMarkdown(args: {
 const materialContentSchema = z.object({
   content: z
     .string()
-    .min(1000)
-    .refine((text) => countWords(text) >= 200, {
-      message: "Materi terlalu pendek, minimal 200 kata",
+    .min(1500)
+    .refine((text) => countWords(text) >= 300, {
+      message: "Materi terlalu pendek, minimal 300 kata",
     }),
 });
 
@@ -989,7 +989,7 @@ Difficulty: ${difficulty}. ${
         : "Seimbang, definisi + contoh + sedikit insight."
   }
 
-Panjang: 300-800 kata (minimal 300 kata). Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat. Output HANYA markdown, jangan ada penjelasan meta.`;
+🔴 PANJANG: WAJIB 300-800 kata (≥300 kata, ≥1500 karakter). HITUNG KATA MANUAL — pastikan sudah ≥300 kata sebelum selesai. KALAU KURANG, TULIS LAGI SAMPAI 300 KATA. Materi harus BERBOBOT dan MENDALAM, bukan ringkasan singkat. Output HANYA markdown, jangan ada penjelasan meta.`;
 
   const userPrompt = `Mapel: ${args.subjectName}
 Topik: ${args.topicName}
