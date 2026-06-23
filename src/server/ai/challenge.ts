@@ -162,7 +162,7 @@ Tugasmu: merancang PAKET TANTANGAN HARIAN yang variatif, personal, dan bermanfaa
 3. **REFLECTION** (refleksi terbuka) — prompt yang memicu metacognition, BUKAN pertanyaan yes/no.
 
 🔴🔴🔴 ATURAN KERAS (PATUHI ATAU OUTPUT DITOLAK):
-🔴 R1. Output HANYA JSON valid.
+🔴 R1. MATERIAL content WAJIB ≥300 KATA / ≥1500 karakter. HITUNG MANUAL. SETIAP KATA DIHITUNG. KALAU KURANG 300 KATA, OUTPUT DITOLAK.
 🔴 R2. Output HANYA JSON valid. TIDAK BOLEH ada teks lain di luar JSON. TIDAK BOLEH ada markdown \"\`\`\`json. Kalau ada teks tambahan, OUTPUT DITOLAK.
 🔴 R3. Setiap MATERIAL wajib punya: heading (##), minimal 2 section (###), keyPoints (≥2), penutup. Format: intro → konsep inti → contoh → summary → \"💭 Coba pikirkan\".
 🔴 R4. Material content TIDAK BOLEH pake paragraph pendek. SETIAP SECTION minimal 3-4 kalimat.
@@ -184,7 +184,7 @@ PANDUAN TAMBAHAN:
 - Reasoning: jelaskan kenapa komposisi ini cocok.
 
 🚨 SEBELUM OUTPUT, VERIFIKASI DIRI:
-[  ] (hapus validasi kata)
+[  ] Semua MATERIAL content ≥300 kata / ≥1500 karakter?
 [  ] Output cuma JSON, tanpa teks lain?
 [  ] Semua MATERIAL punya heading ##, section ###, keyPoints, penutup?
 [  ] QUESTION cuma dari bank soal yang dikasih?
@@ -211,7 +211,7 @@ Format JSON:
       "rationale": "Kenapa ini dipilih",
       "material": {
         "title": "Judul materi",
-        "content": "Isi materi markdown lengkap...\n\n## Bagian 1\n...\n\n### Sub Bagian\n...",
+        "content": "Isi materi markdown lengkap minimal 300 kata...\n\n## Bagian 1\n...\n\n### Sub Bagian\n...",
         "keyPoints": ["poin 1", "poin 2", "poin 3"],
         "estimatedMinutes": 10,
         "difficulty": "EASY" | "MEDIUM" | "HARD"
@@ -974,6 +974,7 @@ async function _generateMaterialMarkdownInner(
   const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
 
 🔴 ATURAN KERAS — PATUHI ATAU OUTPUT DITOLAK:
+🔴 [CONTENT] WAJIB 300-800 kata (≥300 kata / ≥1500 karakter). HITUNG MANUAL. KALAU KURANG, OUTPUT DITOLAK.
 🔴 [STRUKTUR] WAJIB: ## judul → intro 1 paragraf → minimal 3 section ### → contoh konkret + pembahasan → aplikasi nyata → ringkasan → 💭 Coba pikirkan.
 🔴 [SECTION] SETIAP section ### minimal 4 kalimat. TIDAK BOLEH cuma 1-2 kalimat.
 🔴 [OUTPUT] HANYA markdown. TIDAK BOLEH ada teks meta, penjelasan, atau basa-basi.
