@@ -33,6 +33,32 @@ export function canIncrementQuota(
   return current + by <= limit;
 }
 
+export async function decrementAiQuota(
+  userId: string,
+  kind: AiQuotaKind,
+  by = 1,
+): Promise<void> {
+  const { prisma } = await import("@/lib/prisma");
+  const today = startOfUtcDay(new Date());
+
+  const existing = await prisma.dailyAiQuota.findUnique({
+    where: { userId },
+  });
+
+  if (!existing || existing.date.getTime() !== today.getTime()) return;
+
+  const current = existing[`${kind}Count` as const] as number;
+  if (current <= 0) return;
+
+  await prisma.dailyAiQuota.update({
+    where: { userId },
+    data: {
+      [`${kind}Count` as const]: Math.max(0, current - by),
+      updatedAt: new Date(),
+    },
+  });
+}
+
 export async function incrementAiQuota(
   userId: string,
   kind: AiQuotaKind,

@@ -34,7 +34,11 @@ import {
   generateOnDemandChallenge,
 } from "@/server/ai/challenge";
 import { generateQuestionsForConcept } from "@/server/ai/generate-questions";
-import { AI_QUOTA_LIMITS, incrementAiQuota } from "@/server/ai-quota";
+import {
+  AI_QUOTA_LIMITS,
+  decrementAiQuota,
+  incrementAiQuota,
+} from "@/server/ai-quota";
 import { computeMixForSubject, type MixResult } from "@/server/learning/mix";
 import {
   computeGrowthTrend,
@@ -415,31 +419,54 @@ async function generateOneDailyChallenge(
     },
   });
 
-  const weakConcepts = await prisma.studentKnowledgeProfile.findMany({
-    where: {
-      userId,
-      masteryScore: { lt: 0.7 },
-      concept: { topic: { subjectId: subject.id } },
-    },
-    orderBy: { masteryScore: "asc" },
-    take: 5,
-    include: {
-      concept: {
-        select: {
-          id: true,
-          name: true,
-          topic: { select: { subject: { select: { name: true } } } },
+  const [weakConcepts, strongConcepts] = await Promise.all([
+    prisma.studentKnowledgeProfile.findMany({
+      where: {
+        userId,
+        masteryScore: { lt: 0.7 },
+        concept: { topic: { subjectId: subject.id } },
+      },
+      orderBy: { masteryScore: "asc" },
+      take: 5,
+      include: {
+        concept: {
+          select: {
+            id: true,
+            name: true,
+            topic: { select: { subject: { select: { name: true } } } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.studentKnowledgeProfile.findMany({
+      where: {
+        userId,
+        masteryScore: { gte: 0.7 },
+        concept: { topic: { subjectId: subject.id } },
+      },
+      orderBy: { masteryScore: "desc" },
+      take: 5,
+      include: {
+        concept: {
+          select: {
+            id: true,
+            name: true,
+            topic: { select: { subject: { select: { name: true } } } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const learningStyle = profile?.learningStyle ?? "VISUAL";
+  const userName = profile?.user?.name ?? undefined;
 
   const plan = await generateDailyMix({
     userId,
-    userName: profile?.user?.name ?? undefined,
+    userName,
     grade: profile?.grade,
     school: profile?.school,
-    learningStyle: profile?.learningStyle,
+    learningStyle,
     focusedSubjects: [subject.name],
     weakConcepts: weakConcepts.map((w) => ({
       id: w.concept.id,
@@ -447,7 +474,12 @@ async function generateOneDailyChallenge(
       masteryScore: w.masteryScore,
       subjectName: w.concept.topic.subject.name,
     })),
-    strongConcepts: [],
+    strongConcepts: strongConcepts.map((s) => ({
+      id: s.concept.id,
+      name: s.concept.name,
+      masteryScore: s.masteryScore,
+      subjectName: s.concept.topic.subject.name,
+    })),
     recentChallenges: recentChallenges.map((c) => ({
       title: c.title,
       kinds: Array.from(new Set(c.items.map((i) => i.kind))),
@@ -467,16 +499,60 @@ async function generateOneDailyChallenge(
     },
   });
 
-  type PlanItemWithAll = (typeof plan.items)[number];
+  type NormalizedItem = {
+    kind: "QUESTION" | "MATERIAL" | "REFLECTION";
+    subjectSlug: string;
+    conceptHint?: string;
+    topicHint?: string;
+    difficultyHint: "EASY" | "MEDIUM" | "HARD";
+    rationale: string;
+    material?: {
+      title: string;
+      content: string;
+      keyPoints: string[];
+      estimatedMinutes: number;
+      difficulty: "EASY" | "MEDIUM" | "HARD";
+    };
+    reflection?: { prompt: string; context: string };
+  };
+
   const normalizeDifficulty = (
     d: string | undefined,
   ): "EASY" | "MEDIUM" | "HARD" =>
     d === "MEDIUM" || d === "HARD" ? d : "EASY";
-  const normalizedItems = plan.items.map((it: PlanItemWithAll) => ({
-    ...it,
-    difficultyHint: normalizeDifficulty(it.difficultyHint),
+  const normalizedItems: NormalizedItem[] = plan.items.map((it) => ({
+    kind: it.kind,
+    subjectSlug: it.subjectSlug,
+    conceptHint: it.conceptHint,
+    topicHint: it.topicHint,
+    difficultyHint:
+      it.difficultyHint === "MEDIUM" || it.difficultyHint === "HARD"
+        ? it.difficultyHint
+        : "EASY",
+    rationale: it.rationale,
+    material: it.material,
+    reflection: it.reflection,
   }));
 
+  // 🔴 PRE-RESOLVE QUESTION ITEMS — AI calls & quota di LUAR transaction
+  type ResolvedQuestionItem = { questionId?: string; materialId?: string };
+  const resolvedQuestionItems: (ResolvedQuestionItem | null)[] =
+    await Promise.all(
+      normalizedItems.map(async (item) => {
+        if (item.kind !== "QUESTION") return null;
+        return resolveQuestionOutsideTransaction(
+          userId,
+          subject,
+          availableQuestions,
+          item,
+          mix,
+          learningStyle,
+          userName,
+        );
+      }),
+    );
+
+  // 🔴 TRANSACTION — cepet, cuma DB writes, GA ADA AI call
   await prisma.$transaction(async (tx) => {
     const firstConcept =
       plan.items.find((i) => i.conceptHint)?.conceptHint ||
@@ -489,36 +565,6 @@ async function generateOneDailyChallenge(
       materials: plan.items.filter((i) => i.kind === "MATERIAL").length,
       reflections: plan.items.filter((i) => i.kind === "REFLECTION").length,
     };
-
-    type NormalizedItem = {
-      kind: "QUESTION" | "MATERIAL" | "REFLECTION";
-      subjectSlug: string;
-      conceptHint?: string;
-      topicHint?: string;
-      difficultyHint: "EASY" | "MEDIUM" | "HARD";
-      rationale: string;
-      material?: {
-        title: string;
-        content: string;
-        keyPoints: string[];
-        estimatedMinutes: number;
-        difficulty: "EASY" | "MEDIUM" | "HARD";
-      };
-      reflection?: { prompt: string; context: string };
-    };
-    const normalizedItems: NormalizedItem[] = plan.items.map((it) => ({
-      kind: it.kind,
-      subjectSlug: it.subjectSlug,
-      conceptHint: it.conceptHint,
-      topicHint: it.topicHint,
-      difficultyHint:
-        it.difficultyHint === "MEDIUM" || it.difficultyHint === "HARD"
-          ? it.difficultyHint
-          : "EASY",
-      rationale: it.rationale,
-      material: it.material,
-      reflection: it.reflection,
-    }));
 
     const challenge = await tx.challenge.create({
       data: {
@@ -537,15 +583,8 @@ async function generateOneDailyChallenge(
     for (let idx = 0; idx < normalizedItems.length; idx++) {
       const item = normalizedItems[idx];
       if (item.kind === "QUESTION") {
-        const resolved = await resolveQuestionForSubject(
-          tx,
-          userId,
-          subject,
-          availableQuestions,
-          item,
-          mix,
-        );
-        if (resolved.questionId) {
+        const resolved = resolvedQuestionItems[idx];
+        if (resolved?.questionId) {
           await tx.challengeItem.create({
             data: {
               challengeId: challenge.id,
@@ -555,7 +594,7 @@ async function generateOneDailyChallenge(
               points: 10,
             },
           });
-        } else if (resolved.materialId) {
+        } else if (resolved?.materialId) {
           await tx.challengeItem.create({
             data: {
               challengeId: challenge.id,
@@ -603,10 +642,12 @@ async function generateOneDailyChallenge(
   });
 }
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
-async function resolveQuestionForSubject(
-  tx: Tx,
+/**
+ * Resolve a QUESTION item — AI calls & quota DI LUAR transaction.
+ * Falls back: existing question → AI question → AI material.
+ * AI quota dikembalikan kalo gagal (decrement).
+ */
+async function resolveQuestionOutsideTransaction(
   userId: string,
   subject: { id: string; name: string; slug: string; isCustom: boolean },
   availableQuestions: Array<{
@@ -624,7 +665,10 @@ async function resolveQuestionForSubject(
     difficultyHint: "EASY" | "MEDIUM" | "HARD";
   },
   mix: MixResult,
+  learningStyle: string,
+  userName?: string,
 ): Promise<{ questionId?: string; materialId?: string }> {
+  // 1. Cari match dari existing questions
   const sameSubjectQuestions = availableQuestions.filter(
     (q) => q.concept.topic.subject.slug === item.subjectSlug,
   );
@@ -633,9 +677,10 @@ async function resolveQuestionForSubject(
     return { questionId: picked.id };
   }
 
-  const quota = await incrementAiQuota(userId, "questions", 1);
-  if (quota.allowed) {
-    const concept = await tx.concept.findFirst({
+  // 2. Coba AI generate question
+  const questionQuota = await incrementAiQuota(userId, "questions", 1);
+  if (questionQuota.allowed) {
+    const concept = await prisma.concept.findFirst({
       where: { topic: { subjectId: subject.id } },
       include: { topic: { select: { name: true } } },
       orderBy: { order: "asc" },
@@ -646,14 +691,14 @@ async function resolveQuestionForSubject(
           conceptName: concept.name,
           conceptDescription: concept.description ?? "",
           contentMd: concept.contentMd ?? "",
-          learningStyle: "VISUAL",
+          learningStyle,
           easyCount: mix.questionDifficulty === "EASY" ? 1 : 0,
           mediumCount: mix.questionDifficulty === "MEDIUM" ? 1 : 0,
           hardCount: mix.questionDifficulty === "HARD" ? 1 : 0,
         });
         const q = generated[0];
         if (q) {
-          const newQuestion = await tx.question.create({
+          const newQuestion = await prisma.question.create({
             data: {
               conceptId: concept.id,
               type: "MULTIPLE_CHOICE",
@@ -671,22 +716,28 @@ async function resolveQuestionForSubject(
         }
       } catch (err) {
         console.error("AI question fallback failed:", err);
+        // 🔴 Kembalikan quota kalo gagal
+        await decrementAiQuota(userId, "questions", 1);
       }
+    } else {
+      // Ga ada concept — quota ga kepake
+      await decrementAiQuota(userId, "questions", 1);
     }
   }
 
+  // 3. Fallback: AI generate material
   const matQuota = await incrementAiQuota(userId, "materials", 1);
   if (matQuota.allowed) {
     try {
       const material = await generateMaterialMarkdown({
-        userName: undefined,
+        userName,
         subjectName: subject.name,
         topicName: item.conceptHint ?? subject.name,
         conceptName: item.conceptHint ?? subject.name,
         masteryScore: mix.questionDifficulty === "HARD" ? 0.8 : 0.3,
-        learningStyle: "VISUAL",
+        learningStyle,
       });
-      const mat = await tx.material.create({
+      const mat = await prisma.material.create({
         data: {
           userId,
           subjectId: subject.id,
@@ -701,6 +752,7 @@ async function resolveQuestionForSubject(
       return { materialId: mat.id };
     } catch (err) {
       console.error("Material fallback failed:", err);
+      await decrementAiQuota(userId, "materials", 1);
     }
   }
 
