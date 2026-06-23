@@ -23,6 +23,7 @@ export function computeGrowthTrend(
 }
 
 export const MAX_CHALLENGE_SUBJECTS = 4;
+export const DAILY_CHALLENGE_SUBJECTS = 2;
 
 export type ProfileForPicking = {
   challengeSubjectIds: string[];

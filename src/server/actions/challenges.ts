@@ -43,8 +43,8 @@ import { computeMixForSubject, type MixResult } from "@/server/learning/mix";
 import {
   computeGrowthTrend,
   computeMasteryAverage,
+  DAILY_CHALLENGE_SUBJECTS,
   distributeChallengeSubjects,
-  MAX_CHALLENGE_SUBJECTS,
   pickChallengeSubjectIds,
 } from "@/server/learning/strength";
 import type {
@@ -296,7 +296,7 @@ export async function generateAndStoreDailyChallenges(
     where: { isActive: true, isCustom: false },
     select: { id: true },
     orderBy: { order: "asc" },
-    take: MAX_CHALLENGE_SUBJECTS,
+    take: DAILY_CHALLENGE_SUBJECTS,
   });
 
   const subjectIds = pickChallengeSubjectIds(
@@ -320,7 +320,7 @@ export async function generateAndStoreDailyChallenges(
   const now = new Date();
   const distributedSubjects = distributeChallengeSubjects(
     subjectIds,
-    MAX_CHALLENGE_SUBJECTS,
+    DAILY_CHALLENGE_SUBJECTS,
   );
 
   console.log("[DAILY_CHALLENGE] Distribution result", {
