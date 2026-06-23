@@ -367,6 +367,38 @@ Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
     if (!mapped) {
       throw new Error("Failed to parse daily mix plan from AI output");
     }
+
+    // 🔴 Expand material content yang kepanjangan pendek instead of retry seluruh plan
+    for (let i = 0; i < mapped.items.length; i++) {
+      const item = mapped.items[i];
+      if (
+        item.kind === "MATERIAL" &&
+        item.material &&
+        countWords(item.material.content || "") < 300
+      ) {
+        console.log(
+          `[DAILY_MIX] Material item[${i}] content ${countWords(item.material.content || "")} kata, expanding...`,
+        );
+        try {
+          const { text: expanded } = await generateText({
+            model: chatModel,
+            system:
+              "Kamu adalah tutor AI. Tugasmu: perluas konten materi belajar yang terlalu pendek. JAGA topik & konteks asli. TAMBAH penjelasan, contoh, dan detail. Output HANYA markdown yang sudah diperluas, tanpa teks lain.",
+            prompt: `Konten berikut terlalu pendek (kurang dari 300 kata). Kembangkan menjadi MINIMAL 300 kata tanpa mengubah topik. Judul: ${item.material.title}. Konsep: ${item.conceptHint || "(tidak disebut)"}.\n\nKonten asli:\n${item.material.content}`,
+            temperature: 0.5,
+          });
+          item.material.content = expanded;
+          console.log(
+            `[DAILY_MIX] Material item[${i}] expanded to ${countWords(expanded)} kata`,
+          );
+        } catch (expandErr) {
+          console.warn(
+            `[DAILY_MIX] Gagal expand material item[${i}], pake konten asli:`, expandErr,
+          );
+        }
+      }
+    }
+
     const parsed = dailyMixPlanSchema.parse(mapped);
     validateMixPlan(parsed, mix);
     return parsed;
@@ -1011,13 +1043,38 @@ Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" leb
     text: result.text,
   });
 
-  materialContentSchema.parse({ content: result.text });
+  let finalContent = result.text;
 
-  const keyPoints = await extractKeyPoints(result.text);
+  // 🔴 Auto-expand kalo content pendek instead of throw & retry
+  if (countWords(finalContent) < 300) {
+    console.log(
+      `[MATERIAL_MD] Content ${countWords(finalContent)} kata, expanding...`,
+    );
+    try {
+      const { text: expanded } = await generateText({
+        model: chatModel,
+        system:
+          "Kamu adalah tutor AI. Tugasmu: perluas konten materi belajar yang terlalu pendek. JAGA topik & konteks asli. TAMBAH penjelasan, contoh, dan detail. Output HANYA markdown yang sudah diperluas, tanpa teks lain.",
+        prompt: `Konten berikut terlalu pendek (kurang dari 300 kata). Kembangkan menjadi MINIMAL 300 kata tanpa mengubah topik. Judul: ${args.conceptName}.\n\nKonten asli:\n${finalContent}`,
+        temperature: 0.5,
+      });
+      finalContent = expanded;
+      console.log(
+        `[MATERIAL_MD] Expanded to ${countWords(finalContent)} kata`,
+      );
+    } catch (expandErr) {
+      console.warn(
+        "[MATERIAL_MD] Gagal expand, pake konten asli:",
+        expandErr,
+      );
+    }
+  }
+
+  const keyPoints = await extractKeyPoints(finalContent);
 
   return {
     title: `${args.conceptName} — Panduan Singkat`,
-    content: result.text,
+    content: finalContent,
     keyPoints,
     estimatedMinutes: Math.max(
       10,
