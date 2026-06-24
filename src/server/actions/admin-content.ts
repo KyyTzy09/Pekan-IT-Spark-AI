@@ -15,7 +15,12 @@ async function requireAdmin() {
 
 async function logAdminAction(
   adminId: string,
-  action: "CONTENT_DELETE" | "CUSTOM_SUBJECT_APPROVE" | "CUSTOM_SUBJECT_REJECT",
+  action:
+    | "CONTENT_CREATE"
+    | "CONTENT_UPDATE"
+    | "CONTENT_DELETE"
+    | "CUSTOM_SUBJECT_APPROVE"
+    | "CUSTOM_SUBJECT_REJECT",
   targetType: string,
   targetId: string,
   note?: string,
@@ -89,48 +94,90 @@ export async function listAllSubjects(input: {
     prisma.subject.count({ where }),
   ]);
 
-  // For each subject, count concepts (sum across topics) and questions
-  const items: AdminSubjectListItem[] = await Promise.all(
-    rows.map(async (s) => {
-      const topicIds = (
-        await prisma.topic.findMany({
-          where: { subjectId: s.id },
-          select: { id: true },
-        })
-      ).map((t) => t.id);
-      const [conceptCount, questionCount] = await Promise.all([
-        prisma.concept.count({ where: { topicId: { in: topicIds } } }),
-        prisma.question.count({
-          where: { concept: { topicId: { in: topicIds } } },
-        }),
-      ]);
-      return {
-        id: s.id,
-        slug: s.slug,
-        name: s.name,
-        description: s.description,
-        icon: s.icon,
-        color: s.color,
-        order: s.order,
-        isCustom: s.isCustom,
-        isActive: s.isActive,
-        isVerified: s.isVerified,
-        source: s.source,
-        topicCount: s._count.topics,
-        conceptCount,
-        questionCount,
-        createdBy: s.createdBy
-          ? {
-              id: s.createdBy.id,
-              name: s.createdBy.name,
-              email: s.createdBy.email,
-            }
-          : null,
-        createdAt: s.createdAt.toISOString(),
-        updatedAt: s.updatedAt.toISOString(),
-      };
-    }),
-  );
+  // Batch query: count concepts & questions per subject via topic grouping
+  const allSubjectIds = rows.map((s) => s.id);
+  const topicsInSubjects = await prisma.topic.findMany({
+    where: { subjectId: { in: allSubjectIds } },
+    select: { id: true, subjectId: true },
+  });
+  const topicIdsBySubject = new Map<string, string[]>();
+  for (const t of topicsInSubjects) {
+    const arr = topicIdsBySubject.get(t.subjectId) ?? [];
+    arr.push(t.id);
+    topicIdsBySubject.set(t.subjectId, arr);
+  }
+  const allTopicIds = topicsInSubjects.map((t) => t.id);
+
+  const [conceptCounts, questionCounts, conceptsForMapping] =
+    await Promise.all([
+      prisma.concept.groupBy({
+        by: ["topicId"],
+        where: { topicId: { in: allTopicIds } },
+        _count: { _all: true },
+      }),
+      prisma.question.groupBy({
+        by: ["conceptId"],
+        where: { concept: { topicId: { in: allTopicIds } } },
+        _count: { _all: true },
+      }),
+      prisma.concept.findMany({
+        where: { topicId: { in: allTopicIds } },
+        select: { id: true, topicId: true },
+      }),
+    ]);
+
+  const conceptCountByTopic = new Map<string, number>();
+  for (const c of conceptCounts) {
+    conceptCountByTopic.set(c.topicId, c._count._all);
+  }
+
+  const questionCountByConcept = new Map<string, number>();
+  for (const q of questionCounts) {
+    questionCountByConcept.set(q.conceptId, q._count._all);
+  }
+  const questionCountByTopic = new Map<string, number>();
+  for (const c of conceptsForMapping) {
+    const qCount = questionCountByConcept.get(c.id) ?? 0;
+    questionCountByTopic.set(
+      c.topicId,
+      (questionCountByTopic.get(c.topicId) ?? 0) + qCount,
+    );
+  }
+
+  const items: AdminSubjectListItem[] = rows.map((s) => {
+    const tIds = topicIdsBySubject.get(s.id) ?? [];
+    let conceptCount = 0;
+    let questionCount = 0;
+    for (const tId of tIds) {
+      conceptCount += conceptCountByTopic.get(tId) ?? 0;
+      questionCount += questionCountByTopic.get(tId) ?? 0;
+    }
+    return {
+      id: s.id,
+      slug: s.slug,
+      name: s.name,
+      description: s.description,
+      icon: s.icon,
+      color: s.color,
+      order: s.order,
+      isCustom: s.isCustom,
+      isActive: s.isActive,
+      isVerified: s.isVerified,
+      source: s.source,
+      topicCount: s._count.topics,
+      conceptCount,
+      questionCount,
+      createdBy: s.createdBy
+        ? {
+            id: s.createdBy.id,
+            name: s.createdBy.name,
+            email: s.createdBy.email,
+          }
+        : null,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+    };
+  });
 
   return { items, total };
 }
@@ -168,33 +215,37 @@ export async function getAdminSubjectDetail(
   if (!s) return null;
 
   const topicIds = s.topics.map((t) => t.id);
-  const conceptCount = await prisma.concept.count({
-    where: { topicId: { in: topicIds } },
-  });
-  const questionCount = await prisma.question.count({
-    where: { concept: { topicId: { in: topicIds } } },
-  });
+  // Batch query: per-topic question count
+  const [conceptCount, questionCounts, conceptsForMapping] = await Promise.all([
+    prisma.concept.count({ where: { topicId: { in: topicIds } } }),
+    prisma.question.groupBy({
+      by: ["conceptId"],
+      where: { concept: { topicId: { in: topicIds } } },
+      _count: { _all: true },
+    }),
+    prisma.concept.findMany({
+      where: { topicId: { in: topicIds } },
+      select: { id: true, topicId: true },
+    }),
+  ]);
 
-  // Per-topic question count
-  const topicQuestionCounts = await prisma.question.groupBy({
-    by: ["conceptId"],
-    where: { concept: { topicId: { in: topicIds } } },
-    _count: { _all: true },
-  });
   const questionCountByConcept = new Map(
-    topicQuestionCounts.map((q) => [q.conceptId, q._count._all]),
+    questionCounts.map((q) => [q.conceptId, q._count._all]),
   );
   const conceptQuestionByTopic = new Map<string, number>();
-  for (const t of s.topics) {
-    let total = 0;
-    for (const c of await prisma.concept.findMany({
-      where: { topicId: t.id },
-      select: { id: true },
-    })) {
-      total += questionCountByConcept.get(c.id) ?? 0;
-    }
-    conceptQuestionByTopic.set(t.id, total);
+  for (const c of conceptsForMapping) {
+    const qCount = questionCountByConcept.get(c.id) ?? 0;
+    conceptQuestionByTopic.set(
+      c.topicId,
+      (conceptQuestionByTopic.get(c.topicId) ?? 0) + qCount,
+    );
   }
+
+  // Total question count across all topics
+  const questionCount = [...conceptQuestionByTopic.values()].reduce(
+    (sum, n) => sum + n,
+    0,
+  );
 
   return {
     id: s.id,
@@ -288,7 +339,7 @@ export async function createSubject(
   });
   await logAdminAction(
     adminId,
-    "CONTENT_DELETE",
+    "CONTENT_CREATE",
     "Subject",
     subject.id,
     undefined,
@@ -348,7 +399,7 @@ export async function updateSubject(
     await tx.adminAuditLog.create({
       data: {
         adminId,
-        action: "CONTENT_DELETE",
+        action: "CONTENT_UPDATE",
         targetType: "Subject",
         targetId: subjectId,
         metadata: {
@@ -412,7 +463,7 @@ export async function createTopic(
   });
   await logAdminAction(
     adminId,
-    "CONTENT_DELETE",
+    "CONTENT_CREATE",
     "Topic",
     topic.id,
     undefined,
@@ -457,7 +508,7 @@ export async function updateTopic(
     await tx.adminAuditLog.create({
       data: {
         adminId,
-        action: "CONTENT_DELETE",
+        action: "CONTENT_UPDATE",
         targetType: "Topic",
         targetId: topicId,
         metadata: {
@@ -519,7 +570,7 @@ export async function createConcept(
   });
   await logAdminAction(
     adminId,
-    "CONTENT_DELETE",
+    "CONTENT_CREATE",
     "Concept",
     concept.id,
     undefined,
@@ -564,7 +615,7 @@ export async function updateConcept(
     await tx.adminAuditLog.create({
       data: {
         adminId,
-        action: "CONTENT_DELETE",
+        action: "CONTENT_UPDATE",
         targetType: "Concept",
         targetId: conceptId,
         metadata: {

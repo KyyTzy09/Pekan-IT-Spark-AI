@@ -165,36 +165,73 @@ export async function listCustomSubjects(input: {
     prisma.subject.count({ where }),
   ]);
 
-  // For each subject, count concepts and pretest questions
+  // Batch query: count concepts & questions per subject via topic grouping
   const subjectIds = rows.map((r) => r.id);
-  const conceptCounts = await prisma.concept.groupBy({
-    by: ["topicId"],
-    where: { topic: { subjectId: { in: subjectIds } } },
-    _count: { _all: true },
+  const topicsWithSubjects = await prisma.topic.findMany({
+    where: { subjectId: { in: subjectIds } },
+    select: { id: true, subjectId: true },
   });
-  const conceptCountBySubject = new Map<string, number>();
-  for (const c of conceptCounts) {
-    // We need to look up topicId -> subjectId; simpler: re-query
+  const topicIdsBySubject = new Map<string, string[]>();
+  for (const t of topicsWithSubjects) {
+    const arr = topicIdsBySubject.get(t.subjectId) ?? [];
+    arr.push(t.id);
+    topicIdsBySubject.set(t.subjectId, arr);
   }
-  // Simpler: re-query per subject
-  const subjectStats = await Promise.all(
-    rows.map(async (s) => {
-      const topicIds = (
-        await prisma.topic.findMany({
-          where: { subjectId: s.id },
-          select: { id: true },
-        })
-      ).map((t) => t.id);
-      const [conceptCount, pretestCount] = await Promise.all([
-        prisma.concept.count({ where: { topicId: { in: topicIds } } }),
-        prisma.question.count({
-          where: { concept: { topicId: { in: topicIds } } },
-        }),
-      ]);
-      return { id: s.id, conceptCount, pretestCount };
+  const allTopicIds = topicsWithSubjects.map((t) => t.id);
+
+  const [conceptCounts, questionCounts] = await Promise.all([
+    prisma.concept.groupBy({
+      by: ["topicId"],
+      where: { topicId: { in: allTopicIds } },
+      _count: { _all: true },
     }),
-  );
-  const statsMap = new Map(subjectStats.map((s) => [s.id, s]));
+    prisma.question.groupBy({
+      by: ["conceptId"],
+      where: { concept: { topicId: { in: allTopicIds } } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  // Map conceptCount by topicId
+  const conceptCountByTopic = new Map<string, number>();
+  for (const c of conceptCounts) {
+    conceptCountByTopic.set(c.topicId, c._count._all);
+  }
+
+  // Map questionCount by conceptId, then aggregate per topic
+  const questionCountByConcept = new Map<string, number>();
+  for (const q of questionCounts) {
+    questionCountByConcept.set(q.conceptId, q._count._all);
+  }
+  // Need concept->topic mapping for question aggregation
+  const conceptsForMapping = await prisma.concept.findMany({
+    where: { topicId: { in: allTopicIds } },
+    select: { id: true, topicId: true },
+  });
+  const questionCountByTopic = new Map<string, number>();
+  for (const c of conceptsForMapping) {
+    const qCount = questionCountByConcept.get(c.id) ?? 0;
+    questionCountByTopic.set(
+      c.topicId,
+      (questionCountByTopic.get(c.topicId) ?? 0) + qCount,
+    );
+  }
+
+  // Aggregate per subject
+  const statsMap = new Map<
+    string,
+    { conceptCount: number; pretestCount: number }
+  >();
+  for (const s of rows) {
+    const tIds = topicIdsBySubject.get(s.id) ?? [];
+    let conceptCount = 0;
+    let pretestCount = 0;
+    for (const tId of tIds) {
+      conceptCount += conceptCountByTopic.get(tId) ?? 0;
+      pretestCount += questionCountByTopic.get(tId) ?? 0;
+    }
+    statsMap.set(s.id, { conceptCount, pretestCount });
+  }
 
   const items: CustomSubjectListItem[] = rows.map((r) => ({
     id: r.id,
