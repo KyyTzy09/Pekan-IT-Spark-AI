@@ -79,6 +79,7 @@ interface ChallengeListViewProps {
   availableSubjects: SubjectOption[];
   initiallyEmpty?: boolean;
   weeklyChallenge?: any;
+  hasSubjects?: boolean;
 }
 
 type Filter = "all" | "active" | "completed";
@@ -93,6 +94,7 @@ export function ChallengeListView({
   availableSubjects,
   initiallyEmpty,
   weeklyChallenge,
+  hasSubjects = true,
 }: ChallengeListViewProps) {
   const router = useRouter();
   const [challenges, setChallenges] =
@@ -205,6 +207,36 @@ export function ChallengeListView({
 
   return (
     <div className="space-y-5 sm:space-y-7">
+      {/* UX-FIX: Show banner when user hasn't selected any subjects */}
+      {!hasSubjects && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600">
+              <Settings2 size={16} strokeWidth={2.2} />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[13px] font-bold text-amber-800 dark:text-amber-200">
+                Kamu belum pilih mapel
+              </p>
+              <p className="text-[12px] leading-relaxed text-amber-700/80 dark:text-amber-300/70">
+                Pilih mapel yang mau kamu pelajari di Settings supaya tantangan harian dan mingguan bisa di-generate sesuai kebutuhanmu.
+              </p>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="mt-2 border-amber-500/40 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 dark:text-amber-200"
+              >
+                <Link href="/settings">
+                  <Settings2 size={13} />
+                  Pilih Mapel
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Reveal>
         <header className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl sm:p-7">
           <div

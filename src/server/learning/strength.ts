@@ -40,7 +40,9 @@ export function pickChallengeSubjectIds(
   if (profile.focusedSubjects.length > 0) {
     return profile.focusedSubjects.slice(0, MAX_CHALLENGE_SUBJECTS);
   }
-  return nationalFallbackIds.slice(0, MAX_CHALLENGE_SUBJECTS);
+  // BUG-FIX: Return empty array when user hasn't selected any subjects.
+  // Don't fallback to national subjects — let the caller handle "no subjects" case.
+  return [];
 }
 
 export function distributeChallengeSubjects(

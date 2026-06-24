@@ -45,7 +45,7 @@ const profileSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
     .nullable(),
-  focusedSubjects: z.array(z.string()).default([]),
+  focusedSubjects: z.array(z.string()).min(1, "Pilih minimal 1 mapel").max(4).default([]),
 });
 
 const completeSchema = z.object({

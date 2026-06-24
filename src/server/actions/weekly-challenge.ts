@@ -155,19 +155,12 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     focusedSubjects: profile.focusedSubjects.length,
   });
 
-  const nationalFallbacks = await prisma.subject.findMany({
-    where: { isActive: true, isCustom: false },
-    select: { id: true },
-    orderBy: { order: "asc" },
-    take: MAX_CHALLENGE_SUBJECTS,
-  });
-
   const subjectIds = pickChallengeSubjectIds(
     {
       challengeSubjectIds: profile.weeklyChallengeSubjectIds,
       focusedSubjects: profile.focusedSubjects,
     },
-    nationalFallbacks.map((s) => s.id),
+    [], // BUG-FIX: No fallback — empty array if no subjects selected
   );
 
   console.log("[WEEKLY_CHALLENGE] Subject selection", {
@@ -176,8 +169,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   });
 
   if (subjectIds.length === 0) {
-    console.log("[WEEKLY_CHALLENGE] No subjects available", { userId });
-    return { ok: false, error: "Tidak ada mapel untuk tantangan mingguan" };
+    console.log("[WEEKLY_CHALLENGE] No subjects selected — skipping generation", { userId });
+    return { ok: false, error: "Pilih mapel dulu di Settings untuk tantangan mingguan." };
   }
 
   const subjectInputs: WeeklySubjectInput[] = [];

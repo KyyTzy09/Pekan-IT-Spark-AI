@@ -147,9 +147,27 @@ export interface ChallengeDetail {
 export async function getTodayChallenges(): Promise<{
   challenges: ChallengeListItem[];
   progress: { total: number; completed: number; points: number };
+  hasSubjects: boolean;
 }> {
   const userId = await requireStudent();
   const today = startOfToday();
+
+  // BUG-FIX: Check if user has selected subjects before generating
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { challengeSubjectIds: true, focusedSubjects: true },
+  });
+  const hasSubjects =
+    (profile?.challengeSubjectIds?.length ?? 0) > 0 ||
+    (profile?.focusedSubjects?.length ?? 0) > 0;
+
+  if (!hasSubjects) {
+    return {
+      challenges: [],
+      progress: { total: 0, completed: 0, points: 0 },
+      hasSubjects: false,
+    };
+  }
 
   const challenges = await fetchChallengesForDate(userId, today);
 
@@ -169,6 +187,7 @@ export async function getTodayChallenges(): Promise<{
       completed,
       points,
     },
+    hasSubjects: true,
   };
 }
 
@@ -280,19 +299,12 @@ export async function generateAndStoreDailyChallenges(
     focusedSubjects: profile.focusedSubjects.length,
   });
 
-  const nationalFallbacks = await prisma.subject.findMany({
-    where: { isActive: true, isCustom: false },
-    select: { id: true },
-    orderBy: { order: "asc" },
-    take: DAILY_CHALLENGE_SUBJECTS,
-  });
-
   const subjectIds = pickChallengeSubjectIds(
     {
       challengeSubjectIds: profile?.challengeSubjectIds ?? [],
       focusedSubjects: profile?.focusedSubjects ?? [],
     },
-    nationalFallbacks.map((s) => s.id),
+    [], // BUG-FIX: No fallback — let empty array propagate
   );
 
   console.log("[DAILY_CHALLENGE] Subject selection", {
@@ -301,7 +313,7 @@ export async function generateAndStoreDailyChallenges(
   });
 
   if (subjectIds.length === 0) {
-    console.log("[DAILY_CHALLENGE] No subjects to generate", { userId });
+    console.log("[DAILY_CHALLENGE] No subjects selected — skipping generation", { userId });
     return;
   }
 
@@ -2434,6 +2446,19 @@ function startOfWeek(d: Date): Date {
 export async function getOrCreateWeeklyChallenge(): Promise<any> {
   const userId = await requireStudent();
   const monday = startOfWeek(new Date());
+
+  // BUG-FIX: Check if user has selected subjects before generating weekly
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { weeklyChallengeSubjectIds: true, focusedSubjects: true },
+  });
+  const hasSubjects =
+    (profile?.weeklyChallengeSubjectIds?.length ?? 0) > 0 ||
+    (profile?.focusedSubjects?.length ?? 0) > 0;
+
+  if (!hasSubjects) {
+    return null;
+  }
 
   const existing = await prisma.weeklyChallenge.findUnique({
     where: { userId_weekStart: { userId, weekStart: monday } },

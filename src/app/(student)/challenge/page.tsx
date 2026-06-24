@@ -124,6 +124,7 @@ export default async function ChallengePage() {
       availableSubjects={subjectsWithMastery}
       initiallyEmpty={false}
       weeklyChallenge={weeklyChallenge}
+      hasSubjects={result.hasSubjects}
     />
   );
 }
