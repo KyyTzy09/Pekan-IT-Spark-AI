@@ -1,67 +1,72 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Spark AI — Agent Guide
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+## Stack
 
-## RTK (Rust Token Killer)
+Next.js 16 (App Router) + React 19 + Bun + Prisma 7 + PostgreSQL + Biome + Vitest + Tailwind v4 + shadcn (radix-rhea)
 
-> **🔴 ATURAN WAJIB: SEMUA command line WAJIB diawali `rtk`. Tidak ada pengecualian. Setiap command yang gue tulis atau execute di terminal HARUS pake `rtk` di depannya.**
+## Commands
 
-RTK menghemat tokens dengan mengkompresi output sebelum sampai ke LLM context.
+```bash
+rtk bun dev                    # dev server
+rtk bun run build              # prisma generate + next build
+rtk bun run lint               # biome check
+rtk bun run format             # biome format --write
+rtk bun run typecheck          # tsc --noEmit
+rtk bun test                   # vitest run
+rtk bun run db:migrate         # prisma migrate dev
+rtk bun run db:generate        # prisma generate
+rtk bun run db:seed            # seed curriculum data
+rtk bun run db:seed:student    # seed test student
+```
 
-| Standar | RTK |
-|---------|-----|
-| `ls -la` | `rtk ls -la` |
-| `grep -r "pattern" src/` | `rtk grep "pattern" src/` |
-| `find . -name "*.ts"` | `rtk find -name "*.ts"` |
-| `git status` | `rtk git status` |
-| `git diff` | `rtk git diff` |
-| `git log --oneline -10` | `rtk git log --oneline -10` |
-| `npm test` | `rtk npm test` |
-| `npx prisma generate` | `rtk npx prisma generate` |
-| `cat package.json` | `rtk read package.json` |
-| `read` | `rtk read` |
+Always run `typecheck` + `lint` before claiming work is done.
 
-**Perintah yang TIDAK perlu RTK (rtk gak mempan):**
-- `cd`, `mkdir`, `rm`, `cp`, `mv` (file operations, bukan output-heavy)
-- `rtk` sendiri (meta commands)
+## Architecture
 
-### ⚡ Aturan Khusus Bun
+- **Route groups**: `(student)/`, `(admin)/`, `(parent)/`, `(public)/`, `(onboarding)/` — each has its own layout
+- **Server actions**: `src/server/actions/*.ts` — all use `"use server"` directive, Zod validation, return `{ error?, fieldErrors? }`
+- **API routes**: `src/app/api/` — RESTful endpoints for chat streaming, challenges, documents, etc.
+- **AI layer**: `src/server/ai/` — tutor, challenge generator, evaluator, RAG, curriculum
+- **Auth**: Custom JWT via `jose` (NOT NextAuth). Session stored in httpOnly cookie. See `src/lib/session.ts`
+- **Prisma client**: Generated to `generated/prisma` (NOT `@prisma/client` default). Import from `../../generated/prisma/client` in server files, or `@/lib/prisma` for the singleton
+- **Path alias**: `@/` maps to `src/`
 
-> **Proyek ini pakai Bun. SEMUA perintah `bun` WAJIB pakai `rtk`. Tidak ada alasan untuk lupa.**
+## AI Integration
 
-| Standar | RTK |
-|---------|-----|
-| `bun run build` | `rtk bun run build` |
-| `bun run dev` | `rtk bun run dev` |
-| `bun run <script>` | `rtk bun run <script>` |
-| `bun test` | `rtk bun test` |
-| `bun install` | `rtk bun install` |
-| `bun add <pkg>` | `rtk bun add <pkg>` |
-| `bun remove <pkg>` | `rtk bun remove <pkg>` |
-| `bun update` | `rtk bun update` |
-| `bun x <pkg>` | `rtk bun x <pkg>` |
-| `bun create <template>` | `rtk bun create <template>` |
-| `bun pm <cmd>` | `rtk bun pm <cmd>` |
-| `bun prisma <cmd>` | `rtk bun prisma <cmd>` |
-| `bun <script.ts>` | `rtk bun <script.ts>` |
-| `bun --bun <cmd>` | `rtk bun --bun <cmd>` |
+Multi-provider fallback chain in `src/lib/ai.ts`:
+1. Groq (with key rotation across `GROQ_API_KEY`, `GROQ_API_KEY_2`, `GROQ_API_KEY_3`)
+2. Gemini (free fallback)
+3. Sumopod (deepseek-v4-flash)
 
-## ⚠️ Panduan RTK Grep (beda dengan grep biasa!)
+Model selection: `model: "heavy"` uses Groq/fallback chain; `model: "fast"` uses Sumopod directly.
 
-RTK grep **TIDAK** support flag GNU grep kayak `--type`, `--include`, `-r`. Ini yang bener:
+## Prisma
 
-| ❌ Gagal (GNU syntax) | ✅ Berhasil (RTK syntax) |
-|------------------------|--------------------------|
-| `rtk grep -r "pattern" src/ --type ts` | `rtk grep "pattern" src/` |
-| `rtk grep --include="*.ts" -r "pattern"` | `rtk grep "pattern" src/` |
-| `rtk grep -r "pattern" .` | `rtk grep "pattern" .` |
+- Schema: `prisma/schema.prisma`
+- Migrations: `prisma/migrations/`
+- Seeds: `prisma/seed.ts`, `prisma/seed-student.ts`, `prisma/seed-parent.ts`
+- Config: `prisma.config.ts` (runs with `bun --bun run prisma`)
+- Prisma commands need `rtk bunx prisma <cmd>` or the npm script equivalents
 
-**Aturan:**
-1. **Gak usah pake** `-r`, `--type`, `--include`, `-l` — RTK udah otomatis recursive
-2. **Directory** cukup taruh di akhir sebagai argument biasa: `rtk grep "kata" src/components/`
-3. File extension filtering: cukup kasih directory aja, RTK udah tau file mana yang relevan
+## Testing
 
-**Cek help:** `rtk --help` atau `rtk <command> --help`
+- Vitest, config in `vitest.config.ts`
+- Tests live in `__tests__/` directories adjacent to source: `src/server/ai/__tests__/`, `src/server/learning/__tests__/`, `src/server/__tests__/`
+- Pattern: `*.test.ts`
+- Run: `rtk bun test`
 
+## UI
 
+- shadcn components in `src/components/ui/` (style: radix-rhea)
+- Tailwind v4 via `@tailwindcss/postcss`
+- Fonts: Fredoka (headings), Nunito (body), Geist (mono)
+- Animations: Framer Motion
+- Icons: Lucide
+
+## Key Patterns
+
+- Server actions return `AuthActionState` shape: `{ error?: string, fieldErrors?: Record<string, string> }`
+- Rate limiting via DB-backed `RateLimit` model (`src/lib/rate-limit.ts`)
+- AI quota tracking per user per day (`DailyAiQuota` model)
+- Embeddings stored as text (JSON-serialized arrays), not native pgvector
+- `safeParseJson()` in `src/lib/ai.ts` handles messy LLM JSON output (code fences, trailing commas, comments)
