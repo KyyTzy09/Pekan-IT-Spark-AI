@@ -119,10 +119,11 @@ model User {
   image         String?
   passwordHash  String?
   role          Role      @default(STUDENT)
-  isOnboarded   Boolean   @default(false)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  isOnboarded    Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   studentProfile      StudentProfile?
   parentProfile       ParentProfile?
@@ -899,4 +900,12 @@ model ParentTipCache {
   @@unique([studentId, forDate])
   @@index([studentId])
   @@map("parent_tip_cache")
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int      @default(1)
+  resetAt DateTime
+
+  @@map("rate_limits")
 }

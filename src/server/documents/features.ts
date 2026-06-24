@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { fastModel, generateText } from "@/lib/ai";
+import { fastModel, generateText, safeParseJson } from "@/lib/ai";
 import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 import { retrieveDocumentChunks } from "./embeddings";
@@ -88,25 +88,6 @@ Format output harus JSON valid dengan struktur:
     }
   ]
 }`;
-
-function safeParseJson(text: string): unknown {
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/```\s*$/, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch (err) {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
-      } catch (_e) {}
-    }
-    throw err;
-  }
-}
 
 export async function generateDocumentSummary(
   content: string,

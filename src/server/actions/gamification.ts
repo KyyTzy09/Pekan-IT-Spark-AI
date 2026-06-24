@@ -69,7 +69,10 @@ export async function addXp(
     throw new Error("FORBIDDEN");
   }
 
-  if (amount === 0) {
+  // Prevent negative XP
+  const safeAmount = Math.max(0, Math.floor(amount));
+
+  if (safeAmount === 0) {
     const profile = await prisma.studentProfile.findUnique({
       where: { userId },
       select: { totalXp: true, level: true },
@@ -90,14 +93,14 @@ export async function addXp(
     await tx.xpTransaction.create({
       data: {
         userId,
-        amount,
+        amount: safeAmount,
         source,
         metadata: (metadata ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     });
     const updated = await tx.studentProfile.update({
       where: { userId },
-      data: { totalXp: { increment: amount } },
+      data: { totalXp: { increment: safeAmount } },
       select: { totalXp: true, level: true },
     });
 
@@ -123,7 +126,7 @@ export async function addXp(
   revalidatePath("/dashboard");
 
   return {
-    amount,
+    amount: safeAmount,
     totalXp: result.newTotalXp,
     level: result.level,
     levelName: result.levelName,

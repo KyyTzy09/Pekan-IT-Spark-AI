@@ -1,6 +1,7 @@
 import "server-only";
 
 import { embed, embeddingModel } from "@/lib/ai";
+import { aiLog, EMOJI } from "@/lib/ai-logger";
 import { prisma } from "@/lib/prisma";
 
 function parseEmbedding(raw: string): number[] {
@@ -45,9 +46,7 @@ interface SearchOptions {
 export async function retrieveContext(
   options: SearchOptions,
 ): Promise<RetrievedDocument[]> {
-  console.log("[AI_SERVICE] retrieveContext start", {
-    query: options.query,
-  });
+  aiLog.info(`${EMOJI.start} retrieveContext — "${options.query.slice(0, 50)}..."`);
 
   try {
     return await Promise.race([
@@ -57,10 +56,7 @@ export async function retrieveContext(
       ),
     ]);
   } catch (e: unknown) {
-    console.warn(
-      "[AI_SERVICE] Vector retrieveContext timed out or failed, falling back to keywordSearch:",
-      e instanceof Error ? e.message : String(e),
-    );
+    aiLog.warn(`${EMOJI.warn} retrieveContext timeout/gagal, pakai keyword search`);
     return keywordSearch(options);
   }
 }
@@ -77,7 +73,7 @@ async function retrieveContextInner(
       value: query,
     });
 
-    console.log("[AI_SERVICE] retrieveContext: querying concepts...");
+    aiLog.info(`${EMOJI.search} Mencari konsep yang relevan...`);
     // 1) Search concepts (Prisma + JS cosine similarity, since embedding
     //    column is @db.Text, not pgvector)
     const concepts = await prisma.concept.findMany({
@@ -88,9 +84,7 @@ async function retrieveContextInner(
         embeddings: { select: { embedding: true } },
       },
     });
-    console.log(
-      `[AI_SERVICE] retrieveContext: got ${concepts.length} concepts`,
-    );
+    aiLog.info(`${EMOJI.ok} Ditemukan ${concepts.length} konsep`);
 
     const conceptScored = concepts
       .map((c) => {
@@ -121,8 +115,9 @@ async function retrieveContextInner(
       });
     }
 
-    console.log("[AI_SERVICE] retrieveContext: querying document chunks...");
+    aiLog.info(`${EMOJI.search} Mencari chunk dokumen...`);
     // 2) Search user document chunks directly using the pre-calculated chunk embeddings
+    // Limit to 200 chunks max to prevent OOM with large document collections
     const chunks = await prisma.documentEmbedding.findMany({
       where: { document: { userId } },
       select: {
@@ -131,10 +126,10 @@ async function retrieveContextInner(
         embedding: true,
         document: { select: { originalName: true } },
       },
+      take: 200,
+      orderBy: { createdAt: "desc" },
     });
-    console.log(
-      `[AI_SERVICE] retrieveContext: got ${chunks.length} total document chunks`,
-    );
+    aiLog.info(`${EMOJI.ok} Ditemukan ${chunks.length} chunk dokumen`);
 
     if (chunks.length > 0) {
       const chunkScored = chunks
@@ -158,14 +153,9 @@ async function retrieveContextInner(
       results.push(...chunkScored);
     }
 
-    console.log(
-      `[AI_SERVICE] retrieveContext: completed, total context: ${results.length} items`,
-    );
+    aiLog.info(`${EMOJI.ok} retrieveContext selesai — ${results.length} item konteks`);
   } catch (e: unknown) {
-    console.warn(
-      "Vector search failed, falling back to keyword search:",
-      e instanceof Error ? e.message : String(e),
-    );
+    aiLog.warn(`${EMOJI.warn} Vector search gagal, pakai keyword search`);
     return keywordSearch(options);
   }
 
@@ -234,7 +224,7 @@ async function keywordSearch(
 }
 
 export async function getRelevantConcepts(query: string, subjectId?: string) {
-  console.log("[AI_SERVICE] getRelevantConcepts start", { query });
+  aiLog.info(`${EMOJI.start} getRelevantConcepts — "${query.slice(0, 50)}..."`);
   try {
     return await Promise.race([
       getRelevantConceptsInner(query, subjectId),
@@ -243,10 +233,7 @@ export async function getRelevantConcepts(query: string, subjectId?: string) {
       ),
     ]);
   } catch (e: unknown) {
-    console.warn(
-      "[AI_SERVICE] getRelevantConcepts timed out or failed, falling back to keyword search:",
-      e instanceof Error ? e.message : String(e),
-    );
+    aiLog.warn(`${EMOJI.warn} getRelevantConcepts timeout, pakai keyword search`);
     return keywordRelevantConcepts(query, subjectId);
   }
 }

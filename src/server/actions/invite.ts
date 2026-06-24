@@ -1,5 +1,6 @@
 "use server";
 
+import { randomInt } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -11,7 +12,7 @@ const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function generateInviteCode(length = 8) {
   let out = "";
   for (let i = 0; i < length; i += 1) {
-    out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    out += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
   }
   return out;
 }

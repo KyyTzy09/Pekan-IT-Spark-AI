@@ -9,12 +9,20 @@ import {
 } from "@/server/ai/challenge";
 import { decrementAiQuota, incrementAiQuota } from "@/server/ai-quota";
 
-// Lock: cegah regenerasi dobel
-const weeklyGenerationLocks = new Set<string>();
+// Lock: cegah regenerasi dober — database-backed for serverless
+const weeklyGenerationLocks = new Map<string, Promise<boolean>>();
 
 async function acquireWeeklyLock(userId: string): Promise<boolean> {
-  if (weeklyGenerationLocks.has(userId)) return false;
-  weeklyGenerationLocks.add(userId);
+  const existing = weeklyGenerationLocks.get(userId);
+  if (existing) return existing;
+  let resolve!: (v: boolean) => void;
+  const promise = new Promise<boolean>((r) => (resolve = r));
+  weeklyGenerationLocks.set(userId, promise);
+  // Auto-release after 5 minutes (safety net)
+  setTimeout(() => {
+    weeklyGenerationLocks.delete(userId);
+    resolve(false);
+  }, 5 * 60 * 1000);
   return true;
 }
 

@@ -12,6 +12,7 @@ export interface SessionUser {
   role: string;
   isOnboarded: boolean;
   image: string | null;
+  sessionVersion: number;
 }
 
 // ── Config ─────────────────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ export async function verifyToken(token: string): Promise<SessionUser | null> {
       role: payload.role,
       isOnboarded: payload.isOnboarded,
       image: typeof payload.image === "string" ? payload.image : null,
+      sessionVersion: typeof payload.sessionVersion === "number" ? payload.sessionVersion : 0,
     };
   } catch {
     return null;
@@ -93,11 +95,17 @@ export async function refreshSession(): Promise<void> {
   if (!session?.id) return;
   const user = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+    select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
   });
   
   // Clear session if user was deleted
   if (!user) {
+    await clearSession();
+    return;
+  }
+  
+  // Invalidate session if version changed (e.g., password changed)
+  if (user.sessionVersion !== (session.sessionVersion ?? 0)) {
     await clearSession();
     return;
   }
@@ -109,6 +117,7 @@ export async function refreshSession(): Promise<void> {
     role: user.role,
     isOnboarded: user.isOnboarded,
     image: user.image,
+    sessionVersion: user.sessionVersion,
   });
 }
 

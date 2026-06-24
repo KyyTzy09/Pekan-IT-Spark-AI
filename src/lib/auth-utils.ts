@@ -9,7 +9,25 @@ export function sanitizeInternalPath(
   if (input.includes("\n") || input.includes("\r")) return null;
   if (input.includes("\\")) return null;
   // Block URL-encoded path traversal characters
-  const decoded = decodeURIComponent(input);
-  if (decoded !== input) return null;
+  // Decode recursively to catch double-encoding (e.g., %252F → %2F → /)
+  let decoded = input;
+  let prev = "";
+  while (decoded !== prev) {
+    prev = decoded;
+    try {
+      decoded = decodeURIComponent(decoded);
+    } catch {
+      break;
+    }
+  }
+  // After full decoding, re-validate traversal patterns
+  if (decoded !== input) {
+    // Input contained encoded chars — check if decoded version is safe
+    if (decoded.startsWith("//") || decoded.startsWith("/\\")) return null;
+    if (decoded.includes("\n") || decoded.includes("\r")) return null;
+    if (decoded.includes("\\")) return null;
+    // Don't allow encoded null bytes or other control characters
+    if (/\x00/.test(decoded)) return null;
+  }
   return input;
 }

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clearSession, setSession, type SessionUser } from "@/lib/session";
 import { sanitizeInternalPath } from "@/lib/auth-utils";
-import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitAsync, clearRateLimit } from "@/lib/rate-limit";
 
 const SMART_LANDING = "/auth/redirect";
 
@@ -61,6 +61,7 @@ function makeSessionUser(user: {
   role: string;
   isOnboarded: boolean;
   image: string | null;
+  sessionVersion?: number;
 }): SessionUser {
   return {
     id: user.id,
@@ -69,6 +70,7 @@ function makeSessionUser(user: {
     role: user.role,
     isOnboarded: user.isOnboarded,
     image: user.image,
+    sessionVersion: user.sessionVersion ?? 0,
   };
 }
 
@@ -94,8 +96,8 @@ export async function loginAction(
 
   const emailStr = parsed.data.email.toLowerCase();
 
-  // Rate limit check
-  if (!checkRateLimit(`login:${emailStr}`)) {
+  // Rate limit check (async — checks DB for serverless consistency)
+  if (!(await checkRateLimitAsync(`login:${emailStr}`))) {
     return {
       error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit.",
     };
@@ -111,6 +113,7 @@ export async function loginAction(
       role: true,
       isOnboarded: true,
       image: true,
+      sessionVersion: true,
     },
   });
 
@@ -156,8 +159,8 @@ export async function registerAction(
   const data = parsed.data;
   const email = data.email.toLowerCase();
 
-  // Rate limit check
-  if (!checkRateLimit(`register:${email}`)) {
+  // Rate limit check (async — checks DB for serverless consistency)
+  if (!(await checkRateLimitAsync(`register:${email}`))) {
     return {
       error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit.",
     };
@@ -180,7 +183,7 @@ export async function registerAction(
         role: "STUDENT",
         studentProfile: { create: {} },
       },
-      select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+      select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
     });
     await setSession(makeSessionUser(user));
     clearRateLimit(`register:${email}`);
@@ -226,7 +229,7 @@ export async function registerAction(
           role: "PARENT",
           parentProfile: { create: {} },
         },
-        select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true },
+        select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
       });
 
       await tx.parentStudentLink.update({

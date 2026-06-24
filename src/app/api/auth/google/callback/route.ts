@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // 3. Upsert user in DB
     const existing = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, role: true, isOnboarded: true, image: true },
+      select: { id: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
     });
 
     let user;
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
           name: googleUser.name ?? existing.name,
           image: googleUser.picture ?? existing.image,
         },
-        select: { id: true, name: true, email: true, role: true, isOnboarded: true, image: true },
+        select: { id: true, name: true, email: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
       });
     } else {
       user = await prisma.user.create({
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
           role: "STUDENT",
           studentProfile: { create: {} },
         },
-        select: { id: true, name: true, email: true, role: true, isOnboarded: true, image: true },
+        select: { id: true, name: true, email: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
       });
     }
 
@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
       role: user.role,
       isOnboarded: user.isOnboarded,
       image: user.image,
+      sessionVersion: user.sessionVersion,
     });
 
     // 5. Redirect to smart landing

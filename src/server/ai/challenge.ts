@@ -2,9 +2,12 @@ import "server-only";
 
 import { z } from "zod";
 import { chatModel, generateText } from "@/lib/ai";
+import { aiLog, formatErr, EMOJI } from "@/lib/ai-logger";
 import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 import type { SubjectSlug } from "../../../generated/prisma/client";
+
+const isDev = process.env.NODE_ENV !== "production";
 
 export const CHALLENGE_MIX_DEFAULT = {
   questions: 2,
@@ -245,10 +248,12 @@ function sanitizeJsonString(raw: string): string {
     } else {
       result += char;
     }
-    if (char === "\\" && !escaped) {
-      escaped = true;
-    } else {
+    // Track escape state: backslash toggles escaped, everything else resets
+    if (escaped) {
+      // Previous char was an unescaped backslash — this char is escaped
       escaped = false;
+    } else if (char === "\\" && inString) {
+      escaped = true;
     }
   }
   return result;
@@ -263,29 +268,28 @@ function safeParseJson(text: string): unknown {
     const sanitized = sanitizeJsonString(jsonCandidate);
     try {
       return JSON.parse(sanitized);
-    } catch (err) {
-      console.warn(
-        "safeParseJson failed to parse candidate:",
-        err,
-        "Sanitized candidate was:",
-        sanitized.slice(0, 300),
-      );
+    } catch (parseErr) {
+      aiLog.warn(`${EMOJI.warn} safeParseJson gagal parse kandidat: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
       throw new Error(
-        `JSON parsing failed: ${err instanceof Error ? err.message : String(err)}`,
+        `JSON parsing failed: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
       );
     }
   }
 
   const sanitizedClean = sanitizeJsonString(text.trim());
-  return JSON.parse(sanitizedClean);
+  try {
+    return JSON.parse(sanitizedClean);
+  } catch (finalErr) {
+    throw new Error(
+      `JSON parsing failed: no valid JSON object found in AI output. ${finalErr instanceof Error ? finalErr.message : String(finalErr)}`,
+    );
+  }
 }
 
 export async function generateDailyMix(
   input: DailyMixInput,
 ): Promise<DailyMixPlan> {
-  console.log("[AI_SERVICE] generateDailyMix start", {
-    userId: input.userId,
-  });
+  aiLog.info(`${EMOJI.start} generateDailyMix — user: ${input.userId}`);
   const mix = input.mix ?? CHALLENGE_MIX_DEFAULT;
   const totalItems = mix.questions + mix.materials + mix.reflections;
 
@@ -346,18 +350,14 @@ ${questionCatalog || "(tidak ada soal di bank — pakai MATERIAL/REFLECTION saja
 Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
 
   try {
-    console.log("[AI_SERVICE] generateDailyMix request", {
-      model: chatModel,
-      system: SYSTEM_PROMPT,
-      prompt: userPrompt,
-    });
+    aiLog.info(`${EMOJI.model} generateDailyMix → memanggil AI ...`);
     const { text } = await generateText({
       model: chatModel,
       system: SYSTEM_PROMPT,
       prompt: userPrompt,
       temperature: 0.7,
     });
-    console.log("[AI_SERVICE] generateDailyMix response", { text });
+    aiLog.info(`${EMOJI.ok} generateDailyMix selesai`);
 
     const rawJson = safeParseJson(text);
     const mapped = await tryMapAndRecoverMixPlan(rawJson, input);
@@ -369,7 +369,7 @@ Output: judul paket, deskripsi, list items sesuai komposisi, dan reasoning.`;
     validateMixPlan(parsed, mix);
     return parsed;
   } catch (err: unknown) {
-    console.warn("generateDailyMix failed. Error:", err);
+    aiLog.error(`${EMOJI.error} generateDailyMix gagal: ${formatErr(err)}`);
     throw err;
   }
 }
@@ -555,7 +555,7 @@ export async function tryMapAndRecoverMixPlan(
         });
         mappedItem.material = generatedMaterial;
       } catch (genErr) {
-        console.error("Failed to generate fallback material:", genErr);
+        aiLog.error(`${EMOJI.error} Fallback material gagal: ${formatErr(genErr)}`);
         mappedItem.material = {
           title: `${conceptName} — Panduan Singkat`,
           content: `## ${conceptName}\n\nMari pelajari konsep ${conceptName} ini. Konsep ini sangat penting untuk memahami dasar subjek ${subjectName}.\n\n### Pengantar\n${rationale}\n\n💭 Coba pikirkan: Bagaimana menerapkan konsep ini dalam kehidupan sehari-hari?`,
@@ -578,7 +578,7 @@ export async function tryMapAndRecoverMixPlan(
         });
         mappedItem.reflection = generatedReflection;
       } catch (genErr) {
-        console.error("Failed to generate fallback reflection:", genErr);
+        aiLog.error(`${EMOJI.error} Fallback reflection gagal: ${formatErr(genErr)}`);
         mappedItem.reflection = {
           prompt: `Bagaimana pemahamanmu tentang konsep ${conceptName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
           context: `Refleksi tentang konsep ${conceptName}`,
@@ -657,7 +657,7 @@ export async function tryMapAndRecoverMixPlan(
         });
         fallbackItem.material = generatedMaterial;
       } catch (genErr) {
-        console.error("Failed to generate fallback material:", genErr);
+        aiLog.error(`${EMOJI.error} Fallback material gagal: ${formatErr(genErr)}`);
         fallbackItem.material = {
           title: `${conceptName} — Panduan Singkat`,
           content: `## ${conceptName}\n\nMari pelajari konsep ${conceptName} ini. Konsep ini sangat penting untuk memahami dasar subjek ${subjectName}.\n\n### Pengantar\nPenjelasan singkat materi.\n\n💭 Coba pikirkan: Bagaimana menerapkan konsep ini dalam kehidupan sehari-hari?`,
@@ -698,7 +698,7 @@ export async function tryMapAndRecoverMixPlan(
         });
         fallbackItem.reflection = generatedReflection;
       } catch (genErr) {
-        console.error("Failed to generate fallback reflection:", genErr);
+        aiLog.error(`${EMOJI.error} Fallback reflection gagal: ${formatErr(genErr)}`);
         fallbackItem.reflection = {
           prompt: `Bagaimana pemahamanmu tentang konsep ${conceptName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
           context: `Refleksi tentang konsep ${conceptName}`,
@@ -803,7 +803,7 @@ export async function analyzeReflection(
   response: string,
   context?: string,
 ): Promise<ReflectionAnalysis> {
-  console.log("[AI_SERVICE] analyzeReflection start");
+  aiLog.info(`${EMOJI.start} analyzeReflection`);
   const userPrompt = `Prompt refleksi yang diberikan:
 """
 ${prompt}
@@ -819,18 +819,14 @@ Analisis jawaban siswa di atas. Tentukan sentimen (POSITIVE jika siswa semangat,
   try {
     const systemPrompt =
       'Kamu adalah analis refleksi siswa. Berikan analisis yang jujur, suportif, dan actionable. Jangan menghakimi jawaban siswa. Kembalikan output JSON dengan format:\n{\n  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",\n  "depth": "SURFACE" | "MODERATE" | "DEEP",\n  "suggestions": ["saran 1", "saran 2"]\n}';
-    console.log("[AI_SERVICE] analyzeReflection request", {
-      model: chatModel,
-      system: systemPrompt,
-      prompt: userPrompt,
-    });
+    aiLog.info(`${EMOJI.model} analyzeReflection → memanggil AI ...`);
     const { text } = await generateText({
       model: chatModel,
       system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.3,
     });
-    console.log("[AI_SERVICE] analyzeReflection response", { text });
+    aiLog.info(`${EMOJI.ok} analyzeReflection selesai`);
 
     const rawJson = safeParseJson(text) as Record<string, unknown>;
     const sentiment = (rawJson.sentiment as string) || "NEUTRAL";
@@ -848,7 +844,7 @@ Analisis jawaban siswa di atas. Tentukan sentimen (POSITIVE jika siswa semangat,
       suggestions: suggestions.slice(0, 3),
     };
   } catch (err: unknown) {
-    console.warn("analyzeReflection failed, using recovery. Error:", err);
+    aiLog.warn(`${EMOJI.warn} analyzeReflection gagal, pakai recovery: ${formatErr(err)}`);
     return {
       sentiment: "NEUTRAL",
       depth: "MODERATE",
@@ -867,9 +863,7 @@ export async function generateReflectionPrompt(args: {
   materialTitle?: string;
   recentReflections?: string[];
 }): Promise<{ prompt: string; context: string }> {
-  console.log("[AI_SERVICE] generateReflectionPrompt start", {
-    subjectName: args.subjectName,
-  });
+  aiLog.info(`${EMOJI.start} generateReflectionPrompt — ${args.subjectName}`);
   try {
     const systemPrompt =
       'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}';
@@ -889,18 +883,14 @@ Buat prompt yang:
 - Memicu siswa berpikir, bukan menjawab fakta
 - Bisa dijawab 2-4 kalimat`;
 
-    console.log("[AI_SERVICE] generateReflectionPrompt request", {
-      model: chatModel,
-      system: systemPrompt,
-      prompt: userPrompt,
-    });
+    aiLog.info(`${EMOJI.model} generateReflectionPrompt → memanggil AI ...`);
     const { text } = await generateText({
       model: chatModel,
       system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.6,
     });
-    console.log("[AI_SERVICE] generateReflectionPrompt response", { text });
+    aiLog.info(`${EMOJI.ok} generateReflectionPrompt selesai`);
 
     const rawJson = safeParseJson(text) as Record<string, unknown>;
     const prompt = (rawJson.prompt ||
@@ -911,9 +901,7 @@ Buat prompt yang:
       "Refleksi pembelajaran") as string;
     return { prompt, context };
   } catch (err: unknown) {
-    console.warn(
-      "generateReflectionPrompt failed, using recovery. Error:",
-      err,
+    aiLog.warn(`${EMOJI.warn} generateReflectionPrompt gagal, pakai recovery: ${formatErr(err)}`);
     );
     return {
       prompt: `Bagaimana pemahamanmu tentang konsep ${args.topicName || args.subjectName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
@@ -952,9 +940,7 @@ async function _generateMaterialMarkdownInner(
   estimatedMinutes: number;
   difficulty: "EASY" | "MEDIUM" | "HARD";
 }> {
-  console.log("[AI_SERVICE] generateMaterialMarkdown start", {
-    conceptName: args.conceptName,
-  });
+  aiLog.info(`${EMOJI.start} generateMaterialMarkdown — ${args.conceptName}`);
   const difficulty =
     args.masteryScore < 0.4
       ? "EASY"
@@ -989,20 +975,14 @@ Tingkat pemahaman siswa saat ini: ${(args.masteryScore * 100).toFixed(0)}%
 
 Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" lebih dalam. Materi akan disimpan permanen untuk diulang baca, jadi pastikan self-contained.`;
 
-  console.log("[AI_SERVICE] generateMaterialMarkdown request", {
-    model: chatModel,
-    system: systemPrompt,
-    prompt: userPrompt,
-  });
+  aiLog.info(`${EMOJI.model} generateMaterialMarkdown → memanggil AI ...`);
   const result = await generateText({
     model: chatModel,
     system: systemPrompt,
     prompt: userPrompt,
     temperature: 0.6,
   });
-  console.log("[AI_SERVICE] generateMaterialMarkdown response", {
-    text: result.text,
-  });
+  aiLog.info(`${EMOJI.ok} generateMaterialMarkdown selesai`);
 
   const keyPoints = await extractKeyPoints(result.text);
 
@@ -1069,7 +1049,7 @@ export type WeeklyChallengePlan = z.infer<typeof weeklyChallengeSchema>;
 export async function generateWeeklyChallengeAI(
   input: WeeklyChallengeInput,
 ): Promise<WeeklyChallengePlan> {
-  console.log("[AI_SERVICE] generateWeeklyChallengeAI start");
+  aiLog.info(`${EMOJI.start} generateWeeklyChallengeAI`);
 
   const systemPrompt = `Kamu adalah Spark — tutor AI personal untuk siswa SMA/SMK Indonesia.
 Tugasmu adalah merancang TANTANGAN MINGGUAN (Weekly Challenge) untuk memotivasi siswa menyelesaikan tugas belajarnya minggu ini.
@@ -1111,7 +1091,7 @@ Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
 
     return { title, description, goal };
   } catch (err) {
-    console.warn("generateWeeklyChallengeAI failed, using fallback:", err);
+    aiLog.warn(`${EMOJI.warn} generateWeeklyChallengeAI gagal, pakai fallback: ${formatErr(err)}`);
     return {
       title: "Misi Mingguan: Konsistensi Belajar",
       description:
@@ -1176,7 +1156,7 @@ export type WeeklyContent = z.infer<typeof weeklyContentSchema>;
 export async function generateWeeklyChallengeContent(
   input: WeeklyChallengeInput,
 ): Promise<WeeklyContent> {
-  console.log("[AI_SERVICE] generateWeeklyChallengeContent start");
+  aiLog.info(`${EMOJI.start} generateWeeklyChallengeContent`);
 
   const systemPrompt = `Kamu adalah Spark — tutor AI personal untuk siswa SMA/SMK Indonesia.
 Tugasmu adalah membuat konten TANTANGAN MINGGUAN berupa soal-soal SULIT dan materi MENDALAM untuk siswa.
@@ -1211,7 +1191,7 @@ Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang meruju
     const validated = weeklyContentSchema.parse(parsedJson);
     return validated;
   } catch (err) {
-    console.warn("generateWeeklyChallengeContent primary parse failed:", err);
+    aiLog.warn(`${EMOJI.warn} generateWeeklyChallengeContent parse utama gagal, coba alternatif: ${formatErr(err)}`);
     try {
       const { text: retryText } = await generateText({
         model: chatModel,
@@ -1336,7 +1316,7 @@ Buat konten tantangan mingguan untuk mapel di atas. Output JSON.`;
       materials: validated.materials.slice(0, input.materialsCount),
     };
   } catch (err) {
-    console.warn("generateWeeklyPerSubjectAI failed:", err);
+    aiLog.warn(`${EMOJI.warn} generateWeeklyPerSubjectAI gagal: ${formatErr(err)}`);
     return { questions: [], materials: [] };
   }
 }
@@ -1396,7 +1376,7 @@ export async function generateWeeklyDeepMaterial(input: {
   try {
     return await retryOnZodError(() => _generateWeeklyDeepMaterialInner(input));
   } catch (err) {
-    console.warn("generateWeeklyDeepMaterial failed after retry:", err);
+    aiLog.warn(`${EMOJI.warn} generateWeeklyDeepMaterial gagal setelah retry: ${formatErr(err)}`);
     return {
       title: `${input.conceptName} — Deep Dive`,
       content: `## ${input.conceptName}\n\nMateri ini sedang disiapkan. Coba lagi nanti atau pilih mapel lain.`,
@@ -1507,7 +1487,7 @@ Format JSON: { "title": "max 80 char", "description": "max 200 char" }`;
       ).slice(0, 200),
     };
   } catch (err) {
-    console.warn("generateWeeklyTitleAI failed:", err);
+    aiLog.warn(`${EMOJI.warn} generateWeeklyTitleAI gagal: ${formatErr(err)}`);
     return {
       title: `Misi Mingguan: ${input.subjectNames[0] ?? "Pemburu Ilmu"}`,
       description: `Selesaikan tantangan mingguan untuk klaim 100 XP!`,

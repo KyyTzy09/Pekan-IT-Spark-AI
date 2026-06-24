@@ -1,6 +1,7 @@
 import "server-only";
 
-import { chatModel, generateText } from "@/lib/ai";
+import { chatModel, generateText, safeParseJson } from "@/lib/ai";
+import { aiLog, EMOJI } from "@/lib/ai-logger";
 
 interface EvaluationResult {
   isCorrect: boolean;
@@ -16,10 +17,7 @@ export async function evaluateAnswer(
   questionType: string,
   conceptName?: string,
 ): Promise<EvaluationResult> {
-  console.log("[AI_SERVICE] evaluateAnswer start", {
-    questionType,
-    studentAnswer,
-  });
+  aiLog.info(`${EMOJI.start} evaluateAnswer — tipe: ${questionType}`);
   if (questionType === "MULTIPLE_CHOICE" || questionType === "TRUE_FALSE") {
     const isCorrect =
       studentAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
@@ -64,12 +62,16 @@ Jawab dalam format JSON.`;
   });
 
   try {
-    const result = JSON.parse(text);
+    const result = safeParseJson(text);
+    if (typeof result !== "object" || result === null) {
+      throw new Error("AI returned non-object JSON");
+    }
+    const obj = result as Record<string, unknown>;
     return {
-      isCorrect: result.isCorrect,
-      feedback: result.feedback,
-      explanation: result.explanation,
-      mastered: result.mastered,
+      isCorrect: Boolean(obj.isCorrect),
+      feedback: typeof obj.feedback === "string" ? obj.feedback : "Evaluasi selesai.",
+      explanation: typeof obj.explanation === "string" ? obj.explanation : "",
+      mastered: Boolean(obj.mastered),
     };
   } catch {
     return {

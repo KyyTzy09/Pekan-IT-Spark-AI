@@ -1,6 +1,7 @@
 import "server-only";
 
 import { chatModel, streamText } from "@/lib/ai";
+import { aiLog, EMOJI } from "@/lib/ai-logger";
 import { prisma } from "@/lib/prisma";
 import type {
   LearningStyle,
@@ -226,9 +227,7 @@ export async function generateTutorStream(input: {
   topicId?: string;
   lastUserMessage?: string;
 }) {
-  console.log("[AI_SERVICE] generateTutorStream start", {
-    userId: input.userId,
-  });
+  aiLog.info(`${EMOJI.start} generateTutorStream — user: ${input.userId}`);
   const ctx = await loadUserContext(
     input.userId,
     input.subjectSlug,
@@ -256,10 +255,7 @@ export async function generateTutorStream(input: {
         );
       }
     } catch (err) {
-      console.warn(
-        "Failed to retrieve RAG context in generateTutorStream:",
-        err,
-      );
+      aiLog.warn(`${EMOJI.warn} RAG context gagal diambil: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

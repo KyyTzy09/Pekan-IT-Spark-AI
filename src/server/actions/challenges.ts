@@ -3,11 +3,19 @@
 import { revalidatePath } from "next/cache";
 
 // 🔴 Lock in-progress generation per userId — biar polling ga dobel-dobel generate
-const generationLocks = new Set<string>();
+const generationLocks = new Map<string, Promise<boolean>>();
 
 async function acquireGenerationLock(userId: string): Promise<boolean> {
-  if (generationLocks.has(userId)) return false;
-  generationLocks.add(userId);
+  const existing = generationLocks.get(userId);
+  if (existing) return existing;
+  let resolve!: (v: boolean) => void;
+  const promise = new Promise<boolean>((r) => (resolve = r));
+  generationLocks.set(userId, promise);
+  // Auto-release after 5 minutes (safety net)
+  setTimeout(() => {
+    generationLocks.delete(userId);
+    resolve(false);
+  }, 5 * 60 * 1000);
   return true;
 }
 
@@ -668,11 +676,15 @@ async function resolveQuestionOutsideTransaction(
   learningStyle: string,
   userName?: string,
 ): Promise<{ questionId?: string; materialId?: string }> {
-  // 1. Cari match dari existing questions
+  // 1. Cari match dari existing questions — prefer yang match difficulty
   const sameSubjectQuestions = availableQuestions.filter(
     (q) => q.concept.topic.subject.slug === item.subjectSlug,
   );
-  const picked = sameSubjectQuestions[0];
+  // Prefer exact difficulty match, then fall back to any difficulty
+  const exactDifficulty = sameSubjectQuestions.filter(
+    (q) => q.difficulty === item.difficultyHint,
+  );
+  const picked = exactDifficulty[0] ?? sameSubjectQuestions[0];
   if (picked) {
     return { questionId: picked.id };
   }

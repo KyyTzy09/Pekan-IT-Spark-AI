@@ -66,61 +66,60 @@ export async function incrementAiQuota(
 ): Promise<{ allowed: boolean; current: number; limit: number }> {
   const { prisma } = await import("@/lib/prisma");
   const today = startOfUtcDay(new Date());
+  const limit = AI_QUOTA_LIMITS[kind];
+  const countKey = `${kind}Count` as const;
 
-  const existing = await prisma.dailyAiQuota.findUnique({
-    where: { userId },
-  });
+  // Use serializable transaction to prevent race conditions.
+  // Two concurrent requests will serialize — one wins, one retries.
+  return await prisma.$transaction(async (tx) => {
+    // Upsert: ensure row exists for today
+    const existing = await tx.dailyAiQuota.findUnique({ where: { userId } });
 
-  if (!canIncrementQuota(existing, kind, by)) {
-    return {
-      allowed: false,
-      current: existing ? (existing[`${kind}Count` as const] as number) : 0,
-      limit: AI_QUOTA_LIMITS[kind],
-    };
-  }
-
-  if (existing) {
-    if (existing.date.getTime() === today.getTime()) {
-      const updated = await prisma.dailyAiQuota.update({
+    if (!existing || existing.date.getTime() !== today.getTime()) {
+      // New day or new user — create/reset
+      const created = await tx.dailyAiQuota.upsert({
         where: { userId },
-        data: {
-          [`${kind}Count` as const]: { increment: by },
+        create: {
+          userId,
+          date: today,
+          questionsCount: kind === "questions" ? by : 0,
+          materialsCount: kind === "materials" ? by : 0,
+        },
+        update: {
+          date: today,
+          questionsCount: kind === "questions" ? by : 0,
+          materialsCount: kind === "materials" ? by : 0,
           updatedAt: new Date(),
         },
       });
-      return {
-        allowed: true,
-        current: updated[`${kind}Count` as const] as number,
-        limit: AI_QUOTA_LIMITS[kind],
-      };
+      const current = created[countKey] as number;
+      if (current > limit) {
+        return { allowed: false, current, limit };
+      }
+      return { allowed: true, current, limit };
     }
-    const updated = await prisma.dailyAiQuota.update({
+
+    // Same day — check then increment atomically within transaction
+    const current = existing[countKey] as number;
+    if (current + by > limit) {
+      return { allowed: false, current, limit };
+    }
+
+    const updated = await tx.dailyAiQuota.update({
       where: { userId },
       data: {
-        date: today,
-        questionsCount: kind === "questions" ? by : 0,
-        materialsCount: kind === "materials" ? by : 0,
+        [countKey]: { increment: by },
         updatedAt: new Date(),
       },
     });
+
     return {
       allowed: true,
-      current: updated[`${kind}Count` as const] as number,
-      limit: AI_QUOTA_LIMITS[kind],
+      current: updated[countKey] as number,
+      limit,
     };
-  }
-
-  const created = await prisma.dailyAiQuota.create({
-    data: {
-      userId,
-      date: today,
-      questionsCount: kind === "questions" ? by : 0,
-      materialsCount: kind === "materials" ? by : 0,
-    },
+  }, {
+    // Use serializable isolation to prevent concurrent over-increment
+    isolationLevel: "Serializable",
   });
-  return {
-    allowed: true,
-    current: created[`${kind}Count` as const] as number,
-    limit: AI_QUOTA_LIMITS[kind],
-  };
 }

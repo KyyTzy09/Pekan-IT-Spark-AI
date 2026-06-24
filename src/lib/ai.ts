@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { aiLog, maskKey, formatErr, EMOJI } from "./ai-logger";
 
 const openaiDefault = new OpenAI({
   baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
@@ -29,24 +30,16 @@ const openaiHeavy = groqClients[0] ?? new OpenAI({
   apiKey: process.env.HEAVY_MODEL_API_KEY ?? process.env.OPENAI_API_KEY,
 });
 
-// Track current key index for rotation
-let currentGroqKeyIndex = 0;
+// Atomic counter for key rotation — each call gets a unique key
+let groqKeyCounter = 0;
 
 function getNextGroqClient(): { client: OpenAI; keyIndex: number } {
   if (groqClients.length === 0) {
     return { client: openaiHeavy, keyIndex: -1 };
   }
-  const index = currentGroqKeyIndex % groqClients.length;
-  currentGroqKeyIndex = (currentGroqKeyIndex + 1) % groqClients.length;
+  // Atomic increment then modulo — each concurrent request gets a different key
+  const index = (groqKeyCounter++ & 0x7fffffff) % groqClients.length;
   return { client: groqClients[index], keyIndex: index };
-}
-
-function rotateToNextGroqKey(): { client: OpenAI; keyIndex: number } {
-  if (groqClients.length === 0) {
-    return { client: openaiHeavy, keyIndex: -1 };
-  }
-  currentGroqKeyIndex = (currentGroqKeyIndex + 1) % groqClients.length;
-  return { client: groqClients[currentGroqKeyIndex], keyIndex: currentGroqKeyIndex };
 }
 
 export const chatModel = "heavy" as const;
@@ -57,17 +50,6 @@ type ChatMessageParam = {
   role: "system" | "user" | "assistant";
   content: string;
 };
-
-function logAIError(
-  method: string,
-  modelName: string,
-  baseURL: string,
-  err: unknown,
-) {
-  console.error(
-    `[AI_ERROR] ${method} | model=${modelName} | endpoint=${baseURL} | msg=${err instanceof Error ? err.message : String(err)}`,
-  );
-}
 
 function isRateLimitError(err: unknown): boolean {
   if (err && typeof err === "object" && "status" in err) {
@@ -114,19 +96,19 @@ async function tryGroqCompletion(
   let lastErr: unknown;
 
   for (let attempt = 0; attempt < totalKeys; attempt++) {
-    const { client, keyIndex } = attempt === 0 ? getNextGroqClient() : rotateToNextGroqKey();
-    const maskedKey = groqKeys[keyIndex]?.slice(0, 10) + "...";
+    const { client, keyIndex } = getNextGroqClient();
+    const masked = maskKey(groqKeys[keyIndex]);
+
+    aiLog.info(`${EMOJI.key} Groq [key ${keyIndex + 1}/${totalKeys}] ${masked} — percobaan ke-${attempt + 1}`);
 
     try {
       if (isStream) {
-        console.log(`[AI_SERVICE] Groq attempt ${attempt + 1}/${totalKeys} with key[${keyIndex}] ${maskedKey}`);
         const stream = await client.chat.completions.create(
           { model: modelName, messages, temperature, stream: true },
           { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
         );
         return stream;
       } else {
-        console.log(`[AI_SERVICE] Groq attempt ${attempt + 1}/${totalKeys} with key[${keyIndex}] ${maskedKey}`);
         const response = await client.chat.completions.create(
           { model: modelName, messages, temperature },
           { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
@@ -135,12 +117,11 @@ async function tryGroqCompletion(
       }
     } catch (err) {
       lastErr = err;
-      logAIError(`Groq key[${keyIndex}] ${maskedKey}`, modelName, heavyModelBaseUrl, err);
 
-      // Retry with next key if available (any error: 429, 500, timeout, network, etc.)
+      // Coba key berikutnya kalau masih ada
       if (attempt < totalKeys - 1) {
-        const reason = isRateLimitError(err) ? "Rate limited" : "Failed";
-        console.warn(`[AI_SERVICE] ${reason} on key[${keyIndex}] ${maskedKey}, trying next key...`);
+        const reason = isRateLimitError(err) ? "rate limit (429)" : formatErr(err);
+        aiLog.warn(`${EMOJI.retry} Groq key[${keyIndex}] gagal: ${reason} — coba key berikutnya...`);
         continue;
       }
     }
@@ -165,19 +146,7 @@ export async function generateText({
     ? (process.env.HEAVY_MODEL_NAME ?? "llama-3.3-70b-versatile")
     : "deepseek-v4-flash";
 
-  console.log(`
-=========================================
-[AI_SERVICE] generateText REQUEST
------------------------------------------
-* Model Type: ${model} (Resolved Name: ${modelName})
-* Endpoint:   ${isHeavy ? heavyModelBaseUrl : openaiDefault.baseURL}
-* Temp:       ${temperature}
-* System:
-${system ? system : "(none)"}
-* Prompt:
-${prompt ? prompt : "(none)"}
-=========================================
-`);
+  aiLog.info(`${EMOJI.start} generateText → ${modelName} (temp: ${temperature})`);
 
   const messages: ChatMessageParam[] = [];
   if (system) {
@@ -191,66 +160,52 @@ ${prompt ? prompt : "(none)"}
   if (isHeavy) {
     try {
       const result = await tryGroqCompletion(modelName, messages, temperature, false);
-      console.log(`
-=========================================
-[AI_SERVICE] generateText RESPONSE
------------------------------------------
-* Model Used: ${modelName}
-* Output Text:
-${result.text}
-=========================================
-`);
+      aiLog.info(`${EMOJI.ok} generateText selesai (${result.text.length} karakter)`);
       return result;
     } catch (err) {
-      // All Groq keys failed, fall through to fallbacks
-      console.warn(`[AI_SERVICE] All Groq keys failed. Trying fallbacks...`);
+      aiLog.warn(`${EMOJI.warn} Semua Groq key gagal — coba fallback...`);
 
       // Fallback 1: Gemini (free)
       if (gemini) {
-        console.warn(`[AI_SERVICE] Trying Gemini gemini-2.0-flash...`);
+        aiLog.info(`${EMOJI.fallback} Fallback 1: Gemini gemini-2.0-flash ...`);
         try {
           const geminiModel = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
           const promptText = system ? `${system}\n\n${prompt || ""}` : prompt || "";
           const result = await geminiModel.generateContent(promptText);
           const textResult = result.response.text();
-          console.log(`
-=========================================
-[AI_SERVICE] generateText RESPONSE (Gemini)
------------------------------------------
-* Model Used: gemini-2.0-flash
-* Output Text:
-${textResult}
-=========================================
-`);
+          aiLog.info(`${EMOJI.ok} Gemini berhasil (${textResult.length} karakter)`);
           return { text: textResult };
         } catch (geminiErr) {
-          logAIError("generateText (Fallback: Gemini)", "gemini-2.0-flash", "generativelanguage.googleapis.com", geminiErr);
+          aiLog.error(`${EMOJI.error} Gemini gagal: ${formatErr(geminiErr)}`);
         }
       }
 
-      // Fallback 2: fast model on Sumopod
-      console.warn(`[AI_SERVICE] Trying deepseek-v4-flash on Sumopod...`);
+      // Fallback 2: Sumopod
+      aiLog.info(`${EMOJI.fallback} Fallback 2: deepseek-v4-flash via Sumopod ...`);
       try {
         const response = await openaiDefault.chat.completions.create(
           { model: "deepseek-v4-flash", messages, temperature },
           { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
         );
         const textResult = response.choices[0]?.message?.content || "";
+        aiLog.info(`${EMOJI.ok} Sumopod berhasil (${textResult.length} karakter)`);
         return { text: textResult };
       } catch (fallbackSumopodErr) {
-        logAIError("generateText (Fallback: deepseek-v4-flash)", "deepseek-v4-flash", openaiDefault.baseURL, fallbackSumopodErr);
+        aiLog.error(`${EMOJI.error} Sumopod gagal: ${formatErr(fallbackSumopodErr)}`);
       }
 
-      // Fallback 3: glm-5 on Groq (first available client)
+      // Fallback 3: glm-5 on Groq
+      aiLog.info(`${EMOJI.fallback} Fallback 3: glm-5 via Groq ...`);
       try {
         const response = await openaiHeavy.chat.completions.create(
           { model: "glm-5", messages, temperature },
           { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
         );
         const textResult = response.choices[0]?.message?.content || "";
+        aiLog.info(`${EMOJI.ok} glm-5 berhasil (${textResult.length} karakter)`);
         return { text: textResult };
       } catch (fallbackGlmErr) {
-        logAIError("generateText (Fallback: glm-5)", "glm-5", heavyModelBaseUrl, fallbackGlmErr);
+        aiLog.error(`${EMOJI.error} Semua fallback gagal! Terakhir: glm-5 — ${formatErr(fallbackGlmErr)}`);
         throw err;
       }
     }
@@ -263,9 +218,10 @@ ${textResult}
       { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
     );
     const textResult = response.choices[0]?.message?.content || "";
+    aiLog.info(`${EMOJI.ok} generateText selesai (${textResult.length} karakter)`);
     return { text: textResult };
   } catch (err) {
-    logAIError("generateText", modelName, openaiDefault.baseURL, err);
+    aiLog.error(`${EMOJI.error} generateText gagal (${modelName}): ${formatErr(err)}`);
     throw err;
   }
 }
@@ -302,112 +258,90 @@ export async function streamText({
     try {
       const stream = await tryGroqCompletion(heavyModelName, apiMessages, temperature, true);
 
-      console.log(`[AI_SERVICE] streamText streaming started (Groq)`);
-      let chunkCount = 0;
-      let fullText = "";
+      aiLog.info(`${EMOJI.stream} Streaming dimulai (Groq ${heavyModelName})`);
 
-      return {
-        text: (async () => {
-          for await (const chunk of stream) {
-            chunkCount++;
-            const content = chunk.choices[0]?.delta?.content || "";
-            fullText += content;
-          }
-          console.log(`[AI_SERVICE] streamText streaming completed, chunks: ${chunkCount}`);
-          console.log(`
-=========================================
-[AI_SERVICE] streamText RESPONSE (Groq)
------------------------------------------
-* Model Used: ${heavyModelName}
-* Output Text:
-${fullText}
-=========================================
-`);
-          return fullText;
-        })(),
-      };
+      // Return a true async iterable that yields chunks as they arrive
+      const iterable = (async function* () {
+        let chunkCount = 0;
+        for await (const chunk of stream) {
+          chunkCount++;
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) yield content;
+        }
+        aiLog.info(`${EMOJI.ok} Streaming selesai (Groq) — ${chunkCount} chunk`);
+      })();
+
+      return { text: collectStreamText(iterable) };
     } catch (groqErr) {
-      // All Groq keys failed, try fallbacks
-      console.warn(`[AI_SERVICE] All Groq keys failed for streamText. Trying fallbacks...`);
+      aiLog.warn(`${EMOJI.warn} Groq streaming gagal — coba fallback...`);
 
       // Fallback 1: Gemini (free)
       if (gemini) {
-        console.warn(`[AI_SERVICE] Trying Gemini gemini-2.0-flash for streamText...`);
+        aiLog.info(`${EMOJI.fallback} Fallback 1: Gemini streaming ...`);
         try {
           const geminiModel = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
           const promptText = apiMessages.map(m => m.content).join("\n");
           const result = await geminiModel.generateContentStream(promptText);
 
-          let fullText = "";
-          return {
-            text: (async () => {
-              for await (const chunk of result.stream) {
-                const content = chunk.text() || "";
-                fullText += content;
-              }
-              console.log(`[AI_SERVICE] streamText Gemini completed`);
-              console.log(`
-=========================================
-[AI_SERVICE] streamText RESPONSE (Gemini)
------------------------------------------
-* Model Used: gemini-2.0-flash
-* Output Text:
-${fullText}
-=========================================
-`);
-              return fullText;
-            })(),
-          };
+          const iterable = (async function* () {
+            for await (const chunk of result.stream) {
+              const content = chunk.text() || "";
+              if (content) yield content;
+            }
+            aiLog.info(`${EMOJI.ok} Streaming selesai (Gemini)`);
+          })();
+
+          return { text: collectStreamText(iterable) };
         } catch (geminiErr) {
-          logAIError("streamText (Fallback: Gemini)", "gemini-2.0-flash", "generativelanguage.googleapis.com", geminiErr);
+          aiLog.error(`${EMOJI.error} Gemini streaming gagal: ${formatErr(geminiErr)}`);
         }
       }
 
       // Fallback 2: Sumopod
       const sumopodModel = "deepseek-v4-flash";
+      aiLog.info(`${EMOJI.fallback} Fallback 2: Sumopod streaming ...`);
       try {
         const stream = await openaiDefault.chat.completions.create(
           { model: sumopodModel, messages: apiMessages, temperature, stream: true },
           { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
         );
 
-        let chunkCount = 0;
-        let fullText = "";
-        return {
-          text: (async () => {
-            for await (const chunk of stream) {
-              chunkCount++;
-              fullText += chunk.choices[0]?.delta?.content || "";
-            }
-            console.log(`[AI_SERVICE] streamText fallback completed, chunks: ${chunkCount}`);
-            return fullText;
-          })(),
-        };
+        const iterable = (async function* () {
+          let chunkCount = 0;
+          for await (const chunk of stream) {
+            chunkCount++;
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (content) yield content;
+          }
+          aiLog.info(`${EMOJI.ok} Streaming selesai (Sumopod) — ${chunkCount} chunk`);
+        })();
+
+        return { text: collectStreamText(iterable) };
       } catch (sumopodErr) {
-        logAIError("streamText (Fallback: Sumopod)", sumopodModel, openaiDefault.baseURL, sumopodErr);
+        aiLog.error(`${EMOJI.error} Sumopod streaming gagal: ${formatErr(sumopodErr)}`);
       }
 
-      // Fallback 2: glm-5 on Groq
+      // Fallback 3: glm-5 on Groq
+      aiLog.info(`${EMOJI.fallback} Fallback 3: glm-5 streaming ...`);
       try {
         const stream = await openaiHeavy.chat.completions.create(
           { model: "glm-5", messages: apiMessages, temperature, stream: true },
           { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
         );
 
-        let chunkCount = 0;
-        let fullText = "";
-        return {
-          text: (async () => {
-            for await (const chunk of stream) {
-              chunkCount++;
-              fullText += chunk.choices[0]?.delta?.content || "";
-            }
-            console.log(`[AI_SERVICE] streamText glm-5 fallback completed, chunks: ${chunkCount}`);
-            return fullText;
-          })(),
-        };
+        const iterable = (async function* () {
+          let chunkCount = 0;
+          for await (const chunk of stream) {
+            chunkCount++;
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (content) yield content;
+          }
+          aiLog.info(`${EMOJI.ok} Streaming selesai (glm-5) — ${chunkCount} chunk`);
+        })();
+
+        return { text: collectStreamText(iterable) };
       } catch (glmErr) {
-        logAIError("streamText (Fallback: glm-5)", "glm-5", heavyModelBaseUrl, glmErr);
+        aiLog.error(`${EMOJI.error} Semua streaming fallback gagal! Terakhir: glm-5 — ${formatErr(glmErr)}`);
         throw groqErr;
       }
     }
@@ -419,19 +353,34 @@ ${fullText}
       { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
     );
 
-    let chunkCount = 0;
-    let fullText = "";
-    return {
-      text: (async () => {
-        for await (const chunk of stream) {
-          chunkCount++;
-          fullText += chunk.choices[0]?.delta?.content || "";
-        }
-        console.log(`[AI_SERVICE] streamText completed, chunks: ${chunkCount}`);
-        return fullText;
-      })(),
-    };
+    aiLog.info(`${EMOJI.stream} Streaming dimulai (Sumopod ${modelName})`);
+
+    const iterable = (async function* () {
+      let chunkCount = 0;
+      for await (const chunk of stream) {
+        chunkCount++;
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) yield content;
+      }
+      aiLog.info(`${EMOJI.ok} Streaming selesai — ${chunkCount} chunk`);
+    })();
+
+    return { text: collectStreamText(iterable) };
   }
+}
+
+/**
+ * Collect an async iterable of string chunks into a single string.
+ * Used internally by callers that need the full text (e.g., tutor.ts saves to DB).
+ */
+export async function collectStreamText(
+  stream: AsyncIterable<string>,
+): Promise<string> {
+  const parts: string[] = [];
+  for await (const chunk of stream) {
+    parts.push(chunk);
+  }
+  return parts.join("");
 }
 
 // Gemini for fallback
@@ -446,17 +395,7 @@ export async function embed({
   value: string;
 }) {
   const modelName = "text-embedding-3-small";
-  const baseURL = openaiDefault.baseURL;
-  console.log(`
-=========================================
-[AI_SERVICE] embed REQUEST
------------------------------------------
-* Model Type: embedding
-* Model Name: ${modelName}
-* Endpoint:   ${baseURL}
-* Value:      "${value.slice(0, 200)}${value.length > 200 ? "..." : ""}" (Total Length: ${value.length})
-=========================================
-`);
+  aiLog.info(`${EMOJI.embed} Embedding ${value.length} karakter ...`);
   try {
     const response = await openaiDefault.embeddings.create(
       {
@@ -466,19 +405,12 @@ export async function embed({
       { timeout: AI_TIMEOUT_EMBED_MS, maxRetries: 0 },
     );
     const embedding = response.data[0]?.embedding || [];
-    console.log(`
-=========================================
-[AI_SERVICE] embed RESPONSE
------------------------------------------
-* Model Used: ${response.model || modelName}
-* Dimensions: ${embedding.length}
-=========================================
-`);
+    aiLog.info(`${EMOJI.ok} Embedding selesai (${embedding.length} dimensi)`);
     return {
       embedding,
     };
   } catch (err) {
-    logAIError("embed", modelName, baseURL, err);
+    aiLog.error(`${EMOJI.error} Embedding gagal: ${formatErr(err)}`);
     throw err;
   }
 }
@@ -491,23 +423,7 @@ export async function embedMany({
   values: string[];
 }) {
   const modelName = "text-embedding-3-small";
-  const baseURL = openaiDefault.baseURL;
-  console.log(`
-=========================================
-[AI_SERVICE] embedMany REQUEST
------------------------------------------
-* Model Type: embedding
-* Model Name: ${modelName}
-* Endpoint:   ${baseURL}
-* Count:      ${values.length}
-* Inputs:
-${values
-  .map((v, i) => `  [${i}]: "${v.slice(0, 100)}${v.length > 100 ? "..." : ""}"`)
-  .slice(0, 10)
-  .join("\n")}
-${values.length > 10 ? `  ... and ${values.length - 10} more inputs` : ""}
-=========================================
-`);
+  aiLog.info(`${EMOJI.embed} Embedding batch ${values.length} item ...`);
   try {
     const response = await openaiDefault.embeddings.create(
       {
@@ -517,20 +433,12 @@ ${values.length > 10 ? `  ... and ${values.length - 10} more inputs` : ""}
       { timeout: AI_TIMEOUT_EMBED_MS, maxRetries: 0 },
     );
     const embeddings = response.data.map((item) => item.embedding);
-    console.log(`
-=========================================
-[AI_SERVICE] embedMany RESPONSE
------------------------------------------
-* Model Used: ${response.model || modelName}
-* Count:      ${embeddings.length}
-* Dimensions: ${embeddings[0]?.length || 0}
-=========================================
-`);
+    aiLog.info(`${EMOJI.ok} Batch embedding selesai (${embeddings.length} item, ${embeddings[0]?.length ?? 0} dimensi)`);
     return {
       embeddings,
     };
   } catch (err) {
-    logAIError("embedMany", modelName, baseURL, err);
+    aiLog.error(`${EMOJI.error} Batch embedding gagal: ${formatErr(err)}`);
     throw err;
   }
 }

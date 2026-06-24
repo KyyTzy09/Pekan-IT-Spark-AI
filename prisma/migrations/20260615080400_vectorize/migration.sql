@@ -6,5 +6,5 @@ ALTER TABLE "concept_embeddings" ALTER COLUMN "embedding" TYPE vector(1536) USIN
 ALTER TABLE "document_embeddings" ALTER COLUMN "embedding" TYPE vector(1536) USING "embedding"::vector(1536);
 
 -- Create HNSW indexes for fast similarity search
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "concept_embeddings_vector_idx" ON "concept_embeddings" USING hnsw ("embedding" vector_cosine_ops);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "document_embeddings_vector_idx" ON "document_embeddings" USING hnsw ("embedding" vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS "concept_embeddings_vector_idx" ON "concept_embeddings" USING hnsw ("embedding" vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS "document_embeddings_vector_idx" ON "document_embeddings" USING hnsw ("embedding" vector_cosine_ops);
