@@ -15,14 +15,7 @@ flowchart TD
     G2 --> G3[Tambah soal & kunci jawaban]
     G3 --> E
 
-    F -->|Verifikasi Mapel Custom| H[Lihat daftar permintaan mapel custom]
-    H --> H1{Review & approve?}
-    H1 -->|Setujui| H2[Mapel custom aktif untuk siswa]
-    H1 -->|Tolak| H3[Kirim alasan penolakan]
-    H2 --> E
-    H3 --> E
-
-    F -->|Kelola Akun| I[Buka Manajemen Pengguna]
+ I[Buka Manajemen Pengguna]
     I --> I1[Lihat daftar akun siswa, orang tua, guru]
     I1 --> I2[Tambah / Edit / Nonaktifkan akun]
     I2 --> I3[Reset password jika diperlukan]
