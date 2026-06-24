@@ -484,8 +484,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     challengeIds: challengesCreated,
   });
 
-  revalidatePath("/challenge", "layout");
-  revalidatePath("/dashboard", "layout");
+  // UX-FIX: Don't call revalidatePath here — callers handle revalidation.
+  // Calling revalidatePath during render causes Next.js errors.
 
     console.log("[WEEKLY_CHALLENGE] ✓ Complete", {
       userId,
