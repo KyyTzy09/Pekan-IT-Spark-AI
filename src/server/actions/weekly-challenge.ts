@@ -27,11 +27,11 @@ import type { SubjectSlug } from "../../../generated/prisma/client";
 
 function startOfWeek(d: Date): Date {
   const date = new Date(d);
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  date.setDate(diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
+  const day = date.getUTCDay();
+  const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), diff));
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday;
 }
 
 export type WeeklySubjectInput = {
@@ -242,6 +242,12 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
 
     totalGoal += counts.questions + counts.materials;
 
+    const aiQuota = await incrementAiQuota(userId, "questions", counts.questions);
+    if (!aiQuota.allowed) {
+      console.warn("[WEEKLY_CHALLENGE] AI quota exceeded, skipping generation");
+      continue;
+    }
+
     const aiContent = await generateWeeklyPerSubjectAI({
       subjectName: input.subjectName,
       subjectSlug: input.subjectSlug,
@@ -251,6 +257,7 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       materialsCount: counts.materials,
     }).catch((err) => {
       console.error("generateWeeklyPerSubjectAI failed:", err);
+      decrementAiQuota(userId, "questions", counts.questions).catch(() => {});
       return {
         questions: [] as RawWeeklyQuestion[],
         materials: [] as Array<{
@@ -301,9 +308,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       if (q && q.options?.includes(q.correctAnswer)) {
         validQuestions.push(q);
       } else {
-        // 🔴 Kembalikan quota kalo gagal
         await decrementAiQuota(userId, "questions", 1);
-        break;
+        continue;
       }
     }
 
@@ -312,7 +318,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       retries++;
       const quota = await incrementAiQuota(userId, "materials", 1);
       if (!quota.allowed) break;
-      const conceptSeed = validMaterials[0]?.title ?? input.subjectName;
+      const conceptSeeds = [input.subjectName, ...validMaterials.map(m => m.title)];
+      const conceptSeed = conceptSeeds[retries % conceptSeeds.length] ?? input.subjectName;
       const material = await generateWeeklyDeepMaterial({
         subjectName: input.subjectName,
         conceptName: conceptSeed,
@@ -327,10 +334,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
           estimatedMinutes: material.estimatedMinutes,
         });
       } else {
-        // 🔴 Kembalikan quota kalo gagal
         await decrementAiQuota(userId, "materials", 1);
-
-        break;
+        continue;
       }
     }
 
@@ -386,11 +391,11 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
 
       for (let qIdx = 0; qIdx < block.questions.length; qIdx++) {
         const q = block.questions[qIdx];
-        const concept = await tx.concept.findFirst({
+        const concepts = await tx.concept.findMany({
           where: { topic: { subjectId } },
           select: { id: true },
-          orderBy: { order: "asc" },
         });
+        const concept = concepts[qIdx % concepts.length] ?? concepts[0];
         if (!concept) continue;
 
         const bloom = BLOOMS[(blockIdx + qIdx) % BLOOMS.length] ?? "ANALYZE";

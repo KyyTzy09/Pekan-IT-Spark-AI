@@ -990,10 +990,7 @@ Buat materi bacaan yang membantu siswa memahami konsep "${args.conceptName}" leb
     title: `${args.conceptName} — Panduan Singkat`,
     content: result.text,
     keyPoints,
-    estimatedMinutes: Math.max(
-      10,
-      Math.min(45, Math.ceil(args.conceptName.length / 20)),
-    ),
+    estimatedMinutes: Math.max(10, Math.min(45, Math.ceil(500 / 200))),
     difficulty,
   };
 }
@@ -1138,6 +1135,8 @@ export const weeklyMaterialSchema = z.object({
   subjectName: z.string().describe("Nama mapel yang materi ini rujuk"),
 });
 
+// LEGACY: Only used by the legacy generateWeeklyChallengeContent function below.
+// Kept for backwards compatibility; new code uses weeklyPerSubjectContentSchema.
 export const weeklyContentSchema = z.object({
   questions: z
     .array(weeklyQuestionSchema)

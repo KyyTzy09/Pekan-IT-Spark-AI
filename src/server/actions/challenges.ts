@@ -243,17 +243,15 @@ export async function generateAndStoreDailyChallenges(
   });
 
   // 🔴 Cek apakah udah ada challenge buat hari ini — kalo udah, skip
+  const today = toDateOnly(date);
+  const tomorrow = new Date(today.getTime() + 86_400_000);
   const existingCount = await prisma.challenge.count({
     where: {
       userId,
       type: "DAILY",
       scheduledFor: {
-        gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
-        lt: new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate() + 1,
-        ),
+        gte: today,
+        lt: tomorrow,
       },
     },
   });
@@ -560,12 +558,6 @@ async function generateOneDailyChallenge(
     const title = `Tantangan ${subject.name}: ${firstConcept}`;
     const description = `Paket belajar harian untuk ${subject.name}: ${mix.questions} soal, ${mix.materials} materi, ${mix.reflections} refleksi. Difficulty: ${mix.questionDifficulty}.`;
 
-    const challengeMix: ChallengeMix = {
-      questions: plan.items.filter((i) => i.kind === "QUESTION").length,
-      materials: plan.items.filter((i) => i.kind === "MATERIAL").length,
-      reflections: plan.items.filter((i) => i.kind === "REFLECTION").length,
-    };
-
     const challenge = await tx.challenge.create({
       data: {
         userId,
@@ -576,9 +568,13 @@ async function generateOneDailyChallenge(
         status: "ACTIVE",
         source: "AUTO_DAILY",
         scheduledFor: toDateOnly(date),
-        mixConfig: challengeMix,
+        mixConfig: {},
       },
     });
+
+    let createdQuestions = 0;
+    let createdMaterials = 0;
+    let createdReflections = 0;
 
     for (let idx = 0; idx < normalizedItems.length; idx++) {
       const item = normalizedItems[idx];
@@ -594,6 +590,7 @@ async function generateOneDailyChallenge(
               points: 10,
             },
           });
+          createdQuestions++;
         } else if (resolved?.materialId) {
           await tx.challengeItem.create({
             data: {
@@ -604,6 +601,7 @@ async function generateOneDailyChallenge(
               points: 5,
             },
           });
+          createdMaterials++;
         }
       } else if (item.kind === "MATERIAL" && item.material) {
         const mat = await tx.material.create({
@@ -627,6 +625,7 @@ async function generateOneDailyChallenge(
             points: 5,
           },
         });
+        createdMaterials++;
       } else if (item.kind === "REFLECTION" && item.reflection) {
         await tx.challengeItem.create({
           data: {
@@ -637,8 +636,19 @@ async function generateOneDailyChallenge(
             points: 15,
           },
         });
+        createdReflections++;
       }
     }
+
+    const challengeMix: ChallengeMix = {
+      questions: createdQuestions,
+      materials: createdMaterials,
+      reflections: createdReflections,
+    };
+    await tx.challenge.update({
+      where: { id: challenge.id },
+      data: { mixConfig: challengeMix },
+    });
   });
 }
 
@@ -676,7 +686,8 @@ async function resolveQuestionOutsideTransaction(
   const exactDifficulty = sameSubjectQuestions.filter(
     (q) => q.difficulty === item.difficultyHint,
   );
-  const picked = exactDifficulty[0] ?? sameSubjectQuestions[0];
+  const shuffled = [...exactDifficulty].sort(() => Math.random() - 0.5);
+  const picked = shuffled[0] ?? sameSubjectQuestions[Math.floor(Math.random() * sameSubjectQuestions.length)];
   if (picked) {
     return { questionId: picked.id };
   }
@@ -997,13 +1008,19 @@ export async function completeChallengeItem(input: {
       },
     });
 
+    let newMastery: number | undefined;
     if (item.questionId) {
-      await recordQuestionAttempt({
+      const attemptResult = await recordQuestionAttempt({
         questionId: item.questionId,
         answer: parsed.data.answer,
         isCorrect,
       });
+      newMastery = attemptResult.newMastery;
     }
+
+    const newStatus = newMastery !== undefined
+      ? newMastery >= 0.7 ? "LULUS" : "BELUM_LULUS"
+      : undefined;
 
     if (isCorrect) {
       await addXp(userId, XP_REWARDS.ANSWER_CORRECT, "ANSWER_CORRECT", {
@@ -1027,6 +1044,8 @@ export async function completeChallengeItem(input: {
       isCorrect,
       correctAnswer: item.question.correctAnswer,
       explanation: item.question.explanation,
+      newMastery,
+      newStatus,
       challengeCompleted,
       unlockedBadges,
     };
@@ -1036,10 +1055,6 @@ export async function completeChallengeItem(input: {
     if (item.material) {
       await markMaterialReadInternal(userId, item.material.id, true);
     }
-    await prisma.challengeItem.update({
-      where: { id: item.id },
-      data: { status: "COMPLETED", completedAt: new Date() },
-    });
     await addXp(userId, XP_REWARDS.CHAT_SESSION, "CHAT_SESSION", {
       challengeItemId: item.id,
       kind: "MATERIAL",
@@ -1076,6 +1091,8 @@ export async function skipChallengeItem(input: {
   });
   if (claimed.count === 0) return { ok: false, error: "Item sudah selesai" };
   await checkAndCompleteChallenge(item.challengeId);
+  await updateWeeklyChallengeProgress(userId).catch(console.error);
+  await recordActivity(userId).catch(console.error);
   revalidatePath("/challenge", "layout");
   return { ok: true };
 }
@@ -1112,16 +1129,21 @@ export async function submitReflection(input: {
   if (!reflectionItem || !reflectionItem.prompt) {
     return { ok: false, error: "Challenge ini tidak punya refleksi" };
   }
-  // BUG-3 FIX: Check if reflection already completed to prevent XP farming
-  if (reflectionItem.status === "COMPLETED") {
-    return { ok: false, error: "Refleksi sudah diselesaikan sebelumnya." };
-  }
-
   const analysis = await analyzeReflection(
     reflectionItem.prompt,
     parsed.data.response,
     challenge.subject?.name,
   );
+
+  // BUG-1 FIX: Atomic claim FIRST to prevent race condition.
+  // Only create reflection record if we successfully claim the item.
+  const claimed = await prisma.challengeItem.updateMany({
+    where: { id: reflectionItem.id, status: "PENDING" },
+    data: { status: "COMPLETED", completedAt: new Date(), answer: parsed.data.response },
+  });
+  if (claimed.count === 0) {
+    return { ok: false, error: "Refleksi sudah diselesaikan sebelumnya." };
+  }
 
   await prisma.reflection.create({
     data: {
@@ -1132,15 +1154,6 @@ export async function submitReflection(input: {
       sentiment: analysis.sentiment,
       depth: analysis.depth,
       suggestions: analysis.suggestions,
-    },
-  });
-
-  await prisma.challengeItem.update({
-    where: { id: reflectionItem.id },
-    data: {
-      status: "COMPLETED",
-      completedAt: new Date(),
-      answer: parsed.data.response,
     },
   });
 
@@ -1361,7 +1374,7 @@ export async function generateOnDemand(input: {
         select: {
           name: true,
           topic: {
-            select: { name: true, subject: { select: { slug: true } } },
+            select: { name: true, subjectId: true, subject: { select: { slug: true } } },
           },
         },
       },
@@ -1390,8 +1403,10 @@ export async function generateOnDemand(input: {
       })),
     });
 
-    if (plan.items.length === 0)
+    if (plan.items.length === 0) {
+      await decrementAiQuota(userId, "questions", 1).catch(() => {});
       return { ok: false, error: "AI gagal generate tantangan" };
+    }
 
     const firstItem = plan.items[0];
     const slugToLookup = parsed.data.subjectSlug ?? firstItem.subjectSlug;
@@ -1399,7 +1414,7 @@ export async function generateOnDemand(input: {
     let challengeSubject = slugToLookup
       ? await prisma.subject.findUnique({
           where: { slug: slugToLookup as SubjectSlug },
-          select: { id: true, name: true },
+          select: { id: true, name: true, slug: true },
         })
       : null;
     // If not found by slug, try name match (for custom subjects)
@@ -1409,16 +1424,10 @@ export async function generateOnDemand(input: {
           name: { equals: slugToLookup, mode: "insensitive" },
           OR: [{ createdById: null }, { createdById: userId }],
         },
-        select: { id: true, name: true },
+        select: { id: true, name: true, slug: true },
       });
       if (nameMatch) challengeSubject = nameMatch;
     }
-
-    const challengeMix = {
-      questions: plan.items.filter((i) => i.kind === "QUESTION").length,
-      materials: plan.items.filter((i) => i.kind === "MATERIAL").length,
-      reflections: plan.items.filter((i) => i.kind === "REFLECTION").length,
-    };
 
     const firstConcept =
       plan.items.find((i) => i.conceptHint)?.conceptHint ||
@@ -1442,10 +1451,13 @@ export async function generateOnDemand(input: {
       type: "DAILY" as const,
       source: "ON_DEMAND" as const,
       scheduledFor: toDateOnly(today),
-      mixConfig: challengeMix,
     };
 
-    const challenge = await prisma.challenge.create({ data: baseData });
+    const challenge = await prisma.challenge.create({ data: { ...baseData, mixConfig: {} } });
+
+    let createdQuestions = 0;
+    let createdMaterials = 0;
+    let createdReflections = 0;
 
     for (let idx = 0; idx < plan.items.length; idx++) {
       const item = plan.items[idx];
@@ -1454,7 +1466,7 @@ export async function generateOnDemand(input: {
         const candidates = availableQuestions.filter((q) => {
           const qSlug = (q.concept.topic.subject as { slug: SubjectSlug }).slug;
           if (qSlug === item.subjectSlug) return true;
-          if (challengeSubject && q.concept.topic.subject.slug === challengeSubject.id)
+          if (challengeSubject && (q.concept.topic.subject.slug === challengeSubject.slug || q.concept.topic.subjectId === challengeSubject.id))
             return true;
           return false;
         });
@@ -1471,6 +1483,7 @@ export async function generateOnDemand(input: {
               points: 10,
             },
           });
+          createdQuestions++;
         }
       } else if (item.kind === "MATERIAL" && item.material) {
         const m = await prisma.material.create({
@@ -1494,6 +1507,7 @@ export async function generateOnDemand(input: {
             points: 5,
           },
         });
+        createdMaterials++;
       } else if (item.kind === "REFLECTION" && item.reflection) {
         await prisma.challengeItem.create({
           data: {
@@ -1504,8 +1518,19 @@ export async function generateOnDemand(input: {
             points: 15,
           },
         });
+        createdReflections++;
       }
     }
+
+    const challengeMix = {
+      questions: createdQuestions,
+      materials: createdMaterials,
+      reflections: createdReflections,
+    };
+    await prisma.challenge.update({
+      where: { id: challenge.id },
+      data: { mixConfig: challengeMix },
+    });
 
     const challengeId = challenge.id;
 
@@ -2313,7 +2338,7 @@ export async function getProgressTimeline(
         where: {
           status: "COMPLETED",
           completedAt: { gte: startDate, lt: endDate },
-          challenge: { userId },
+          challenge: { userId, type: "DAILY" },
         },
         select: { completedAt: true },
       }),
@@ -2407,7 +2432,7 @@ async function computeActivityStreak(userId: string): Promise<number> {
     where: { status: "COMPLETED", challenge: { userId } },
     select: { completedAt: true },
     orderBy: { completedAt: "desc" },
-    take: 5000,
+    take: 365,
   });
 
   const activeDays = new Set<string>();
@@ -2436,10 +2461,10 @@ async function computeActivityStreak(userId: string): Promise<number> {
 
 function startOfWeek(d: Date): Date {
   const date = new Date(d);
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(date.setDate(diff));
-  monday.setHours(0, 0, 0, 0);
+  const day = date.getUTCDay();
+  const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), diff));
+  monday.setUTCHours(0, 0, 0, 0);
   return monday;
 }
 
@@ -2462,21 +2487,17 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
 
   const existing = await prisma.weeklyChallenge.findUnique({
     where: { userId_weekStart: { userId, weekStart: monday } },
-    include: {
-      challenge: {
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          status: true,
-          items: { select: { id: true, kind: true, status: true } },
-        },
-      },
-    },
   });
 
   if (existing) {
     const sunday = new Date(monday.getTime() + 7 * 86_400_000);
+    const allWeeklyChallenges = await prisma.challenge.findMany({
+      where: { userId, type: "WEEKLY", scheduledFor: { gte: monday, lt: sunday } },
+      select: { id: true, title: true, description: true, status: true, items: { select: { id: true, kind: true, status: true } } },
+    });
+
+    const allItems = allWeeklyChallenges.flatMap((c) => c.items);
+
     const completedCount = await prisma.challengeItem.count({
       where: {
         challenge: {
@@ -2500,6 +2521,10 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
 
     return {
       ...existing,
+      // BUG-11 FIX: Return ALL weekly challenges, not just the first one
+      challenges: allWeeklyChallenges,
+      challenge: allWeeklyChallenges[0] ?? null,
+      allItems,
       weekStart: existing.weekStart.toISOString(),
       createdAt: existing.createdAt.toISOString(),
     };
