@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
+import { incrementAiQuota } from "@/server/ai-quota";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
 
 const DAILY_MATERIAL_LIMIT = 7;
@@ -44,50 +46,67 @@ export async function generateOnDemandMaterial(input: {
   const today = startOfToday();
   const tomorrow = startOfNextDay();
 
-  // Daily limit check
-  const todayCount = await prisma.material.count({
-    where: {
-      userId,
-      source: "ON_DEMAND",
-      createdAt: { gte: today, lt: tomorrow },
-    },
-  });
-  if (todayCount >= DAILY_MATERIAL_LIMIT) {
+  // 🔴 Lock: cegah double generate dari request simultan
+  if (!(await acquireDbLock(userId, "ON_DEMAND"))) {
     return {
       ok: false,
-      error: `Batas generate materi hari ini sudah tercapai (${DAILY_MATERIAL_LIMIT}x). Coba lagi besok ya!`,
+      error: "Masih ada materi yang sedang di-generate. Tunggu sebentar ya!",
     };
   }
 
-  // Validate subject
-  const subject = await prisma.subject.findFirst({
-    where: { id: subjectId, isActive: true },
-    select: { id: true, name: true },
-  });
-  if (!subject) {
-    return { ok: false, error: "Mapel tidak ditemukan." };
-  }
+  try {
+    // 🔴 AI Quota check: batasi pemanggilan AI per hari
+    const quota = await incrementAiQuota(userId, "materials", 1);
+    if (!quota.allowed) {
+      return {
+        ok: false,
+        error: `Batas generate materi AI hari ini sudah tercapai (${quota.limit}x). Coba lagi besok ya!`,
+      };
+    }
 
-  // Get learning style + mastery
-  const [profile, knowledgeProfile] = await Promise.all([
-    prisma.studentProfile.findUnique({
-      where: { userId },
-      select: { learningStyle: true },
-    }),
-    prisma.studentKnowledgeProfile.findFirst({
+    // Daily limit check (source-specific)
+    const todayCount = await prisma.material.count({
       where: {
         userId,
-        concept: { topic: { subjectId } },
+        source: "ON_DEMAND",
+        createdAt: { gte: today, lt: tomorrow },
       },
-      select: { masteryScore: true },
-      orderBy: { masteryScore: "asc" },
-    }),
-  ]);
+    });
+    if (todayCount >= DAILY_MATERIAL_LIMIT) {
+      return {
+        ok: false,
+        error: `Batas generate materi hari ini sudah tercapai (${DAILY_MATERIAL_LIMIT}x). Coba lagi besok ya!`,
+      };
+    }
 
-  const learningStyle = profile?.learningStyle ?? "VISUAL";
-  const masteryScore = knowledgeProfile?.masteryScore ?? 0.3;
+    // Validate subject
+    const subject = await prisma.subject.findFirst({
+      where: { id: subjectId, isActive: true },
+      select: { id: true, name: true },
+    });
+    if (!subject) {
+      return { ok: false, error: "Mapel tidak ditemukan." };
+    }
 
-  try {
+    // Get learning style + mastery
+    const [profile, knowledgeProfile] = await Promise.all([
+      prisma.studentProfile.findUnique({
+        where: { userId },
+        select: { learningStyle: true },
+      }),
+      prisma.studentKnowledgeProfile.findFirst({
+        where: {
+          userId,
+          concept: { topic: { subjectId } },
+        },
+        select: { masteryScore: true },
+        orderBy: { masteryScore: "asc" },
+      }),
+    ]);
+
+    const learningStyle = profile?.learningStyle ?? "VISUAL";
+    const masteryScore = knowledgeProfile?.masteryScore ?? 0.3;
+
     console.log("[MATERIAL] Generating on-demand material", {
       userId,
       subjectId,
@@ -126,5 +145,7 @@ export async function generateOnDemandMaterial(input: {
   } catch (err) {
     console.error("[MATERIAL] ✗ Failed to generate", err);
     return { ok: false, error: "Gagal generate materi. Coba lagi." };
+  } finally {
+    releaseDbLock(userId, "ON_DEMAND");
   }
 }
