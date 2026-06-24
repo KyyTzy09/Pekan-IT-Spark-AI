@@ -48,14 +48,16 @@ export async function retrieveContext(
 ): Promise<RetrievedDocument[]> {
   aiLog.info(`${EMOJI.start} retrieveContext — "${options.query.slice(0, 50)}..."`);
 
+  // BUG-16 FIX: Use AbortController to cancel inner work on timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500);
+
   try {
-    return await Promise.race([
-      retrieveContextInner(options),
-      new Promise<RetrievedDocument[]>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 2500),
-      ),
-    ]);
+    const result = await retrieveContextInner(options, controller.signal);
+    clearTimeout(timeoutId);
+    return result;
   } catch (e: unknown) {
+    clearTimeout(timeoutId);
     aiLog.warn(`${EMOJI.warn} retrieveContext timeout/gagal, pakai keyword search`);
     return keywordSearch(options);
   }
@@ -63,22 +65,29 @@ export async function retrieveContext(
 
 async function retrieveContextInner(
   options: SearchOptions,
+  signal?: AbortSignal,
 ): Promise<RetrievedDocument[]> {
   const { query, userId, subjectId, limit = 3 } = options;
   const results: RetrievedDocument[] = [];
 
   try {
+    // Check if already aborted
+    if (signal?.aborted) throw new Error("Aborted");
+
     const { embedding: queryEmbedding } = await embed({
       model: embeddingModel,
       value: query,
     });
 
+    // Check again after potentially slow embedding call
+    if (signal?.aborted) throw new Error("Aborted");
+
     aiLog.info(`${EMOJI.search} Mencari konsep yang relevan...`);
-    // 1) Search concepts (Prisma + JS cosine similarity, since embedding
-    //    column is @db.Text, not pgvector)
+    // 1) Search concepts
     const concepts = await prisma.concept.findMany({
       where: subjectId ? { topic: { subjectId } } : undefined,
-      take: 500,
+      // BUG-17 FIX: Limit concepts to prevent OOM
+      take: 200,
       include: {
         topic: { select: { subjectId: true } },
         embeddings: { select: { embedding: true } },
@@ -228,24 +237,30 @@ async function keywordSearch(
 
 export async function getRelevantConcepts(query: string, subjectId?: string) {
   aiLog.info(`${EMOJI.start} getRelevantConcepts — "${query.slice(0, 50)}..."`);
+  // BUG-16 FIX: Use AbortController instead of Promise.race
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500);
+
   try {
-    return await Promise.race([
-      getRelevantConceptsInner(query, subjectId),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 2500),
-      ),
-    ]);
+    const result = await getRelevantConceptsInner(query, subjectId, controller.signal);
+    clearTimeout(timeoutId);
+    return result;
   } catch (e: unknown) {
+    clearTimeout(timeoutId);
     aiLog.warn(`${EMOJI.warn} getRelevantConcepts timeout, pakai keyword search`);
     return keywordRelevantConcepts(query, subjectId);
   }
 }
 
-async function getRelevantConceptsInner(query: string, subjectId?: string) {
+async function getRelevantConceptsInner(query: string, subjectId?: string, signal?: AbortSignal) {
+  if (signal?.aborted) throw new Error("Aborted");
+
   const { embedding: queryEmbedding } = await embed({
     model: embeddingModel,
     value: query,
   });
+
+  if (signal?.aborted) throw new Error("Aborted");
 
   const concepts = await prisma.concept.findMany({
     where: subjectId ? { topic: { subjectId } } : undefined,
@@ -256,6 +271,8 @@ async function getRelevantConceptsInner(query: string, subjectId?: string) {
       topicId: true,
       embeddings: { select: { embedding: true } },
     },
+    // BUG-17 FIX: Limit concepts to prevent OOM
+    take: 200,
   });
 
   const scored = concepts

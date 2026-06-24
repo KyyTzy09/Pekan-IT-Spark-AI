@@ -52,13 +52,14 @@ async function requireStudent() {
   return user.id;
 }
 
+// BUG-15 FIX: Use UTC to match ai-quota.ts startOfUtcDay
 function startOfToday(): Date {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 function toDateOnly(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
 export interface ChallengeListItem {
@@ -943,6 +944,16 @@ export async function completeChallengeItem(input: {
     return { ok: false, error: "Item sudah selesai" };
   }
 
+  // BUG-4 FIX: Atomic status update to prevent TOCTOU race condition.
+  // Only one concurrent request can change PENDING -> COMPLETED.
+  const claimed = await prisma.challengeItem.updateMany({
+    where: { id: item.id, status: "PENDING" },
+    data: { status: "COMPLETED", completedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return { ok: false, error: "Item sudah selesai" };
+  }
+
   if (item.kind === "QUESTION") {
     if (!parsed.data.answer) {
       return { ok: false, error: "Jawaban wajib diisi" };
@@ -965,11 +976,10 @@ export async function completeChallengeItem(input: {
       return false;
     })();
 
+    // Status already updated atomically above, just save answer and correctness
     await prisma.challengeItem.update({
       where: { id: item.id },
       data: {
-        status: "COMPLETED",
-        completedAt: new Date(),
         answer: parsed.data.answer,
         isCorrect,
       },
@@ -1088,6 +1098,10 @@ export async function submitReflection(input: {
   const reflectionItem = challenge.items[0];
   if (!reflectionItem || !reflectionItem.prompt) {
     return { ok: false, error: "Challenge ini tidak punya refleksi" };
+  }
+  // BUG-3 FIX: Check if reflection already completed to prevent XP farming
+  if (reflectionItem.status === "COMPLETED") {
+    return { ok: false, error: "Refleksi sudah diselesaikan sebelumnya." };
   }
 
   const analysis = await analyzeReflection(
@@ -1341,6 +1355,12 @@ export async function generateOnDemand(input: {
     },
   });
 
+  // BUG-2 FIX: Track AI quota for on-demand challenge generation
+  const aiQuota = await incrementAiQuota(userId, "questions", 1);
+  if (!aiQuota.allowed) {
+    return { ok: false, error: "Kuota AI harian sudah habis. Coba lagi besok ya!" };
+  }
+
   const plan = await generateOnDemandChallenge({
       userId,
       kind: parsed.data.kind,
@@ -1479,6 +1499,8 @@ export async function generateOnDemand(input: {
     revalidatePath("/challenge", "layout");
     return { ok: true, challengeId };
   } catch (err) {
+    // BUG-2 FIX: Restore quota on failure
+    await decrementAiQuota(userId, "questions", 1).catch(() => {});
     console.error("generateOnDemand failed:", err);
     return { ok: false, error: "Gagal generate tantangan" };
   } finally {

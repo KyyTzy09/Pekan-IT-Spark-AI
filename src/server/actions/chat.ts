@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateChatTitle, generateTutorStream } from "@/server/ai/tutor";
+import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 import { logDocumentEvent } from "@/server/documents/audit";
 import { buildDocumentChatContext } from "@/server/documents/features";
 
@@ -61,6 +62,8 @@ export async function listChatSessions(): Promise<ChatSessionSummary[]> {
       sessionId: { in: sessions.map((s) => s.id) },
     },
     orderBy: { createdAt: "desc" },
+    // BUG-21 FIX: Limit to avoid fetching all messages for all sessions
+    take: sessions.length,
     select: {
       id: true,
       sessionId: true,
@@ -219,6 +222,13 @@ export async function generateAssistantResponse(
   sessionId: string,
 ): Promise<void> {
   const userId = await requireStudent();
+
+  // BUG-1 FIX: Check chat quota before AI call
+  const quota = await incrementAiQuota(userId, "chat", 1);
+  if (!quota.allowed) {
+    throw new Error("Kuasa AI chat harian sudah habis. Coba lagi besok ya!");
+  }
+
   const session = await prisma.chatSession.findFirst({
     where: { id: sessionId, userId },
     include: {
@@ -227,12 +237,14 @@ export async function generateAssistantResponse(
     },
   });
   if (!session) {
+    await decrementAiQuota(userId, "chat", 1);
     throw new Error("Chat session not found");
   }
 
-  // If the last message is already from assistant, skip to prevent double generation
+  // BUG-5 FIX: If the last message is already from assistant, skip to prevent double generation
   const lastMessage = session.messages[session.messages.length - 1];
   if (!lastMessage || lastMessage.role === "ASSISTANT") {
+    await decrementAiQuota(userId, "chat", 1);
     return;
   }
 
@@ -280,30 +292,47 @@ export async function generateAssistantResponse(
     })),
   ];
 
-  const result = await generateTutorStream({
-    userId,
-    userName: user?.name ?? undefined,
-    messages,
-    subjectSlug: subjectSlug ?? undefined,
-    topicId: session.topicId ?? undefined,
-    lastUserMessage: lastMessage.content,
-  });
+  try {
+    const result = await generateTutorStream({
+      userId,
+      userName: user?.name ?? undefined,
+      messages,
+      subjectSlug: subjectSlug ?? undefined,
+      topicId: session.topicId ?? undefined,
+      lastUserMessage: lastMessage.content,
+    });
 
-  const fullText = await result.text;
+    const fullText = await result.text;
 
-  await prisma.$transaction([
-    prisma.chatMessage.create({
-      data: {
-        sessionId: session.id,
-        role: "ASSISTANT",
-        content: fullText,
-      },
-    }),
-    prisma.chatSession.update({
-      where: { id: session.id },
-      data: { updatedAt: new Date() },
-    }),
-  ]);
+    // BUG-5 FIX: Re-check before saving to catch race condition
+    const reCheck = await prisma.chatMessage.findFirst({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: "desc" },
+      select: { role: true },
+    });
+    if (reCheck?.role === "ASSISTANT") {
+      // Another request already generated a response — skip
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.chatMessage.create({
+        data: {
+          sessionId: session.id,
+          role: "ASSISTANT",
+          content: fullText,
+        },
+      }),
+      prisma.chatSession.update({
+        where: { id: session.id },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
+  } catch (err) {
+    // BUG-1 FIX: Restore quota on AI failure
+    await decrementAiQuota(userId, "chat", 1).catch(() => {});
+    throw err;
+  }
 
   revalidatePath("/chat");
   revalidatePath(`/chat/${session.id}`);
@@ -335,6 +364,12 @@ export async function sendMessage(input: {
     throw new Error("Pesan kosong");
   }
 
+  // BUG-1 FIX: Check chat quota before AI call
+  const quota = await incrementAiQuota(userId, "chat", 1);
+  if (!quota.allowed) {
+    throw new Error("Kuota AI chat harian sudah habis. Coba lagi besok ya!");
+  }
+
   const session = await prisma.chatSession.findFirst({
     where: { id: input.sessionId, userId },
     include: {
@@ -343,6 +378,7 @@ export async function sendMessage(input: {
     },
   });
   if (!session) {
+    await decrementAiQuota(userId, "chat", 1);
     throw new Error("Chat session not found");
   }
 
@@ -416,44 +452,50 @@ export async function sendMessage(input: {
     { role: "user" as const, content: input.content },
   ];
 
-  const result = await generateTutorStream({
-    userId,
-    userName: user?.name ?? undefined,
-    messages,
-    subjectSlug: subjectSlug ?? undefined,
-    topicId: session.topicId ?? undefined,
-    lastUserMessage: input.content,
-  });
+  try {
+    const result = await generateTutorStream({
+      userId,
+      userName: user?.name ?? undefined,
+      messages,
+      subjectSlug: subjectSlug ?? undefined,
+      topicId: session.topicId ?? undefined,
+      lastUserMessage: input.content,
+    });
 
-  const fullText = await result.text;
+    const fullText = await result.text;
 
-  await prisma.$transaction([
-    prisma.chatMessage.create({
-      data: {
-        sessionId: session.id,
-        role: "ASSISTANT",
-        content: fullText,
-      },
-    }),
-    prisma.chatSession.update({
-      where: { id: session.id },
-      data: { updatedAt: new Date() },
-    }),
-  ]);
+    await prisma.$transaction([
+      prisma.chatMessage.create({
+        data: {
+          sessionId: session.id,
+          role: "ASSISTANT",
+          content: fullText,
+        },
+      }),
+      prisma.chatSession.update({
+        where: { id: session.id },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
 
-  revalidatePath("/chat");
-  revalidatePath(`/chat/${session.id}`);
-  revalidatePath("/dashboard");
+    revalidatePath("/chat");
+    revalidatePath(`/chat/${session.id}`);
+    revalidatePath("/dashboard");
 
-  async function* iterator() {
-    yield fullText;
+    async function* iterator() {
+      yield fullText;
+    }
+
+    return {
+      sessionId: session.id,
+      text: iterator(),
+      ...(documentName ? { documentName } : {}),
+    } as StreamResult;
+  } catch (err) {
+    // BUG-1 FIX: Restore quota on AI failure
+    await decrementAiQuota(userId, "chat", 1).catch(() => {});
+    throw err;
   }
-
-  return {
-    sessionId: session.id,
-    text: iterator(),
-    ...(documentName ? { documentName } : {}),
-  } as StreamResult;
 }
 
 export async function sendMessageAndNavigate(input: {

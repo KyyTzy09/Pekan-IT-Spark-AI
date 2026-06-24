@@ -347,25 +347,31 @@ export async function streamText({
     }
   } else {
     // Non-heavy: Sumopod direct
+    // BUG-18 FIX: Add try/catch for non-heavy streaming path
     const modelName = "deepseek-v4-flash";
-    const stream = await openaiDefault.chat.completions.create(
-      { model: modelName, messages: apiMessages, temperature, stream: true },
-      { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
-    );
+    try {
+      const stream = await openaiDefault.chat.completions.create(
+        { model: modelName, messages: apiMessages, temperature, stream: true },
+        { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
+      );
 
-    aiLog.info(`${EMOJI.stream} Streaming dimulai (Sumopod ${modelName})`);
+      aiLog.info(`${EMOJI.stream} Streaming dimulai (Sumopod ${modelName})`);
 
-    const iterable = (async function* () {
-      let chunkCount = 0;
-      for await (const chunk of stream) {
-        chunkCount++;
-        const content = chunk.choices[0]?.delta?.content || "";
-        if (content) yield content;
-      }
-      aiLog.info(`${EMOJI.ok} Streaming selesai — ${chunkCount} chunk`);
-    })();
+      const iterable = (async function* () {
+        let chunkCount = 0;
+        for await (const chunk of stream) {
+          chunkCount++;
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) yield content;
+        }
+        aiLog.info(`${EMOJI.ok} Streaming selesai — ${chunkCount} chunk`);
+      })();
 
-    return { text: collectStreamText(iterable) };
+      return { text: collectStreamText(iterable) };
+    } catch (err) {
+      aiLog.error(`${EMOJI.error} Non-heavy streaming gagal (${modelName}): ${formatErr(err)}`);
+      throw err;
+    }
   }
 }
 

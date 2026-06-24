@@ -12,8 +12,19 @@ const FALLBACK = (name: string) =>
 • **Ciptakan Ruang Kondusif**: Sediakan tempat belajar yang tenang dan bebas gangguan agar ${name} bisa lebih fokus menyelesaikan misi belajarnya.
 `.trim();
 
-function formatRecommendation(text: string): string {
+function escapeHtml(text: string): string {
   return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatRecommendation(text: string): string {
+  // BUG-7 FIX: Escape HTML first to prevent XSS via AI-generated content
+  const safe = escapeHtml(text);
+  return safe
     .replace(/\n\n/g, "<br/><br/>")
     .replace(/\n/g, "<br/>")
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")

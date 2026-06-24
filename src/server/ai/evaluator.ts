@@ -8,6 +8,8 @@ interface EvaluationResult {
   feedback: string;
   explanation: string;
   mastered: boolean;
+  // BUG-9 FIX: Add flag to indicate AI failure (so caller can handle appropriately)
+  aiFailed?: boolean;
 }
 
 export async function evaluateAnswer(
@@ -74,11 +76,14 @@ Jawab dalam format JSON.`;
       mastered: Boolean(obj.mastered),
     };
   } catch {
+    // BUG-9 FIX: Return aiFailed flag so caller knows this isn't a real evaluation.
+    // Don't mark as incorrect — the answer might actually be correct.
     return {
       isCorrect: false,
-      feedback: "Maaf, terjadi kesalahan saat mengevaluasi jawaban.",
-      explanation: "Silakan coba lagi atau tanyakan ke Spark.",
+      feedback: "Maaf, terjadi kesalahan saat mengevaluasi jawaban. Coba lagi ya!",
+      explanation: "Sistem evaluasi sedang bermasalah. Jawabanmu belum dinilai.",
       mastered: false,
+      aiFailed: true,
     };
   }
 }

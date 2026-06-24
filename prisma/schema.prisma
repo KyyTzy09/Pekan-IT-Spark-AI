@@ -574,6 +574,7 @@ model DailyAiQuota {
   date           DateTime @db.Date
   questionsCount Int      @default(0)
   materialsCount Int      @default(0)
+  chatCount      Int      @default(0)
   updatedAt      DateTime @updatedAt
 
   @@index([date])

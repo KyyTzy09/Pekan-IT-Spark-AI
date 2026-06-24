@@ -9,6 +9,7 @@ import {
   checkAndUnlockBadges,
   recordActivity,
 } from "@/server/actions/gamification";
+import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 import { logDocumentEvent } from "@/server/documents/audit";
 import { validateEducationalContent } from "@/server/documents/content-check";
 import { embedDocumentChunks } from "@/server/documents/embeddings";
@@ -547,6 +548,12 @@ export async function generateDocumentQuizAction(
   const doc = await loadOwnedDocument(userId, documentId);
   if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
   try {
+    // BUG-8 FIX: Track AI quota for document quiz generation
+    const quota = await incrementAiQuota(userId, "questions", 1);
+    if (!quota.allowed) {
+      return { ok: false, error: "Kuota AI harian sudah habis. Coba lagi besok ya!" };
+    }
+
     const quiz = await generateQuizFromDocument(
       doc.content,
       doc.originalName,
@@ -581,6 +588,8 @@ export async function generateDocumentQuizAction(
       },
     };
   } catch (e) {
+    // BUG-8 FIX: Restore quota on failure
+    await decrementAiQuota(userId, "questions", 1).catch(() => {});
     console.error("generateDocumentQuiz failed:", e);
     return { ok: false, error: "Gagal bikin latihan. Coba lagi nanti ya." };
   }
@@ -619,6 +628,12 @@ export async function appendQuestionsToDocumentQuizAction(
   }
 
   try {
+    // BUG-8 FIX: Track AI quota for appending quiz questions
+    const quota = await incrementAiQuota(userId, "questions", 1);
+    if (!quota.allowed) {
+      return { ok: false, error: "Kuota AI harian sudah habis. Coba lagi besok ya!" };
+    }
+
     const existingQuestions = (quizRecord.questions as any[]) || [];
     const generated = await generateMoreQuestionsForQuiz(
       quizRecord.document.content,
@@ -646,6 +661,8 @@ export async function appendQuestionsToDocumentQuizAction(
       },
     };
   } catch (e) {
+    // BUG-8 FIX: Restore quota on failure
+    await decrementAiQuota(userId, "questions", 1).catch(() => {});
     console.error("appendQuestionsToDocumentQuiz failed:", e);
     return { ok: false, error: "Gagal menambahkan soal baru." };
   }
@@ -893,6 +910,12 @@ export async function generateDocumentMaterialAction(
   const doc = await loadOwnedDocument(userId, documentId);
   if (!doc) return { ok: false, error: "Dokumen tidak ditemukan." };
   try {
+    // BUG-8 FIX: Track AI quota for document material generation
+    const quota = await incrementAiQuota(userId, "materials", 1);
+    if (!quota.allowed) {
+      return { ok: false, error: "Kuota AI materi harian sudah habis. Coba lagi besok ya!" };
+    }
+
     const studentProfile = await prisma.studentProfile.findUnique({
       where: { userId },
       select: { learningStyle: true },
@@ -970,6 +993,8 @@ export async function generateDocumentMaterialAction(
       },
     };
   } catch (e) {
+    // BUG-8 FIX: Restore quota on failure
+    await decrementAiQuota(userId, "materials", 1).catch(() => {});
     console.error("generateDocumentMaterial failed:", e);
     return { ok: false, error: "Gagal bikin materi. Coba lagi nanti ya." };
   }

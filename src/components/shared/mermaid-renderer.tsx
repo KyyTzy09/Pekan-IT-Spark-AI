@@ -27,7 +27,8 @@ export default function MermaidRenderer({ chart }: MermaidRendererProps) {
         mermaid.initialize({
           startOnLoad: false,
           theme: "dark",
-          securityLevel: "loose",
+          // BUG-20 FIX: Use "strict" to prevent script execution in diagram nodes
+          securityLevel: "strict",
           fontFamily: "var(--font-sans), system-ui, sans-serif",
           themeVariables: {
             background: "transparent",

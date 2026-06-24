@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ai", () => ({ chatModel: {}, generateText: vi.fn() }));
 
-import { canIncrementQuota, AI_QUOTA_LIMITS } from "@/server/ai-quota";
+import { AI_QUOTA_LIMITS, canIncrementQuota } from "@/server/ai-quota";
 
 // ============================================================
 // BUG #1: AI Generation di DALAM DB Transaction
@@ -71,7 +71,9 @@ describe("BUG #2 — learningStyle dioper dari profile, bukan hardcoded", () => 
     );
 
     // Cari di region resolveQuestionOutsideTransaction
-    const fnStart = source.indexOf("async function resolveQuestionOutsideTransaction");
+    const fnStart = source.indexOf(
+      "async function resolveQuestionOutsideTransaction",
+    );
     const fnEnd = source.indexOf("\n}\n\n", fnStart);
     const fnBody = source.slice(fnStart, fnEnd + 5);
 
@@ -101,11 +103,13 @@ describe("BUG #3 — strongConcepts di-fetch dari DB", () => {
     );
 
     // Cari: harus ada query untuk strongConcepts (masteryScore: { gte: 0.7 })
-    const hasStrongQuery = source.includes('masteryScore: { gte: 0.7 }');
+    const hasStrongQuery = source.includes("masteryScore: { gte: 0.7 }");
     expect(hasStrongQuery).toBe(true);
 
     // Cari: strongConcepts dioper ke generateDailyMix
-    const mixCallMatch = source.match(/strongConcepts:\s*strongConcepts\.map[^;]+/);
+    const mixCallMatch = source.match(
+      /strongConcepts:\s*strongConcepts\.map[^;]+/,
+    );
     expect(mixCallMatch).not.toBeNull();
   });
 });
@@ -127,11 +131,11 @@ describe("BUG #4 — AI quota dikembalikan (decrement) kalo gagal", () => {
     const fnBody = source.slice(fnStart, fnEnd + 5);
 
     // Harus ada decrementAiQuota di catch (question gagal)
-    expect(fnBody).toContain("await decrementAiQuota(userId, \"questions\", 1)");
+    expect(fnBody).toContain('await decrementAiQuota(userId, "questions", 1)');
     // Harus ada decrementAiQuota kalo concept ga ditemukan
-    expect(fnBody).toContain("await decrementAiQuota(userId, \"questions\", 1)");
+    expect(fnBody).toContain('await decrementAiQuota(userId, "questions", 1)');
     // Harus ada decrementAiQuota di catch (material gagal)
-    expect(fnBody).toContain("await decrementAiQuota(userId, \"materials\", 1)");
+    expect(fnBody).toContain('await decrementAiQuota(userId, "materials", 1)');
   });
 });
 
@@ -167,14 +171,14 @@ describe("canIncrementQuota", () => {
     expect(canIncrementQuota(null, "questions", 1)).toBe(true);
     expect(
       canIncrementQuota(
-        { questionsCount: 5, materialsCount: 0 },
+        { questionsCount: 5, materialsCount: 0, chatCount: 0 },
         "questions",
         1,
       ),
     ).toBe(true);
     expect(
       canIncrementQuota(
-        { questionsCount: 19, materialsCount: 0 },
+        { questionsCount: 19, materialsCount: 0, chatCount: 0 },
         "questions",
         1,
       ),
@@ -184,14 +188,14 @@ describe("canIncrementQuota", () => {
   it("return false kalo quota udah penuh", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 20, materialsCount: 0 },
+        { questionsCount: 20, materialsCount: 0, chatCount: 0 },
         "questions",
         1,
       ),
     ).toBe(false);
     expect(
       canIncrementQuota(
-        { questionsCount: 5, materialsCount: 5 },
+        { questionsCount: 5, materialsCount: 5, chatCount: 0 },
         "materials",
         1,
       ),
@@ -201,7 +205,7 @@ describe("canIncrementQuota", () => {
   it("return false kalo increment melebihi limit", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 19, materialsCount: 0 },
+        { questionsCount: 19, materialsCount: 0, chatCount: 0 },
         "questions",
         2,
       ),
@@ -211,7 +215,7 @@ describe("canIncrementQuota", () => {
   it("return true kalo masih ada sisa dengan by > 1", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 18, materialsCount: 0 },
+        { questionsCount: 18, materialsCount: 0, chatCount: 0 },
         "questions",
         2,
       ),
@@ -223,5 +227,3 @@ describe("canIncrementQuota", () => {
     expect(AI_QUOTA_LIMITS.materials).toBe(5);
   });
 });
-
-

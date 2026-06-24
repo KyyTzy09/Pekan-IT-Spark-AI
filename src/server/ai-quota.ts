@@ -3,6 +3,7 @@ import "server-only";
 export const AI_QUOTA_LIMITS = {
   questions: 20,
   materials: 5,
+  chat: 50,
 } as const;
 
 export type AiQuotaKind = keyof typeof AI_QUOTA_LIMITS;
@@ -10,6 +11,7 @@ export type AiQuotaKind = keyof typeof AI_QUOTA_LIMITS;
 export type AiQuotaSnapshot = {
   questionsCount: number;
   materialsCount: number;
+  chatCount: number;
 };
 
 function startOfUtcDay(d: Date): Date {
@@ -84,11 +86,13 @@ export async function incrementAiQuota(
           date: today,
           questionsCount: kind === "questions" ? by : 0,
           materialsCount: kind === "materials" ? by : 0,
+          chatCount: kind === "chat" ? by : 0,
         },
         update: {
           date: today,
           questionsCount: kind === "questions" ? by : 0,
           materialsCount: kind === "materials" ? by : 0,
+          chatCount: kind === "chat" ? by : 0,
           updatedAt: new Date(),
         },
       });

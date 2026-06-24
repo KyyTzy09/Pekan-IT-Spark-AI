@@ -45,37 +45,31 @@ export async function checkRateLimitAsync(key: string): Promise<boolean> {
   try {
     const { prisma } = await import("@/lib/prisma");
 
-    // BUG-3 FIX: Atomic increment within upsert to prevent race condition.
-    // If window expired, reset count to 1. Otherwise, increment and check.
-    const record = await prisma.rateLimit.upsert({
-      where: { key },
-      create: { key, count: 1, resetAt: new Date(now + WINDOW_MS) },
-      update: {
-        // If window expired, Prisma will still execute this update.
-        // We handle the reset case below by checking the timestamp.
-        count: { increment: 1 },
-      },
-      select: { count: true, resetAt: true },
-    });
+    // BUG-19 FIX: Use atomic conditional update to prevent race on window reset.
+    // If window expired, use raw query to atomically reset to 1.
+    const record = await prisma.$queryRaw<[{ count: number; reset_at: Date }]>`
+      INSERT INTO rate_limits (key, count, reset_at)
+      VALUES (${key}, 1, ${new Date(now + WINDOW_MS)})
+      ON CONFLICT (key) DO UPDATE
+        SET count = CASE
+          WHEN rate_limits.reset_at < ${new Date(now)} THEN 1
+          ELSE rate_limits.count + 1
+        END,
+        reset_at = CASE
+          WHEN rate_limits.reset_at < ${new Date(now)} THEN ${new Date(now + WINDOW_MS)}
+          ELSE rate_limits.reset_at
+        END
+      RETURNING count, reset_at
+    `;
+    const result = record[0];
+    const resetAt = new Date(result.reset_at).getTime();
 
-    // If the window had expired before the increment, reset to 1
-    if (record.resetAt.getTime() < now) {
-      const _reset = await prisma.rateLimit.update({
-        where: { key },
-        data: { count: 1, resetAt: new Date(now + WINDOW_MS) },
-        select: { count: true },
-      });
-      attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-      return true;
-    }
-
-    // Check if the atomically-incremented count exceeds the limit
-    if (record.count > MAX_ATTEMPTS) {
-      attempts.set(key, { count: record.count, resetAt: record.resetAt.getTime() });
+    if (result.count > MAX_ATTEMPTS) {
+      attempts.set(key, { count: result.count, resetAt });
       return false;
     }
 
-    attempts.set(key, { count: record.count, resetAt: record.resetAt.getTime() });
+    attempts.set(key, { count: result.count, resetAt });
     return true;
   } catch {
     // DB unavailable — fall back to in-memory only

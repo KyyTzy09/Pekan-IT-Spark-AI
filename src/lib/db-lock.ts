@@ -34,19 +34,20 @@ export async function acquireDbLock(
   } catch (err: any) {
     // P2002 = unique constraint violation = lock already exists
     if (err?.code === "P2002") {
-      // Check if the existing lock is expired
-      const existing = await prisma.generationLock.findUnique({
-        where: { userId_lockType: { userId, lockType } },
+      // BUG-14 FIX: Use atomic update to prevent race condition on lock stealing.
+      // If lock is expired, atomically update it — only one request can succeed.
+      const updated = await prisma.generationLock.updateMany({
+        where: {
+          userId,
+          lockType,
+          expiresAt: { lt: now },
+        },
+        data: { expiresAt },
       });
-      if (existing && existing.expiresAt < now) {
-        // Lock expired, steal it
-        await prisma.generationLock.update({
-          where: { id: existing.id },
-          data: { expiresAt },
-        });
-        return true;
+      if (updated.count > 0) {
+        return true; // Lock was expired and we claimed it
       }
-      return false;
+      return false; // Lock is still valid
     }
     // Other errors - log and allow generation (fail-open)
     console.error("[DB_LOCK] Unexpected error:", err);

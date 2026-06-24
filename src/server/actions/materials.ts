@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
-import { incrementAiQuota } from "@/server/ai-quota";
+import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
 
 const DAILY_MATERIAL_LIMIT = 7;
@@ -143,6 +143,8 @@ export async function generateOnDemandMaterial(input: {
 
     return { ok: true, materialId: created.id };
   } catch (err) {
+    // BUG-10 FIX: Restore quota on AI failure
+    await decrementAiQuota(userId, "materials", 1).catch(() => {});
     console.error("[MATERIAL] ✗ Failed to generate", err);
     return { ok: false, error: "Gagal generate materi. Coba lagi." };
   } finally {
