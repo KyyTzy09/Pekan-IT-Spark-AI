@@ -909,3 +909,15 @@ model RateLimit {
 
   @@map("rate_limits")
 }
+
+model GenerationLock {
+  id        String   @id @default(cuid())
+  userId    String
+  lockType  String   // "DAILY" | "WEEKLY" | "ON_DEMAND"
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@unique([userId, lockType])
+  @@index([expiresAt])
+  @@map("generation_locks")
+}

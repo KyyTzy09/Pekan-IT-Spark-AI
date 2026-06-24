@@ -902,7 +902,6 @@ Buat prompt yang:
     return { prompt, context };
   } catch (err: unknown) {
     aiLog.warn(`${EMOJI.warn} generateReflectionPrompt gagal, pakai recovery: ${formatErr(err)}`);
-    );
     return {
       prompt: `Bagaimana pemahamanmu tentang konsep ${args.topicName || args.subjectName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
       context: `Refleksi tentang konsep ${args.topicName || args.subjectName}`,

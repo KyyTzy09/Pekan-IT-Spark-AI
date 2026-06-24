@@ -43,8 +43,9 @@ export function maskKey(key: string | undefined): string {
 export function formatErr(err: unknown): string {
   if (err instanceof Error) {
     // OpenAI SDK errors punya status dan code
-    const status = (err as Record<string, unknown>).status;
-    const code = (err as Record<string, unknown>).code;
+    const errObj = err as unknown as Record<string, unknown>;
+    const status = errObj.status;
+    const code = errObj.code;
     if (status || code) {
       return `${err.message} (HTTP ${status ?? "?"}, code: ${code ?? "?"})`;
     }

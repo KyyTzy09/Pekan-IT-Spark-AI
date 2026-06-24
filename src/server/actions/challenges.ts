@@ -1,28 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
-// 🔴 Lock in-progress generation per userId — biar polling ga dobel-dobel generate
-const generationLocks = new Map<string, Promise<boolean>>();
-
-async function acquireGenerationLock(userId: string): Promise<boolean> {
-  const existing = generationLocks.get(userId);
-  if (existing) return existing;
-  let resolve!: (v: boolean) => void;
-  const promise = new Promise<boolean>((r) => (resolve = r));
-  generationLocks.set(userId, promise);
-  // Auto-release after 5 minutes (safety net)
-  setTimeout(() => {
-    generationLocks.delete(userId);
-    resolve(false);
-  }, 5 * 60 * 1000);
-  return true;
-}
-
-function releaseGenerationLock(userId: string) {
-  generationLocks.delete(userId);
-}
-
+import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { XP_REWARDS } from "@/lib/gamification";
@@ -266,8 +245,8 @@ export async function generateAndStoreDailyChallenges(
     return;
   }
 
-  // 🔴 Lock: cegah generation dobel dari polling simultan
-  if (!(await acquireGenerationLock(userId))) {
+  // 🔴 Lock: cegah generation dobel dari polling simultan (DB-backed for Vercel)
+  if (!(await acquireDbLock(userId, "DAILY"))) {
     console.log(
       "[DAILY_CHALLENGE] Skip — generation udah berjalan, tunggu selesai",
       { userId, date: date.toISOString() },
@@ -358,7 +337,7 @@ export async function generateAndStoreDailyChallenges(
     total: distributedSubjects.length,
   });
   } finally {
-    releaseGenerationLock(userId);
+    releaseDbLock(userId, "DAILY");
   }
 }
 
@@ -1268,70 +1247,76 @@ export async function generateOnDemand(input: {
   const parsed = generateSchema.safeParse(input ?? {});
   if (!parsed.success) return { ok: false, error: "Input tidak valid" };
 
-  const today = startOfToday();
-  const todayCount = await prisma.challenge.count({
-    where: {
-      userId,
-      source: "ON_DEMAND",
-      scheduledFor: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
-    },
-  });
-  if (todayCount >= 7) {
-    return {
-      ok: false,
-      error:
-        "Batas tantangan tambahan hari ini sudah tercapai (7x). Coba lagi besok ya!",
-    };
+  // 🔴 Lock: cegah double generate on-demand (DB-backed for Vercel)
+  if (!(await acquireDbLock(userId, "ON_DEMAND"))) {
+    return { ok: false, error: "Masih ada tantangan yang sedang di-generate. Tunggu sebentar ya!" };
   }
 
-  const profile = await prisma.studentProfile.findUnique({
-    where: { userId },
-    select: { focusedSubjects: true },
-  });
-
-  const focusedSubjectIds = profile?.focusedSubjects ?? [];
-
-  // Fetch focused subject details (names)
-  const focusedSubjectModels =
-    focusedSubjectIds.length > 0
-      ? await prisma.subject.findMany({
-          where: { id: { in: focusedSubjectIds } },
-          select: { name: true },
-        })
-      : [];
-  const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
-
-  // If specific subject is requested
-  const subjectSlug = parsed.data.subjectSlug;
-  // Try slug match first, then name match for custom subjects
-  let subject = subjectSlug
-    ? await prisma.subject.findUnique({
-        where: { slug: subjectSlug as SubjectSlug },
-      })
-    : null;
-  // If not found by slug, try name match (for custom subjects)
-  if (!subject && subjectSlug) {
-    const nameMatch = await prisma.subject.findFirst({
+  try {
+    const today = startOfToday();
+    const todayCount = await prisma.challenge.count({
       where: {
-        name: { equals: subjectSlug, mode: "insensitive" },
-        OR: [{ createdById: null }, { createdById: userId }],
+        userId,
+        source: "ON_DEMAND",
+        scheduledFor: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
       },
     });
-    if (nameMatch) subject = nameMatch;
-  }
+    if (todayCount >= 7) {
+      return {
+        ok: false,
+        error:
+          "Batas tantangan tambahan hari ini sudah tercapai (7x). Coba lagi besok ya!",
+      };
+    }
 
-  // Build filter for availableQuestions
-  const availableQuestionsFilter: Prisma.QuestionWhereInput = {
-    isActive: true,
-  };
-  if (subject) {
-    availableQuestionsFilter.concept = {
-      topic: {
-        subjectId: subject.id,
-      },
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { focusedSubjects: true },
+    });
+
+    const focusedSubjectIds = profile?.focusedSubjects ?? [];
+
+    // Fetch focused subject details (names)
+    const focusedSubjectModels =
+      focusedSubjectIds.length > 0
+        ? await prisma.subject.findMany({
+            where: { id: { in: focusedSubjectIds } },
+            select: { name: true },
+          })
+        : [];
+    const focusedSubjectNames = focusedSubjectModels.map((s) => s.name);
+
+    // If specific subject is requested
+    const subjectSlug = parsed.data.subjectSlug;
+    // Try slug match first, then name match for custom subjects
+    let subject = subjectSlug
+      ? await prisma.subject.findUnique({
+          where: { slug: subjectSlug as SubjectSlug },
+        })
+      : null;
+    // If not found by slug, try name match (for custom subjects)
+    if (!subject && subjectSlug) {
+      const nameMatch = await prisma.subject.findFirst({
+        where: {
+          name: { equals: subjectSlug, mode: "insensitive" },
+          OR: [{ createdById: null }, { createdById: userId }],
+        },
+      });
+      if (nameMatch) subject = nameMatch;
+    }
+
+    // Build filter for availableQuestions
+    const availableQuestionsFilter: Prisma.QuestionWhereInput = {
+      isActive: true,
     };
-  } else if (focusedSubjectIds.length > 0) {
-    availableQuestionsFilter.concept = {
+    if (subject) {
+      availableQuestionsFilter.concept = {
+        topic: {
+          subjectId: subject.id,
+        },
+      };
+    } else if (focusedSubjectIds.length > 0) {
+      availableQuestionsFilter.concept = {
       topic: {
         subjectId: { in: focusedSubjectIds },
       },
@@ -1356,8 +1341,7 @@ export async function generateOnDemand(input: {
     },
   });
 
-  try {
-    const plan = await generateOnDemandChallenge({
+  const plan = await generateOnDemandChallenge({
       userId,
       kind: parsed.data.kind,
       subjectSlug: parsed.data.subjectSlug,
@@ -1379,14 +1363,14 @@ export async function generateOnDemand(input: {
     const firstItem = plan.items[0];
     const slugToLookup = parsed.data.subjectSlug ?? firstItem.subjectSlug;
     // Try slug match first, then name match for custom subjects
-    let subject = slugToLookup
+    let challengeSubject = slugToLookup
       ? await prisma.subject.findUnique({
           where: { slug: slugToLookup as SubjectSlug },
           select: { id: true, name: true },
         })
       : null;
     // If not found by slug, try name match (for custom subjects)
-    if (!subject && slugToLookup) {
+    if (!challengeSubject && slugToLookup) {
       const nameMatch = await prisma.subject.findFirst({
         where: {
           name: { equals: slugToLookup, mode: "insensitive" },
@@ -1394,7 +1378,7 @@ export async function generateOnDemand(input: {
         },
         select: { id: true, name: true },
       });
-      if (nameMatch) subject = nameMatch;
+      if (nameMatch) challengeSubject = nameMatch;
     }
 
     const challengeMix = {
@@ -1407,7 +1391,7 @@ export async function generateOnDemand(input: {
       plan.items.find((i) => i.conceptHint)?.conceptHint ||
       "Pembelajaran Adaptif";
     const _subjectName =
-      subject?.name ??
+      challengeSubject?.name ??
       (slugToLookup
         ? slugToLookup
             .replace(/_/g, " ")
@@ -1417,7 +1401,7 @@ export async function generateOnDemand(input: {
 
     const baseData = {
       userId,
-      subjectId: subject?.id ?? null,
+      subjectId: challengeSubject?.id ?? null,
       title: `Tantangan Tambahan: ${firstConcept}`,
       description:
         plan.description || "Latihan adaptif tambahan atas permintaan siswa.",
@@ -1437,7 +1421,7 @@ export async function generateOnDemand(input: {
         const candidates = availableQuestions.filter((q) => {
           const qSlug = (q.concept.topic.subject as { slug: SubjectSlug }).slug;
           if (qSlug === item.subjectSlug) return true;
-          if (subject && q.concept.topic.subject.slug === subject.id)
+          if (challengeSubject && q.concept.topic.subject.slug === challengeSubject.id)
             return true;
           return false;
         });
@@ -1459,7 +1443,7 @@ export async function generateOnDemand(input: {
         const m = await prisma.material.create({
           data: {
             userId,
-            subjectId: subject?.id ?? null,
+            subjectId: challengeSubject?.id ?? null,
             title: item.material.title,
             content: item.material.content,
             keyPoints: item.material.keyPoints,
@@ -1497,6 +1481,8 @@ export async function generateOnDemand(input: {
   } catch (err) {
     console.error("generateOnDemand failed:", err);
     return { ok: false, error: "Gagal generate tantangan" };
+  } finally {
+    releaseDbLock(userId, "ON_DEMAND");
   }
 }
 

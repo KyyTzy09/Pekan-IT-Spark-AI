@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
 import { prisma } from "@/lib/prisma";
 import {
   generateWeeklyDeepMaterial,
@@ -8,27 +9,6 @@ import {
   generateWeeklyTitleAI,
 } from "@/server/ai/challenge";
 import { decrementAiQuota, incrementAiQuota } from "@/server/ai-quota";
-
-// Lock: cegah regenerasi dober — database-backed for serverless
-const weeklyGenerationLocks = new Map<string, Promise<boolean>>();
-
-async function acquireWeeklyLock(userId: string): Promise<boolean> {
-  const existing = weeklyGenerationLocks.get(userId);
-  if (existing) return existing;
-  let resolve!: (v: boolean) => void;
-  const promise = new Promise<boolean>((r) => (resolve = r));
-  weeklyGenerationLocks.set(userId, promise);
-  // Auto-release after 5 minutes (safety net)
-  setTimeout(() => {
-    weeklyGenerationLocks.delete(userId);
-    resolve(false);
-  }, 5 * 60 * 1000);
-  return true;
-}
-
-function releaseWeeklyLock(userId: string) {
-  weeklyGenerationLocks.delete(userId);
-}
 
 const MAX_RETRIES = 3;
 
@@ -142,8 +122,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     return { ok: true, weeklyChallengeId: existingWeekly.id };
   }
 
-  // 🔴 Lock: cegah regenerasi dobel
-  if (!(await acquireWeeklyLock(userId))) {
+  // 🔴 Lock: cegah regenerasi dobel (DB-backed for Vercel)
+  if (!(await acquireDbLock(userId, "WEEKLY"))) {
     console.log(
       "[WEEKLY_CHALLENGE] Skip — regenerasi udah berjalan, tunggu selesai",
       { userId },
@@ -515,6 +495,6 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
 
     return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
   } finally {
-    releaseWeeklyLock(userId);
+    releaseDbLock(userId, "WEEKLY");
   }
 }
