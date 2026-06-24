@@ -152,14 +152,12 @@ export async function getTodayChallenges(): Promise<{
   const userId = await requireStudent();
   const today = startOfToday();
 
-  // BUG-FIX: Check if user has selected subjects before generating
+  // RULE: WAJIB ada challengeSubjectIds yang di-set. Tidak ada fallback ke focusedSubjects.
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
-    select: { challengeSubjectIds: true, focusedSubjects: true },
+    select: { challengeSubjectIds: true },
   });
-  const hasSubjects =
-    (profile?.challengeSubjectIds?.length ?? 0) > 0 ||
-    (profile?.focusedSubjects?.length ?? 0) > 0;
+  const hasSubjects = (profile?.challengeSubjectIds?.length ?? 0) > 0;
 
   if (!hasSubjects) {
     return {
@@ -280,7 +278,6 @@ export async function generateAndStoreDailyChallenges(
       school: true,
       learningStyle: true,
       challengeSubjectIds: true,
-      focusedSubjects: true,
       user: { select: { name: true } },
     },
   });
@@ -294,15 +291,14 @@ export async function generateAndStoreDailyChallenges(
     grade: profile.grade,
     learningStyle: profile.learningStyle,
     challengeSubjectIds: profile.challengeSubjectIds.length,
-    focusedSubjects: profile.focusedSubjects.length,
   });
 
   const subjectIds = pickChallengeSubjectIds(
     {
       challengeSubjectIds: profile?.challengeSubjectIds ?? [],
-      focusedSubjects: profile?.focusedSubjects ?? [],
+      focusedSubjects: [], // Tidak dipakai — aturan baru: WAJIB challengeSubjectIds
     },
-    [], // BUG-FIX: No fallback — let empty array propagate
+    [],
   );
 
   console.log("[DAILY_CHALLENGE] Subject selection", {
@@ -2472,14 +2468,12 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
   const userId = await requireStudent();
   const monday = startOfWeek(new Date());
 
-  // BUG-FIX: Check if user has selected subjects before generating weekly
+  // RULE: WAJIB ada weeklyChallengeSubjectIds. Tidak ada fallback ke focusedSubjects.
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
-    select: { weeklyChallengeSubjectIds: true, focusedSubjects: true },
+    select: { weeklyChallengeSubjectIds: true },
   });
-  const hasSubjects =
-    (profile?.weeklyChallengeSubjectIds?.length ?? 0) > 0 ||
-    (profile?.focusedSubjects?.length ?? 0) > 0;
+  const hasSubjects = (profile?.weeklyChallengeSubjectIds?.length ?? 0) > 0;
 
   if (!hasSubjects) {
     return null;

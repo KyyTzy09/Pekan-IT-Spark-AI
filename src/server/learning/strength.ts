@@ -34,14 +34,11 @@ export function pickChallengeSubjectIds(
   profile: ProfileForPicking,
   nationalFallbackIds: string[],
 ): string[] {
+  // RULE: WAJIB ada challengeSubjectIds yang di-set manual atau via onboarding.
+  // TIDAK ADA fallback ke focusedSubjects.
   if (profile.challengeSubjectIds.length > 0) {
     return profile.challengeSubjectIds.slice(0, MAX_CHALLENGE_SUBJECTS);
   }
-  if (profile.focusedSubjects.length > 0) {
-    return profile.focusedSubjects.slice(0, MAX_CHALLENGE_SUBJECTS);
-  }
-  // BUG-FIX: Return empty array when user hasn't selected any subjects.
-  // Don't fallback to national subjects — let the caller handle "no subjects" case.
   return [];
 }
 

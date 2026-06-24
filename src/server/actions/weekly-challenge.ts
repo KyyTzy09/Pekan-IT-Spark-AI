@@ -17,7 +17,6 @@ import {
   computeMasteryAverage,
   distributeChallengeSubjects,
   MAX_CHALLENGE_SUBJECTS,
-  pickChallengeSubjectIds,
 } from "@/server/learning/strength";
 import {
   computeWeeklyItemCounts,
@@ -138,7 +137,6 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       grade: true,
       learningStyle: true,
       weeklyChallengeSubjectIds: true,
-      focusedSubjects: true,
       user: { select: { name: true } },
     },
   });
@@ -152,16 +150,10 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     grade: profile.grade,
     learningStyle: profile.learningStyle,
     weeklyChallengeSubjectIds: profile.weeklyChallengeSubjectIds.length,
-    focusedSubjects: profile.focusedSubjects.length,
   });
 
-  const subjectIds = pickChallengeSubjectIds(
-    {
-      challengeSubjectIds: profile.weeklyChallengeSubjectIds,
-      focusedSubjects: profile.focusedSubjects,
-    },
-    [], // BUG-FIX: No fallback — empty array if no subjects selected
-  );
+  // RULE: WAJIB ada weeklyChallengeSubjectIds. Tidak ada fallback ke focusedSubjects.
+  const subjectIds = profile.weeklyChallengeSubjectIds.slice(0, MAX_CHALLENGE_SUBJECTS);
 
   console.log("[WEEKLY_CHALLENGE] Subject selection", {
     picked: subjectIds.length,

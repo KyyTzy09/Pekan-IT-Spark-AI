@@ -7,11 +7,18 @@ import { z } from "zod";
 import { getSession, refreshSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateTopicConceptsContent } from "@/server/ai/curriculum";
+import { DAILY_CHALLENGE_SUBJECTS, MAX_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
 import type {
   BloomTaxonomy,
   Difficulty,
   QuestionType,
 } from "../../../generated/prisma/client";
+
+function pickRandom<T>(arr: T[], count: number): T[] {
+  if (arr.length <= count) return [...arr];
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 const conceptSchema = z.object({
   name: z.string(),
@@ -225,6 +232,10 @@ export async function completeOnboardingCustom(
 
       const focusedSubjects = [...data.profile.focusedSubjects, subjectId];
 
+      // RULE: Auto-set challenge subjects from onboarding selection
+      const challengeSubjectIds = pickRandom(focusedSubjects, DAILY_CHALLENGE_SUBJECTS);
+      const weeklyChallengeSubjectIds = pickRandom(focusedSubjects, MAX_CHALLENGE_SUBJECTS);
+
       await tx.studentProfile.upsert({
         where: { userId },
         update: {
@@ -232,6 +243,8 @@ export async function completeOnboardingCustom(
           grade: data.profile.grade,
           school: data.profile.school,
           focusedSubjects,
+          challengeSubjectIds,
+          weeklyChallengeSubjectIds,
           learningStyle: data.profile.learningStyle,
           reminderEnabled: data.profile.reminderEnabled,
           reminderTime,
@@ -242,6 +255,8 @@ export async function completeOnboardingCustom(
           grade: data.profile.grade,
           school: data.profile.school,
           focusedSubjects,
+          challengeSubjectIds,
+          weeklyChallengeSubjectIds,
           learningStyle: data.profile.learningStyle,
           reminderEnabled: data.profile.reminderEnabled,
           reminderTime,

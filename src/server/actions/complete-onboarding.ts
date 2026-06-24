@@ -4,7 +4,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSession, refreshSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { DAILY_CHALLENGE_SUBJECTS, MAX_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
 import type { Prisma } from "../../../generated/prisma/client";
+
+function pickRandom<T>(arr: T[], count: number): T[] {
+  if (arr.length <= count) return [...arr];
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 const completeSchema = z.object({
   educationLevel: z.enum(["SMA", "SMK"]),
@@ -81,6 +88,9 @@ export async function completeOnboarding(
     grade: data.grade,
     school: data.school,
     focusedSubjects: data.focusedSubjects,
+    // RULE: Auto-set challenge subjects from onboarding selection
+    challengeSubjectIds: pickRandom(data.focusedSubjects, DAILY_CHALLENGE_SUBJECTS),
+    weeklyChallengeSubjectIds: pickRandom(data.focusedSubjects, MAX_CHALLENGE_SUBJECTS),
     learningStyle: data.learningStyle,
     reminderEnabled: data.reminderEnabled,
     reminderTime,
