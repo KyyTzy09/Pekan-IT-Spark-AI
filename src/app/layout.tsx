@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   description:
     "Asisten tutor AI adaptif untuk siswa SMA/SMK. Penjelasan yang pas di level kamu, latihan adaptif, dan upload materi dari guru.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.png",
   },
   appleWebApp: {
     capable: true,
