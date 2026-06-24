@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { fastModel, generateText, safeParseJson } from "@/lib/ai";
+import { sanitizeForPrompt, sanitizeAiMarkdown } from "@/lib/prompt-sanitize";
 import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 import { retrieveDocumentChunks } from "./embeddings";
@@ -97,11 +98,16 @@ export async function generateDocumentSummary(
   const { text } = await generateText({
     model: fastModel,
     system: SYSTEM_SUMMARY,
-    prompt: `Judul file: "${originalName}"\n\nMateri:\n\n${truncated}\n\nBuat ringkasan yang sangat detail, mendalam, dan komprehensif untuk siswa SMA/SMK. Jelaskan teori dan konsep-konsep di dalamnya secara lengkap agar ringkasan ini bisa dipakai sebagai bahan belajar yang utuh.`,
+    prompt: `Judul file: "${sanitizeForPrompt(originalName)}"\n\nMateri:\n\n${truncated}\n\nBuat ringkasan yang sangat detail, mendalam, dan komprehensif untuk siswa SMA/SMK. Jelaskan teori dan konsep-konsep di dalamnya secara lengkap agar ringkasan ini bisa dipakai sebagai bahan belajar yang utuh.`,
   });
 
   const parsedJson = safeParseJson(text);
-  return summarySchema.parse(parsedJson);
+  const result = summarySchema.parse(parsedJson);
+  // BUG-8 FIX: Sanitize AI-generated summary content before storage
+  return {
+    ...result,
+    summary: sanitizeAiMarkdown(result.summary),
+  };
 }
 
 export async function generateQuizFromDocument(
@@ -113,7 +119,7 @@ export async function generateQuizFromDocument(
   const { text } = await generateText({
     model: fastModel,
     system: SYSTEM_QUIZ,
-    prompt: `Judul file: "${originalName}". Buat tepat ${count} soal pilihan ganda berdasarkan materi ini. Pastikan ada variasi difficulty (EASY/MEDIUM/HARD) dan explanation yang jelas.\n\nMateri:\n\n${truncated}`,
+    prompt: `Judul file: "${sanitizeForPrompt(originalName)}". Buat tepat ${count} soal pilihan ganda berdasarkan materi ini. Pastikan ada variasi difficulty (EASY/MEDIUM/HARD) dan explanation yang jelas.\n\nMateri:\n\n${truncated}`,
   });
 
   const parsedJson = safeParseJson(text);
@@ -269,11 +275,16 @@ async function _generateMaterialFromDocumentInner(
   const { text } = await generateText({
     model: fastModel,
     system: SYSTEM_MATERIAL + stylePrompt,
-    prompt: `Judul file: "${originalName}". Buat penjelasan materi teori belajar yang lengkap, mendalam, dan relevan berdasarkan soal-soal/tugas yang ada di dokumen ini.\n\nDokumen Soal/Tugas:\n\n${truncated}`,
+    prompt: `Judul file: "${sanitizeForPrompt(originalName)}". Buat penjelasan materi teori belajar yang lengkap, mendalam, dan relevan berdasarkan soal-soal/tugas yang ada di dokumen ini.\n\nDokumen Soal/Tugas:\n\n${truncated}`,
   });
 
   const parsedJson = safeParseJson(text);
-  return materialSchema.parse(parsedJson);
+  const result = materialSchema.parse(parsedJson);
+  // BUG-8 FIX: Sanitize AI-generated material content before storage
+  return {
+    ...result,
+    content: sanitizeAiMarkdown(result.content),
+  };
 }
 
 export async function generateMoreQuestionsForQuiz(
@@ -290,7 +301,7 @@ export async function generateMoreQuestionsForQuiz(
   const { text } = await generateText({
     model: fastModel,
     system: SYSTEM_QUIZ,
-    prompt: `Judul file: "${originalName}". Buat TEPAT ${count} soal baru pilihan ganda berdasarkan materi ini.
+    prompt: `Judul file: "${sanitizeForPrompt(originalName)}". Buat TEPAT ${count} soal baru pilihan ganda berdasarkan materi ini.
 PENTING: Jangan buat soal yang sama atau mirip dengan soal-soal yang sudah ada di bawah ini. Soal-soal baru harus menguji topik yang berbeda atau tingkat pemahaman yang berbeda dari dokumen.
 
 Soal-soal yang sudah ada:
@@ -331,7 +342,7 @@ async function _generateEnhancedMaterialFromDocumentInner(
   const { text } = await generateText({
     model: fastModel,
     system: SYSTEM_MATERIAL + stylePrompt,
-    prompt: `Judul file: "${originalName}".
+    prompt: `Judul file: "${sanitizeForPrompt(originalName)}".
 Tugas kamu adalah menulis ulang dan meningkatkan materi belajar teori yang sudah ada di bawah ini agar menjadi JAUH LEBIH BERBOBOT, LEBIH MENDALAM, DAN KOMPREHENSIF.
 - Tambahkan penjelasan konsep-konsep teoritis yang lebih detail dan terperinci.
 - Tambahkan lebih banyak contoh soal beserta pembahasan langkah demi langkah (step-by-step).
@@ -346,7 +357,12 @@ ${truncated}`,
   });
 
   const parsedJson = safeParseJson(text);
-  return materialSchema.parse(parsedJson);
+  const result = materialSchema.parse(parsedJson);
+  // BUG-8 FIX: Sanitize AI-generated enhanced material content before storage
+  return {
+    ...result,
+    content: sanitizeAiMarkdown(result.content),
+  };
 }
 
 export const _internal = { SYSTEM_SUMMARY, SYSTEM_QUIZ, SYSTEM_MATERIAL };

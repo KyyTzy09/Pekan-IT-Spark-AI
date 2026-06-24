@@ -97,16 +97,31 @@ export type ContentWarning = {
 
 const OFF_TOPIC_SIGNALS: Array<{ re: RegExp; label: string }> = [
   {
-    re: /\b(adult content|nsfw|explicit sexual|porn|18\+|xxx)\b/i,
+    re: /\b(adult\s*content|nsfw|explicit\s*sexual|porn(?:ography)?|18\+|xxx)\b/i,
     label: "konten dewasa",
   },
   {
-    re: /\b(weapon synthesis|synthesize meth|cocaine|heroin|fentanyl|how to make a bomb|build a bomb|terroris)\b/i,
+    // BUG-5 FIX: Expanded pattern to catch common obfuscations
+    re: /\b(?:p[o0]rn[o0]?|p[e3]d[o0]|s[e3]x\s*(?:vid|tub|chat|cam)|b[o0]k[e3]p|n[uud]+[d3]+[e3]|f[a4]p|orgas[mn])\b/i,
+    label: "konten dewasa",
+  },
+  {
+    re: /\b(weapon\s*synthesis|synthesize\s*meth|cocaine|heroin|fentanyl|how\s*to\s*make\s*a?\s*bomb|build\s*a?\s*bomb|terroris)\b/i,
     label: "konten berbahaya",
   },
   {
-    re: /\b(hate speech|genocide|kill all|supremacist)\b/i,
+    // BUG-5 FIX: Expanded harmful content patterns
+    re: /\b(?:m[e3]t[h4]|f[e3]nt[a4]nyl|c[o0]c[a4]in[e3]|h[e3]r[o0]in|e?xpl[o0]s[i1]v[e3]|w[e3]ap[o0]n\s*(?:mak|build|synth))\b/i,
+    label: "konten berbahaya",
+  },
+  {
+    re: /\b(hate\s*speech|genocide|kill\s*all|supremacist)\b/i,
     label: "ujaran kebencian",
+  },
+  {
+    // BUG-5 FIX: Indonesian harmful content patterns
+    re: /\b(?:konten\s*dewasa|video\s*bokep|foto\s*bugil|judi\s*online|narkoba|bahan\s*peledak)\b/i,
+    label: "konten terlarang",
   },
 ];
 
@@ -139,5 +154,18 @@ export function validateEducationalContent(
       };
     }
   }
+
+  // BUG-5 FIX: Check for zero-width character injection (common bypass technique)
+  const zeroWidthChars = /\u200B|\u200C|\u200D|\uFEFF|\u2060|\u00AD/g;
+  const cleaned = text.replace(zeroWidthChars, "");
+  for (const { re, label } of OFF_TOPIC_SIGNALS) {
+    if (re.test(cleaned)) {
+      return {
+        ok: false,
+        reason: `Dokumen terdeteksi mengandung ${label} (dengan karakter tersembunyi). Spark cuma untuk materi edukasi ya.`,
+      };
+    }
+  }
+
   return { ok: true, warnings: [] };
 }

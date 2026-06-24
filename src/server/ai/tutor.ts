@@ -3,6 +3,7 @@ import "server-only";
 import { chatModel, streamText } from "@/lib/ai";
 import { aiLog, EMOJI } from "@/lib/ai-logger";
 import { prisma } from "@/lib/prisma";
+import { sanitizeNameForPrompt, sanitizeForPrompt } from "@/lib/prompt-sanitize";
 import type {
   LearningStyle,
   ResponseDepth,
@@ -40,13 +41,13 @@ function buildSystemPrompt(
   const newOnes = mastery.filter((c) => c.status === "NOT_STARTED").slice(0, 5);
 
   const subjectLine = options.subject
-    ? `Mata pelajaran: ${options.subject.name}.`
+    ? `Mata pelajaran: ${sanitizeForPrompt(options.subject.name)}.`
     : "Topik umum: mata pelajaran SMA/SMK Indonesia.";
   const topicLine = options.topic
-    ? `Topik saat ini: ${options.topic.name}.`
+    ? `Topik saat ini: ${sanitizeForPrompt(options.topic.name)}.`
     : "";
   const gradeLine = options.grade ? `Kelas siswa: ${options.grade}.` : "";
-  const schoolLine = options.school ? `Asal sekolah: ${options.school}.` : "";
+  const schoolLine = options.school ? `Asal sekolah: ${sanitizeForPrompt(options.school)}.` : "";
   const styleLine = options.learningStyle
     ? `Gaya belajar siswa: ${styleLabel(options.learningStyle)}.`
     : "";
@@ -68,7 +69,7 @@ function buildSystemPrompt(
 - Selalu akhiri respons dengan pertanyaan terbuka untuk lanjutin dialog (kecuali konteksnya sudah clear)
 
 ## PROFIL SISWA
-${userName ? `Nama: ${userName}` : ""}
+${userName ? `Nama: ${sanitizeNameForPrompt(userName)}` : ""}
 ${subjectLine}
 ${topicLine}
 ${gradeLine}

@@ -30,6 +30,8 @@ import {
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_PAGES = 50;
+// BUG-7 FIX: Timeout for document processing to prevent DoS
+const PROCESSING_TIMEOUT_MS = 60_000; // 60 seconds max for entire upload
 
 export type UploadDocumentInput = {
   file: File;
@@ -178,9 +180,16 @@ export async function uploadDocument(
   let extracted: Awaited<ReturnType<typeof extractFromPdf>>;
   console.log("[uploadDocument] extracting...", { isPdf });
   try {
-    extracted = isPdf
-      ? await extractFromPdf(buffer)
-      : await extractFromDocx(buffer);
+    // BUG-7 FIX: Wrap extraction in a timeout to prevent DoS
+    const extractionPromise = isPdf
+      ? extractFromPdf(buffer)
+      : extractFromDocx(buffer);
+    extracted = await Promise.race([
+      extractionPromise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Processing timeout")), PROCESSING_TIMEOUT_MS),
+      ),
+    ]);
     console.log("[uploadDocument] extraction OK", {
       textLength: extracted.text.length,
       pageCount: extracted.pageCount,
@@ -357,7 +366,7 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
       size: true,
       pageCount: true,
       createdAt: true,
-      content: true,
+      // BUG-6 FIX: Don't fetch full content — use summary for preview instead
       summary: true,
       _count: { select: { embeddings: true } },
     },
@@ -366,6 +375,7 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
     ok: true,
     documents: docs.map((d) => {
       let hasHomework: boolean | null = null;
+      let contentPreview = "";
       if (d.summary) {
         try {
           const parsed = JSON.parse(d.summary);
@@ -373,6 +383,10 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
             typeof parsed.hasHomework === "boolean"
               ? parsed.hasHomework
               : false;
+          // Use summary as preview (much smaller than full content)
+          contentPreview = typeof parsed.summary === "string"
+            ? parsed.summary.slice(0, 220)
+            : "";
         } catch {
           // ignore
         }
@@ -384,7 +398,7 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
         size: d.size,
         pageCount: d.pageCount,
         createdAt: d.createdAt.toISOString(),
-        contentPreview: d.content.slice(0, 220),
+        contentPreview,
         hasSummary: Boolean(d.summary && d.summary.length > 0),
         hasHomework,
         chunkCount: d._count.embeddings,
@@ -648,7 +662,7 @@ export type SubmitDocumentQuizAttemptResult =
 export async function submitDocumentQuizAttemptAction(
   quizId: string,
   answers: number[],
-  score: number,
+  _score?: number,
 ): Promise<SubmitDocumentQuizAttemptResult> {
   let userId: string;
   try {
@@ -670,24 +684,12 @@ export async function submitDocumentQuizAttemptAction(
     const attempts = Array.isArray(quizRecord.attempts)
       ? quizRecord.attempts
       : [];
-    const newAttempt = {
-      answers,
-      score,
-      completedAt: new Date().toISOString(),
-    };
-
-    const updatedAttempts = [...attempts, newAttempt];
-    const updated = await prisma.documentQuiz.update({
-      where: { id: quizId },
-      data: {
-        attempts: updatedAttempts,
-      },
-    });
 
     const questionsArray = Array.isArray(quizRecord.questions)
       ? (quizRecord.questions as any[])
       : [];
 
+    // Server-side score computation — never trust client-provided score
     let correctCount = 0;
     for (let i = 0; i < questionsArray.length; i++) {
       const q = questionsArray[i];
@@ -700,6 +702,23 @@ export async function submitDocumentQuizAttemptAction(
         correctCount++;
       }
     }
+    const serverScore = questionsArray.length > 0
+      ? Math.round((correctCount / questionsArray.length) * 100)
+      : 0;
+
+    const newAttempt = {
+      answers,
+      score: serverScore,
+      completedAt: new Date().toISOString(),
+    };
+
+    const updatedAttempts = [...attempts, newAttempt];
+    const updated = await prisma.documentQuiz.update({
+      where: { id: quizId },
+      data: {
+        attempts: updatedAttempts,
+      },
+    });
 
     const earnedXp = correctCount * 10;
     if (earnedXp > 0) {

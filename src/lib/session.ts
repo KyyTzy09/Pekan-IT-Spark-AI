@@ -104,7 +104,8 @@ export async function refreshSession(): Promise<void> {
     return;
   }
   
-  // Invalidate session if version changed (e.g., password changed)
+  // BUG-4 FIX: Invalidate session if version changed (e.g., password changed).
+  // Clear the cookie AND return early — don't re-issue a token.
   if (user.sessionVersion !== (session.sessionVersion ?? 0)) {
     await clearSession();
     return;
@@ -119,6 +120,20 @@ export async function refreshSession(): Promise<void> {
     image: user.image,
     sessionVersion: user.sessionVersion,
   });
+}
+
+/**
+ * Increment session version to invalidate all existing JWTs for this user.
+ * Call this on password change, email change, or security-sensitive actions.
+ * Existing tokens will fail the sessionVersion check in refreshSession/verifyToken.
+ */
+export async function invalidateAllSessions(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { sessionVersion: { increment: 1 } },
+  });
+  // Also clear current session cookie
+  await clearSession();
 }
 
 // ── Cookie header parser (untuk middleware yang butuh async) ─────────────────────

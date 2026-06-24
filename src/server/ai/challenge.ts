@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { chatModel, generateText } from "@/lib/ai";
 import { aiLog, formatErr, EMOJI } from "@/lib/ai-logger";
+import { sanitizeNameForPrompt, sanitizeForPrompt } from "@/lib/prompt-sanitize";
 import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 import type { SubjectSlug } from "../../../generated/prisma/client";
@@ -323,9 +324,9 @@ export async function generateDailyMix(
     .join("\n");
 
   const userPrompt = `Buat paket tantangan harian untuk siswa:
-- Nama: ${input.userName ?? "Siswa"}
+- Nama: ${sanitizeNameForPrompt(input.userName) ?? "Siswa"}
 - Kelas: ${input.grade ?? "belum diisi"}
-- Sekolah: ${input.school ?? "belum diisi"}
+- Sekolah: ${sanitizeForPrompt(input.school) ?? "belum diisi"}
 - Gaya belajar: ${input.learningStyle ?? "TEXTUAL"}
 - Mapel fokus: ${input.focusedSubjects.join(", ") || "(belum ada — pilih dari weak concepts)"}
 
@@ -868,7 +869,7 @@ export async function generateReflectionPrompt(args: {
     const systemPrompt =
       'Kamu adalah perancang prompt refleksi untuk siswa SMA/SMK. Buat prompt yang terbuka, memicu metacognition, bukan pertanyaan tertutup. Kembalikan output JSON dengan format:\n{\n  "prompt": "Pertanyaan refleksi",\n  "context": "Konteks refleksi"\n}';
     const userPrompt = `Buat 1 prompt refleksi untuk siswa ${
-      args.userName ?? "SMA/SMK"
+      sanitizeNameForPrompt(args.userName) ?? "SMA/SMK"
     } yang baru saja belajar materi:
 - Mapel: ${args.subjectName}
 ${args.topicName ? `- Topik: ${args.topicName}` : ""}
@@ -1060,9 +1061,9 @@ Kembalikan output JSON valid sesuai format schema berikut:
 }`;
 
   const userPrompt = `Rancang tantangan mingguan untuk siswa:
-- Nama: ${input.userName ?? "Siswa"}
+- Nama: ${sanitizeNameForPrompt(input.userName) ?? "Siswa"}
 - Kelas: ${input.grade ?? "belum diisi"}
-- Mata pelajaran fokus: ${input.focusedSubjects.join(", ") || "Semua Mapel"}
+- Mata pelajaran fokus: ${input.focusedSubjects.map(s => sanitizeForPrompt(s)).join(", ") || "Semua Mapel"}
   
 Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
 
@@ -1172,9 +1173,9 @@ ATURAN WAJIB:
 9. JANGAN bungkus output dalam markdown wrapper (json fence atau sejenisnya). Langsung output JSON murni.`;
 
   const userPrompt = `Buat konten tantangan mingguan untuk siswa:
-- Nama: ${input.userName ?? "Siswa"}
+- Nama: ${sanitizeNameForPrompt(input.userName) ?? "Siswa"}
 - Kelas: ${input.grade ?? "SMA"}
-- Mata pelajaran fokus: ${input.focusedSubjects.join(", ") || "Semua Mapel"}
+- Mata pelajaran fokus: ${input.focusedSubjects.map(s => sanitizeForPrompt(s)).join(", ") || "Semua Mapel"}
   
 Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang merujuk pada mapel-mapel di atas. Soal harus benar-benar sulit, bukan soal mudah. Materi harus panjang dan berbobot.`;
 
@@ -1465,7 +1466,7 @@ export async function generateWeeklyTitleAI(input: {
 Buat judul + deskripsi singkat (1 kalimat) untuk tantangan mingguan.
 Bahasa Indonesia asyik untuk remaja. JSON valid saja.`;
 
-  const userPrompt = `Siswa: ${input.userName ?? "Siswa"}
+  const userPrompt = `Siswa: ${sanitizeNameForPrompt(input.userName) ?? "Siswa"}
 Kelas: ${input.grade ?? "SMA"}
 Mapel minggu ini: ${input.subjectNames.join(", ")}
 

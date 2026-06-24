@@ -203,6 +203,9 @@ async function keywordSearch(
   const documents = await prisma.document.findMany({
     where: { userId },
     select: { id: true, content: true, originalName: true },
+    // BUG-14 FIX: Limit documents to prevent OOM with large collections
+    take: 20,
+    orderBy: { createdAt: "desc" },
   });
 
   for (const doc of documents) {

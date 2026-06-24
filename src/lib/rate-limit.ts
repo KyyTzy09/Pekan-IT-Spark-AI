@@ -45,38 +45,38 @@ export async function checkRateLimitAsync(key: string): Promise<boolean> {
   try {
     const { prisma } = await import("@/lib/prisma");
 
-    // Use upsert to atomically check and increment
+    // BUG-3 FIX: Atomic increment within upsert to prevent race condition.
+    // If window expired, reset count to 1. Otherwise, increment and check.
     const record = await prisma.rateLimit.upsert({
       where: { key },
       create: { key, count: 1, resetAt: new Date(now + WINDOW_MS) },
-      update: {},
+      update: {
+        // If window expired, Prisma will still execute this update.
+        // We handle the reset case below by checking the timestamp.
+        count: { increment: 1 },
+      },
       select: { count: true, resetAt: true },
     });
 
+    // If the window had expired before the increment, reset to 1
     if (record.resetAt.getTime() < now) {
-      // Window expired — reset
-      await prisma.rateLimit.update({
+      const _reset = await prisma.rateLimit.update({
         where: { key },
         data: { count: 1, resetAt: new Date(now + WINDOW_MS) },
+        select: { count: true },
       });
       attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
       return true;
     }
 
-    if (record.count >= MAX_ATTEMPTS) {
+    // Check if the atomically-incremented count exceeds the limit
+    if (record.count > MAX_ATTEMPTS) {
       attempts.set(key, { count: record.count, resetAt: record.resetAt.getTime() });
       return false;
     }
 
-    // Increment
-    const updated = await prisma.rateLimit.update({
-      where: { key },
-      data: { count: { increment: 1 } },
-      select: { count: true },
-    });
-
-    attempts.set(key, { count: updated.count, resetAt: record.resetAt.getTime() });
-    return updated.count <= MAX_ATTEMPTS;
+    attempts.set(key, { count: record.count, resetAt: record.resetAt.getTime() });
+    return true;
   } catch {
     // DB unavailable — fall back to in-memory only
     return checkRateLimit(key);
