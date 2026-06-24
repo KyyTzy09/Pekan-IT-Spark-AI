@@ -564,16 +564,19 @@ async function generateUniqueSlug(base: string): Promise<string> {
 
 export async function markConceptAsRead(
   conceptId: string,
-): Promise<{ ok: boolean; newStatus: ConceptStatus; earnedXp: number }> {
+): Promise<
+  | { ok: true; newStatus: ConceptStatus; earnedXp: number }
+  | { ok: false; error: string }
+> {
   const session = await getSession();
-  if (!session?.id) throw new Error("UNAUTHORIZED");
+  if (!session?.id) return { ok: false, error: "Login dulu ya" };
   const userId = session.id;
 
   const concept = await prisma.concept.findUnique({
     where: { id: conceptId },
     select: { id: true },
   });
-  if (!concept) throw new Error("Concept not found");
+  if (!concept) return { ok: false, error: "Konsep tidak ditemukan" };
 
   const existingProfile = await prisma.studentKnowledgeProfile.findUnique({
     where: { userId_conceptId: { userId, conceptId } },

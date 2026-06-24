@@ -16,12 +16,12 @@ const generateMaterialSchema = z.object({
 
 function startOfToday(): Date {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 function startOfNextDay(): Date {
-  const d = startOfToday();
-  return new Date(d.getTime() + 86_400_000);
+  const today = startOfToday();
+  return new Date(today.getTime() + 86_400_000);
 }
 
 export async function generateOnDemandMaterial(input: {

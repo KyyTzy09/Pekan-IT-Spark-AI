@@ -193,6 +193,10 @@ export function ChallengeDetailView({
     setBusy(false);
     if (data.ok) {
       router.refresh();
+      // UX-7 FIX: Show badge celebrations on skip
+      if (data.unlockedBadges?.length) {
+        showBadges(data.unlockedBadges);
+      }
     }
     return data;
   };

@@ -74,7 +74,7 @@ export default async function ParentHistoryPage({
   searchParams: Promise<{ childId?: string; days?: string }>;
 }) {
   const { childId, days = "30" } = await searchParams;
-  const daysNum = parseInt(days, 10);
+  const daysNum = Math.max(1, Math.min(365, parseInt(days, 10) || 30));
 
   const result = await getParentHistoryData(childId, daysNum);
 

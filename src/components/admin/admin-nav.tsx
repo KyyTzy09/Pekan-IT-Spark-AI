@@ -51,44 +51,8 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
       },
     ],
   },
-  {
-    title: "Konten (segera)",
-    items: [
-      {
-        href: "/admin/questions",
-        label: "Bank Soal",
-        shortLabel: "Soal",
-        icon: ClipboardList,
-        match: (p) => p.startsWith("/admin/questions"),
-      },
-      {
-        href: "/admin/badges",
-        label: "Badge",
-        shortLabel: "Badge",
-        icon: Shield,
-        match: (p) => p.startsWith("/admin/badges"),
-      },
-    ],
-  },
-  {
-    title: "Moderasi (segera)",
-    items: [
-      {
-        href: "/admin/moderation",
-        label: "Chat & Laporan",
-        shortLabel: "Moderasi",
-        icon: Flag,
-        match: (p) => p.startsWith("/admin/moderation"),
-      },
-      {
-        href: "/admin/audit",
-        label: "Audit Log",
-        shortLabel: "Audit",
-        icon: ScrollText,
-        match: (p) => p.startsWith("/admin/audit"),
-      },
-    ],
-  },
+  // UX-6 FIX: Removed "Konten (segera)" and "Moderasi (segera)" sections
+  // that linked to non-existent pages (404). Add them back when pages are built.
 ];
 
 export function AdminNav() {

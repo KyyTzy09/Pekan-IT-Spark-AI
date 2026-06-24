@@ -86,7 +86,11 @@ export function ConceptDetailDialog({
   const handleStartPractice = () => {
     if (!conceptId) return;
     onClose();
-    router.push(`/practice?concept=${conceptId}`);
+    if (data?.topic?.id) {
+      router.push(`/practice?topicId=${data.topic.id}`);
+    } else {
+      router.push(`/practice`);
+    }
   };
 
   const handleAskTutor = async () => {
@@ -95,6 +99,10 @@ export function ConceptDetailDialog({
     try {
       const firstMessage = `Halo Spark! Boleh tolong jelaskan lebih dalam tentang konsep "${data.name}" di mata pelajaran "${data.topic.subject.name}"? Aku ingin mempelajari dan berdiskusi tentang materi ini.`;
       const res = await startNewChat({ firstMessage });
+      if ("error" in res) {
+        console.error("Gagal memulai sesi chat:", res.error);
+        return;
+      }
       onClose();
       router.push(`/chat/${res.sessionId}`);
     } catch (err) {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
+import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 
 const addMaterialSchema = z.object({
   conceptId: z.string().min(1),
@@ -62,6 +63,9 @@ export async function addAdvancedMaterial(
   });
   const learningStyle = studentProfile?.learningStyle ?? "VISUAL";
 
+  const quota = await incrementAiQuota(session.id, "materials", 1);
+  if (!quota.allowed) return { ok: false, error: "Kuota AI harian sudah habis." };
+
   try {
     const material = await generateAdaptiveMaterial({
       conceptName: concept.name,
@@ -87,6 +91,7 @@ export async function addAdvancedMaterial(
 
     return { ok: true, materialId: created.id };
   } catch (err) {
+    await decrementAiQuota(session.id, "materials", 1).catch(() => {});
     console.error("Failed to generate adaptive material:", err);
     return { ok: false, error: "Gagal generate materi. Coba lagi." };
   }

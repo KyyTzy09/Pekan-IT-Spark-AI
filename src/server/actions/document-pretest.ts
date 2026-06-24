@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { computeDifficultyDistribution } from "@/server/ai/curriculum";
 import { extractConceptsFromDocument } from "@/server/ai/extract-document-concepts";
 import { generateQuestionsForConcept } from "@/server/ai/generate-questions";
+import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 
 const submitPretestSchema = z.object({
   documentId: z.string().min(1),
@@ -57,6 +58,9 @@ export async function generateDocumentPretest(documentId: string) {
   }> = [];
 
   for (const concept of concepts) {
+    const quota = await incrementAiQuota(session.id, "questions", 1);
+    if (!quota.allowed) break;
+
     const distribution = computeDifficultyDistribution(0, 3);
     try {
       const generated = await generateQuestionsForConcept({
@@ -73,6 +77,7 @@ export async function generateDocumentPretest(documentId: string) {
         questions.push({ ...q, conceptName: concept.name });
       }
     } catch (err) {
+      await decrementAiQuota(session.id, "questions", 1).catch(() => {});
       console.error(
         `Failed to generate pretest questions for concept: ${concept.name}`,
         err,

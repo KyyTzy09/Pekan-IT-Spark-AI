@@ -205,15 +205,21 @@ export function OnboardingWizardClient({
 
   const goBack = () => {
     if (step === 0) {
+      // UX-3 FIX: Add confirmation before resetting onboarding progress
       if (flow !== null) {
-        setFlow(null);
-        setStep(0);
+        if (window.confirm("Kembali ke awal? Semua data yang sudah diisi akan hilang.")) {
+          setFlow(null);
+          setStep(0);
+        }
       }
       return;
     }
     if (step === 1 && flow !== null) {
-      setFlow(null);
-      setStep(0);
+      // UX-3 FIX: Add confirmation before resetting onboarding progress
+      if (window.confirm("Kembali ke awal? Semua data yang sudah diisi akan hilang.")) {
+        setFlow(null);
+        setStep(0);
+      }
       return;
     }
     setStep((s) => Math.max(s - 1, 0));

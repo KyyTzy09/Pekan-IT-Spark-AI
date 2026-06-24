@@ -120,6 +120,7 @@ export function UploadView({
       }
 
       setStatus({ kind: "uploading", fileName: file.name, progress: 30 });
+      await new Promise(r => setTimeout(r, 100)); // Let UI update
       setStatus({ kind: "processing", fileName: file.name });
       const result = await uploadDocument({ file });
       if (!result.ok) {
@@ -188,6 +189,14 @@ export function UploadView({
         firstMessage,
         documentId: doc.id,
       });
+      if ("error" in result) {
+        setStatus({
+          kind: "error",
+          fileName: doc.originalName,
+          message: result.error,
+        });
+        return;
+      }
       router.push(`/chat/${result.sessionId}`);
     } catch (err) {
       setStatus({

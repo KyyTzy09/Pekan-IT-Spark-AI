@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useTransition, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { AdminSubjectListItem } from "@/server/actions/admin-content";
 
@@ -43,6 +43,13 @@ export function SubjectsTable({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   const setShow = (next: ShowFilter) => {
     const params = new URLSearchParams(searchParams);
@@ -91,10 +98,16 @@ export function SubjectsTable({
             type="search"
             defaultValue={search}
             onChange={(e) => {
-              // debounce
               const value = e.target.value;
-              const t = setTimeout(() => setSearch(value), 250);
-              return () => clearTimeout(t);
+              if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+              searchTimeoutRef.current = setTimeout(() => {
+                startTransition(() => {
+                  const params = new URLSearchParams(searchParams);
+                  if (value) params.set("search", value);
+                  else params.delete("search");
+                  router.push(`/admin/subjects?${params.toString()}`);
+                });
+              }, 300);
             }}
             placeholder="Cari nama atau slug…"
             className="w-full rounded-xl border border-border/50 bg-card/60 py-2 pl-9 pr-3 text-[12.5px] text-foreground outline-none transition-colors focus:border-slate-400"

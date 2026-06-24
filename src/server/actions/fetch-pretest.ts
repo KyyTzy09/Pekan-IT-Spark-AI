@@ -1,5 +1,6 @@
 "use server";
 
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 const PRETEST_PER_SUBJECT = 3;
@@ -27,6 +28,12 @@ export type FetchPretestResult =
     };
 
 export async function fetchPretestPool(): Promise<FetchPretestResult> {
+  // UX-9 FIX: Add authentication check
+  const session = await getSession();
+  if (!session?.id) {
+    return { ok: false, error: "Login dulu ya" };
+  }
+
   try {
     const rows = await prisma.question.findMany({
       where: { isActive: true },
@@ -34,7 +41,7 @@ export async function fetchPretestPool(): Promise<FetchPretestResult> {
         id: true,
         questionText: true,
         options: true,
-        correctAnswer: true,
+        // UX-9 FIX: Don't fetch correctAnswer — it leaks to the client
         concept: {
           select: {
             id: true,
@@ -54,7 +61,6 @@ export async function fetchPretestPool(): Promise<FetchPretestResult> {
 
     const perSubjectCount = new Map<string, number>();
     const limited: PretestQuestion[] = [];
-    const correctAnswers: Record<string, string> = {};
 
     for (const q of rows) {
       if (limited.length >= PRETEST_MAX_TOTAL) break;
@@ -71,10 +77,10 @@ export async function fetchPretestPool(): Promise<FetchPretestResult> {
         subjectId,
         subjectName: q.concept.topic.subject.name,
       });
-      correctAnswers[q.id] = q.correctAnswer;
     }
 
-    return { ok: true, questions: limited, correctAnswers };
+    // UX-9 FIX: Don't return correctAnswers — answers are verified server-side only
+    return { ok: true, questions: limited, correctAnswers: {} };
   } catch (err) {
     console.error("[fetchPretestPool] error:", err);
     return { ok: false, error: "Gagal memuat soal pretest." };

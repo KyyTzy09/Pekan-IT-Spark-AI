@@ -201,7 +201,6 @@ export default function RegisterPage() {
 
       {/* ── Form ── */}
       <form
-        key={role}
         onSubmit={onSubmit}
         className="space-y-3.5 anim-slide-up gpu"
         style={{ animationDelay: "240ms" }}

@@ -1,11 +1,18 @@
 import type * as React from "react";
+import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { getSession } from "@/lib/session";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getSession();
+  if (!session?.id || session.role !== "ADMIN") {
+    redirect("/auth/login");
+  }
+
   return (
     <div className="relative min-h-screen w-full bg-background">
       <div

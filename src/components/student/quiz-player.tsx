@@ -85,6 +85,7 @@ export function QuizPlayer({
         correct: String(result.correctCount),
         pct: String(result.scorePct),
         time: String(result.timeUsedSec),
+        topicId: result.topicId,
         topic: result.topicName,
         subject: result.subjectName,
         breakdown: JSON.stringify(result.breakdown),

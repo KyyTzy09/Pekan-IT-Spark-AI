@@ -53,9 +53,15 @@ export function ChatListView({
         firstMessage: trimmed,
         subjectSlug: subjectSlug || undefined,
       });
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
       router.push(`/chat/${result.sessionId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mulai chat.");
+    } finally {
+      // UX-8 FIX: Always reset submitting state, not just on error
       setSubmitting(false);
     }
   };

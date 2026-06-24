@@ -158,11 +158,11 @@ export async function startNewChat(input: {
   topicId?: string;
   documentId?: string;
   firstMessage: string;
-}): Promise<{ sessionId: string }> {
+}): Promise<{ sessionId: string } | { ok: false; error: string }> {
   const userId = await requireStudent();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error("Input tidak valid");
+    return { ok: false, error: "Input tidak valid" };
   }
 
   const subject = parsed.data.subjectSlug
@@ -189,7 +189,13 @@ export async function startNewChat(input: {
   const baseTitle = document
     ? `Diskusi: ${document.originalName}`
     : parsed.data.firstMessage;
-  const title = await generateChatTitle(baseTitle);
+
+  let title: string;
+  try {
+    title = await generateChatTitle(baseTitle);
+  } catch {
+    title = baseTitle.slice(0, 80);
+  }
 
   const created = await prisma.chatSession.create({
     data: {

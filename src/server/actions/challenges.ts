@@ -1058,10 +1058,11 @@ export async function skipChallengeItem(input: {
     where: { id: input.itemId, challenge: { userId } },
   });
   if (!item) return { ok: false, error: "Item tidak ditemukan" };
-  await prisma.challengeItem.update({
-    where: { id: item.id },
+  const claimed = await prisma.challengeItem.updateMany({
+    where: { id: item.id, status: "PENDING" },
     data: { status: "SKIPPED", completedAt: new Date() },
   });
+  if (claimed.count === 0) return { ok: false, error: "Item sudah selesai" };
   await checkAndCompleteChallenge(item.challengeId);
   revalidatePath("/challenge", "layout");
   return { ok: true };

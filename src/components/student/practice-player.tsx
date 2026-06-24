@@ -197,6 +197,11 @@ export function PracticePlayer({
       const q = session.question;
       const firstMessage = `Aku lagi latihan soal ini di topik ${q.topicName} (${q.subjectName}):\n\n"${q.questionText}"\n\nBoleh bantu aku pecah lewat pertanyaan? Aku belum ngerti konsep "${q.conceptName}".`;
       const res = await startNewChat({ firstMessage });
+      if ("error" in res) {
+        setError(res.error);
+        setSocraticLoading(false);
+        return;
+      }
       router.push(`/chat/${res.sessionId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mulai chat.");

@@ -83,7 +83,7 @@ export function DailyChallengeSummary({
                 style={{
                   background: c.subject?.color
                     ? `linear-gradient(135deg, ${c.subject.color}30, transparent)`
-                    : "var(--purple)/10",
+                    : "color-mix(in oklch, var(--purple) 10%, transparent)",
                 }}
               >
                 {c.subject?.icon ?? "✨"}

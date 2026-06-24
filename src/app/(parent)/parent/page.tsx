@@ -111,7 +111,7 @@ export default async function ParentDashboardPage({
           <p className="text-[13px] text-muted-foreground mt-0.5">
             Memantau perkembangan belajar{" "}
             <span className="font-bold text-foreground/80">
-              {activeChild.name}
+              {activeChild.name ?? "Anak"}
             </span>{" "}
             secara suportif.
           </p>

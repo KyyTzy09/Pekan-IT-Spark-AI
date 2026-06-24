@@ -144,7 +144,13 @@ export function ChatConversationView({
     if (!window.confirm("Hapus chat ini? Riwayatnya bakal ilang permanen.")) {
       return;
     }
-    await deleteChatSession(sessionId);
+    try {
+      await deleteChatSession(sessionId);
+      router.push("/chat");
+    } catch {
+      // deleteChatSession calls redirect() internally, which throws NEXT_REDIRECT
+      // If we get here, the redirect happened
+    }
   };
 
   return (

@@ -419,6 +419,11 @@ export async function getQuestionHint(input: {
     select: { id: true, hint: true, explanation: true },
   });
   if (!question) return { ok: false, error: "Soal tidak ditemukan" };
+  const attempt = await prisma.questionAttempt.findFirst({
+    where: { userId, questionId: input.questionId },
+    select: { id: true },
+  });
+  if (!attempt) return { ok: false, error: "Jawab soal dulu sebelum minta hint." };
   return { ok: true, hint: question.hint, explanation: question.explanation };
 }
 
@@ -462,6 +467,7 @@ export type QuizResult =
       correctCount: number;
       scorePct: number;
       timeUsedSec: number;
+      topicId: string;
       topicName: string;
       subjectName: string;
       breakdown: Array<{
@@ -787,10 +793,19 @@ export async function getQuizResult(input: {
   const topic = await prisma.topic.findUnique({
     where: { id: store.topicId },
     select: {
+      id: true,
       name: true,
       subject: { select: { name: true } },
     },
   });
+
+  // UX-29 FIX: Batch fetch all concepts in one query instead of N+1
+  const conceptIds = [...new Set(allAttempts.map((a) => a.question.conceptId))];
+  const concepts = await prisma.concept.findMany({
+    where: { id: { in: conceptIds } },
+    select: { id: true, name: true },
+  });
+  const conceptNameMap = new Map(concepts.map((c) => [c.id, c.name]));
 
   const conceptMap = new Map<
     string,
@@ -798,13 +813,9 @@ export async function getQuizResult(input: {
   >();
   for (const a of allAttempts) {
     const conceptId = a.question.conceptId;
-    const concept = await prisma.concept.findUnique({
-      where: { id: conceptId },
-      select: { name: true },
-    });
     const entry = conceptMap.get(conceptId) ?? {
       id: conceptId,
-      name: concept?.name ?? "?",
+      name: conceptNameMap.get(conceptId) ?? "?",
       correct: 0,
       wrong: 0,
       total: 0,
@@ -851,6 +862,7 @@ export async function getQuizResult(input: {
     correctCount,
     scorePct,
     timeUsedSec: Math.round(timeUsedSec),
+    topicId: topic?.id ?? "",
     topicName: topic?.name ?? "?",
     subjectName: topic?.subject.name ?? "?",
     breakdown,

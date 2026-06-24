@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { computeDifficultyDistribution } from "@/server/ai/curriculum";
 import { generateQuestionsForConcept } from "@/server/ai/generate-questions";
+import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 
 const generateSchema = z.object({
   subjectId: z.string().min(1),
@@ -91,6 +92,12 @@ export async function generatePracticeQuestionsForSubject(
       questionsPerConcept,
     );
 
+    const quota = await incrementAiQuota(session.id, "questions", 1);
+    if (!quota.allowed) {
+      await decrementAiQuota(session.id, "questions", 1);
+      break;
+    }
+
     try {
       const questions = await generateQuestionsForConcept({
         conceptName: concept.name,
@@ -122,6 +129,7 @@ export async function generatePracticeQuestionsForSubject(
         totalGenerated += questions.length;
       }
     } catch (err) {
+      await decrementAiQuota(session.id, "questions", 1).catch(() => {});
       console.error(
         `Failed to generate questions for concept ${concept.name}:`,
         err,
