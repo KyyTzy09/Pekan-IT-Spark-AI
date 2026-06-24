@@ -6,9 +6,15 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateAndStoreDailyChallenges } from "@/server/actions/challenges";
 import { regenerateWeeklyChallenge } from "@/server/actions/weekly-challenge";
-import { MAX_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
+import { MAX_CHALLENGE_SUBJECTS, DAILY_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
 
-const subjectIdsSchema = z
+// BUG-FIX: Separate schemas for daily (max 2) and weekly (max 4)
+const dailySubjectIdsSchema = z
+  .array(z.string().min(1).max(64))
+  .min(1, "Pilih minimal 1 mapel")
+  .max(DAILY_CHALLENGE_SUBJECTS, `Maksimal ${DAILY_CHALLENGE_SUBJECTS} mapel`);
+
+const weeklySubjectIdsSchema = z
   .array(z.string().min(1).max(64))
   .min(1, "Pilih minimal 1 mapel")
   .max(MAX_CHALLENGE_SUBJECTS, `Maksimal ${MAX_CHALLENGE_SUBJECTS} mapel`);
@@ -49,7 +55,7 @@ export async function setChallengeSubjects(input: {
   error?: string;
 }> {
   const userId = await requireStudent();
-  const parsed = subjectIdsSchema.safeParse(input.subjectIds);
+  const parsed = dailySubjectIdsSchema.safeParse(input.subjectIds);
   if (!parsed.success) {
     return {
       ok: false,
@@ -107,7 +113,7 @@ export async function setWeeklyChallengeSubjects(input: {
   error?: string;
 }> {
   const userId = await requireStudent();
-  const parsed = subjectIdsSchema.safeParse(input.subjectIds);
+  const parsed = weeklySubjectIdsSchema.safeParse(input.subjectIds);
   if (!parsed.success) {
     return {
       ok: false,

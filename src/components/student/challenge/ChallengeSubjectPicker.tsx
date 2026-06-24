@@ -48,14 +48,17 @@ export function ChallengeSubjectPicker({
 
   if (!open) return null;
 
+  // BUG-FIX: Daily max 2, Weekly max 4
+  const maxSubjects = variant === "daily" ? 2 : 4;
+
   const toggle = (id: string) => {
     setError(null);
     setSelected((prev) => {
       if (prev.includes(id)) {
         return prev.filter((x) => x !== id);
       }
-      if (prev.length >= 4) {
-        setError("Maksimal 4 mapel");
+      if (prev.length >= maxSubjects) {
+        setError(`Maksimal ${maxSubjects} mapel`);
         return prev;
       }
       return [...prev, id];
@@ -91,8 +94,8 @@ export function ChallengeSubjectPicker({
       : "Pilih mapel untuk tantangan mingguan";
   const subtitle =
     variant === "daily"
-      ? "Maksimal 4 mapel. Berlaku mulai besok kalau tantangan hari ini sudah dibuat."
-      : "Maksimal 4 mapel. Berlaku mulai minggu depan kalau tantangan minggu ini sudah dibuat.";
+      ? `Maksimal ${maxSubjects} mapel. Berlaku mulai besok kalau tantangan hari ini sudah dibuat.`
+      : `Maksimal ${maxSubjects} mapel. Berlaku mulai minggu depan kalau tantangan minggu ini sudah dibuat.`;
 
   return (
     <div
@@ -132,7 +135,7 @@ export function ChallengeSubjectPicker({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {availableSubjects.map((s) => {
                 const isSelected = selected.includes(s.id);
-                const isDisabled = !isSelected && selected.length >= 4;
+                const isDisabled = !isSelected && selected.length >= maxSubjects;
                 return (
                   <button
                     key={s.id}
@@ -179,7 +182,7 @@ export function ChallengeSubjectPicker({
 
         <div className="flex items-center justify-between gap-3 border-t border-border/30 p-5 sm:p-6">
           <p className="text-[11.5px] font-bold text-muted-foreground">
-            {selected.length}/4 dipilih
+            {selected.length}/{maxSubjects} dipilih
           </p>
           <div className="flex items-center gap-2">
             {error && (
