@@ -1,37 +1,22 @@
 ```mermaid
-flowchart TD
-    A[Admin membuka Spark Ai] --> B{Sudah login?}
-    B -->|Belum| C[Login / Register]
-    C --> D{Verifikasi berhasil?}
-    D -->|Gagal| C
-    D -->|Berhasil| E[Beranda Admin]
-    B -->|Sudah| E
+flowchart LR
+    A((Admin)) --> UC1[Kelola Kurikulum]
+    A --> UC2[Kelola Akun]
+    A --> UC3[Lihat Statistik]
+    A --> UC4[Atur Daily Challenge]
 
-    E --> F{Pilih fitur}
+    UC1 --- D1[CRUD Mapel]
+    UC1 --- D2[CRUD Topik & Konsep]
+    UC1 --- D3[CRUD Soal]
 
-    F -->|Kelola Kurikulum| G[Buka Manajemen Kurikulum]
-    G --> G1[Tambah / Edit / Hapus Mata Pelajaran]
-    G1 --> G2[Kelola topik & subtopik materi]
-    G2 --> G3[Tambah soal & kunci jawaban]
-    G3 --> E
+    UC2 --- D4[CRUD Akun User]
+    UC2 --- D5[Reset Password]
 
- I[Buka Manajemen Pengguna]
-    I --> I1[Lihat daftar akun siswa, orang tua, guru]
-    I1 --> I2[Tambah / Edit / Nonaktifkan akun]
-    I2 --> I3[Reset password jika diperlukan]
-    I3 --> E
+    UC3 --- D6[Dashboard Statistik]
+    UC3 --- D7[Export Laporan]
 
-    F -->|Lihat Statistik| J[Buka Dashboard Statistik]
-    J --> J1[Lihat jumlah pengguna aktif]
-    J1 --> J2[Lihat metrik pembelajaran per mapel]
-    J2 --> J3[Export laporan]
-    J3 --> E
-
-    F -->|Atur Daily Challenge| K[Buka Manajemen Daily Challenge]
-    K --> K1[Pilih mapel & tingkat kesulitan]
-    K1 --> K2[Atur jadwal rilis soal]
-    K2 --> K3[Preview & publish challenge]
-    K3 --> E
+    UC4 --- D8[Atur Jadwal]
+    UC4 --- D9[Preview & Publish]
 ```
 
 Render: buka [mermaid.live](https://mermaid.live) ➜ paste ➜ export PNG

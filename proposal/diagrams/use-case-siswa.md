@@ -1,66 +1,29 @@
 ```mermaid
-flowchart TD
-    subgraph SISWA["Aktor: Siswa"]
-        style SISWA fill:#e0f2fe,stroke:#0284c7
-    end
+flowchart LR
+    A((Siswa)) --> UC1[Socratic Tutor]
+    A --> UC2[Daily Challenge]
+    A --> UC3[Practice Quiz]
+    A --> UC4[Upload Dokumen]
+    A --> UC5[Lihat Materi]
+    A --> UC6[Lihat Progress]
+    A --> UC7[Leaderboard]
+    A --> UC8[Kelola Mapel]
+    A --> UC9[Undang Orang Tua]
 
-    SISWA --> UC1["Buka Socratic Tutor"]
-    SISWA --> UC2["Kerjakan Daily Challenge"]
-    SISWA --> UC3["Kerjakan Practice Quiz"]
-    SISWA --> UC4["Upload Dokumen Belajar"]
-    SISWA --> UC5["Lihat Materi Pembelajaran"]
-    SISWA --> UC6["Lihat Progress & Statistik"]
-    SISWA --> UC7["Lihat Leaderboard"]
-    SISWA --> UC8["Kelola Mata Pelajaran"]
-    SISWA --> UC9["Undang Orang Tua"]
+    UC1 --- D1[Ketik & Jawab Pertanyaan]
+    UC1 --- D2[Lihat Riwayat Chat]
 
-    subgraph UC1_DETAIL["Socratic Tutor"]
-        UC1 --> UC1a["Ketik pertanyaan"]
-        UC1 --> UC1b["Jawab pertanyaan pancingan AI"]
-        UC1 --> UC1c["Lihat riwayat chat"]
-    end
+    UC2 --- D3[Kerjakan Soal Harian]
+    UC2 --- D4[Klaim Reward XP]
 
-    subgraph UC2_DETAIL["Daily Challenge"]
-        UC2 --> UC2a["Kerjakan soal harian"]
-        UC2 --> UC2b["Lihat hasil & skor"]
-        UC2 --> UC2c["Klaim reward XP"]
-    end
+    UC3 --- D5[Pilih Mapel]
+    UC3 --- D6[Latihan Adaptif]
 
-    subgraph UC3_DETAIL["Practice Quiz"]
-        UC3 --> UC3a["Pilih mata pelajaran"]
-        UC3 --> UC3b["Kerjakan soal adaptif"]
-        UC3 --> UC3c["Lihat hasil quiz"]
-    end
+    UC4 --- D7[Upload PDF/DOCX]
+    UC4 --- D8[Chat dengan Dokumen]
 
-    subgraph UC4_DETAIL["Upload Dokumen"]
-        UC4 --> UC4a["Upload file PDF/DOCX"]
-        UC4 --> UC4b["Sistem rangkum dokumen"]
-        UC4 --> UC4c["Chat dengan dokumen"]
-    end
-
-    subgraph UC6_DETAIL["Progress"]
-        UC6 --> UC6a["Lihat XP & Level"]
-        UC6 --> UC6b["Lihat Streak Belajar"]
-        UC6 --> UC6c["Lihat Badge & Achievement"]
-        UC6 --> UC6d["Lihat Mastery per Topik"]
-    end
-
-    subgraph SISTEM["Sistem Spark Ai"]
-        style SISTEM fill:#fef3c7,stroke:#f59e0b
-        SYS1[("AI Socratic Engine")]
-        SYS2[("Adaptive Difficulty Engine")]
-        SYS3[("Knowledge Graph")]
-        SYS4[("Gamification Engine")]
-        SYS5[("RAG Document Engine")]
-    end
-
-    UC1 -.-> SYS1
-    UC2 -.-> SYS2
-    UC2 -.-> SYS4
-    UC3 -.-> SYS2
-    UC4 -.-> SYS5
-    UC6 -.-> SYS3
-    UC6 -.-> SYS4
+    UC6 --- D9[XP, Level, Badge]
+    UC6 --- D10[Mastery per Topik]
 ```
 
 Render: buka [mermaid.live](https://mermaid.live) ➜ paste ➜ export PNG
