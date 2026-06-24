@@ -274,20 +274,6 @@ export function ChallengeListView({
             </Button>
           </div>
 
-          <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2.5">
-            <button
-              type="button"
-              onClick={() => setPickerOpen({ variant: "daily" })}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--coral)]/30 bg-[var(--coral)]/5 px-3 py-1.5 text-[11.5px] font-bold text-[var(--coral)] transition-all hover:bg-[var(--coral)]/10"
-            >
-              <Settings2 size={11} strokeWidth={2.5} />
-              Atur mapel tantangan
-              <span className="rounded-full bg-[var(--coral)]/15 px-1.5 py-0.5 text-[10px]">
-                {pickerSnapshot.daily.length}/4
-              </span>
-            </button>
-          </div>
-
           <div className="relative mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatTile
               icon={<Target size={14} />}
@@ -317,6 +303,59 @@ export function ChallengeListView({
             />
           </div>
         </header>
+      </Reveal>
+
+      {/* Atur Tantangan Card — separate card for daily & weekly subject settings */}
+      <Reveal delay={30}>
+        <section className="rounded-2xl border border-border/40 bg-card/80 p-4 shadow-[0_6px_18px_rgba(80,20,50,0.05)] backdrop-blur-md sm:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--coral)]/15 to-[var(--purple)]/15 shadow-[inset_0_0_0_1px_rgba(225,29,72,0.15)]">
+              <Settings2 size={13} className="text-[var(--coral)]" strokeWidth={2.5} />
+            </span>
+            <p className="text-[12px] font-bold text-muted-foreground">Pengaturan Tantangan</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {/* Daily Subject Setting */}
+            <button
+              type="button"
+              onClick={() => setPickerOpen({ variant: "daily" })}
+              className="group flex items-center gap-3 rounded-xl border border-border/40 bg-card/60 p-3.5 text-left transition-all hover:border-[var(--coral)]/30 hover:bg-[var(--coral)]/5"
+            >
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--coral)]/10 text-[var(--coral)] shadow-[inset_0_0_0_1px_rgba(225,29,72,0.2)]">
+                <Target size={15} strokeWidth={2.2} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-bold">Mapel Harian</p>
+                <p className="text-[10.5px] text-muted-foreground">
+                  {pickerSnapshot.daily.length > 0
+                    ? `${pickerSnapshot.daily.length} mapel dipilih`
+                    : "Belum dipilih"}
+                </p>
+              </div>
+              <ChevronDown size={14} className="text-muted-foreground rotate-[-90deg] group-hover:text-[var(--coral)]" />
+            </button>
+
+            {/* Weekly Subject Setting */}
+            <button
+              type="button"
+              onClick={() => setPickerOpen({ variant: "weekly" })}
+              className="group flex items-center gap-3 rounded-xl border border-border/40 bg-card/60 p-3.5 text-left transition-all hover:border-[var(--purple)]/30 hover:bg-[var(--purple)]/5"
+            >
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--purple)]/10 text-[var(--purple)] shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]">
+                <Trophy size={15} strokeWidth={2.2} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-bold">Mapel Mingguan</p>
+                <p className="text-[10.5px] text-muted-foreground">
+                  {pickerSnapshot.weekly.length > 0
+                    ? `${pickerSnapshot.weekly.length} mapel dipilih`
+                    : "Belum dipilih"}
+                </p>
+              </div>
+              <ChevronDown size={14} className="text-muted-foreground rotate-[-90deg] group-hover:text-[var(--purple)]" />
+            </button>
+          </div>
+        </section>
       </Reveal>
 
       {/* Weekly Challenge Card */}
