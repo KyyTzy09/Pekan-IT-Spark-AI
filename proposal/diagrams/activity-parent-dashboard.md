@@ -1,27 +1,32 @@
 ```mermaid
 flowchart TD
-    A[Orang tua buka Portal] --> B{Sudah punya akun?}
+    A[Mulai: Orang tua buka Portal] --> B{Sudah punya akun?}
 
-    B -->|Belum| C[Register dengan kode undangan]
-    C --> D[Hubungkan ke akun anak]
-    D --> E[Beranda Portal]
+    B -->|Belum| C[Register dengan kode undangan dari anak]
+    C --> D[Buat akun orang tua]
+    D --> E[Hubungkan ke akun anak]
+    E --> F[Beranda Portal Orang Tua]
 
-    B -->|Sudah| E
+    B -->|Sudah| F
 
-    E --> F{Punya > 1 anak?}
-    F -->|Ya| G[Pilih anak]
-    G --> H[Ambil data dashboard]
-    F -->|Tidak| H
+    F --> G{Punya lebih dari 1 anak?}
+    G -->|Ya| H[Tampilkan selector anak]
+    H --> I[Orang tua pilih anak yang ingin dipantau]
+    I --> J[Ambil data dashboard anak terpilih]
+    G -->|Tidak| J
 
-    H --> I[Cek cache rekomendasi AI]
-    I --> J{Cache ada?}
+    J --> K[Ambil statistik: level, XP, streak, progress]
+    K --> L[Cek cache rekomendasi AI hari ini]
 
-    J -->|Ada| K[Gunakan dari cache]
-    J -->|Tidak| L[Claim slot & generate AI]
-    L --> K
+    L --> M{Cache ada?}
+    M -->|Ada| N[Gunakan rekomendasi dari cache]
+    M -->|Tidak ada| O[Claim slot generate dengan DB create]
+    O --> P[Generate rekomendasi AI via LLM]
+    P --> Q[Simpan hasil ke parent_tip_cache]
+    Q --> N
 
-    K --> M[Generate alerts]
-    M --> N[Tampilkan dashboard lengkap]
+    N --> R[Generate alerts: inaktivitas / kesulitan / positif]
+    R --> S[Tampilkan dashboard lengkap]
 ```
 
 Render: buka [mermaid.live](https://mermaid.live) ➜ paste ➜ export PNG

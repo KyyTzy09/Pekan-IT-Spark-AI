@@ -1,22 +1,47 @@
-```mermaid
-flowchart LR
-    A((Admin)) --> UC1[Kelola Kurikulum]
-    A --> UC2[Kelola Akun]
-    A --> UC3[Lihat Statistik]
-    A --> UC4[Atur Daily Challenge]
+@startuml
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
 
-    UC1 --- D1[CRUD Mapel]
-    UC1 --- D2[CRUD Topik & Konsep]
-    UC1 --- D3[CRUD Soal]
+actor Admin
 
-    UC2 --- D4[CRUD Akun User]
-    UC2 --- D5[Reset Password]
+rectangle "Sistem Spark Ai" {
+    usecase "Kelola Kurikulum" as UC1
+    usecase "Kelola Akun" as UC2
+    usecase "Lihat Statistik" as UC3
+    usecase "Atur Daily Challenge" as UC4
 
-    UC3 --- D6[Dashboard Statistik]
-    UC3 --- D7[Export Laporan]
+    usecase "CRUD Mata Pelajaran" as UC1a
+    usecase "CRUD Topik & Konsep" as UC1b
+    usecase "CRUD Soal & Jawaban" as UC1c
 
-    UC4 --- D8[Atur Jadwal]
-    UC4 --- D9[Preview & Publish]
-```
+    usecase "CRUD Akun User" as UC2a
+    usecase "Reset Password" as UC2b
 
-Render: buka [mermaid.live](https://mermaid.live) ➜ paste ➜ export PNG
+    usecase "Dashboard Statistik" as UC3a
+    usecase "Export Laporan" as UC3b
+
+    usecase "Atur Jadwal Challenge" as UC4a
+    usecase "Preview & Publish" as UC4b
+}
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+
+UC1 ..> UC1a : <<include>>
+UC1 ..> UC1b : <<include>>
+UC1 ..> UC1c : <<include>>
+
+UC2 ..> UC2a : <<include>>
+UC2 ..> UC2b : <<extend>>
+
+UC3 ..> UC3a : <<include>>
+UC3 ..> UC3b : <<extend>>
+
+UC4 ..> UC4a : <<include>>
+UC4 ..> UC4b : <<include>>
+@enduml
+
+Render: buka https://www.plantuml.com/plantuml/uml/ ➜ paste ➜ export PNG

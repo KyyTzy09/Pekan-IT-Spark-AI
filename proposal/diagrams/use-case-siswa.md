@@ -1,29 +1,69 @@
-```mermaid
-flowchart LR
-    A((Siswa)) --> UC1[Socratic Tutor]
-    A --> UC2[Daily Challenge]
-    A --> UC3[Practice Quiz]
-    A --> UC4[Upload Dokumen]
-    A --> UC5[Lihat Materi]
-    A --> UC6[Lihat Progress]
-    A --> UC7[Leaderboard]
-    A --> UC8[Kelola Mapel]
-    A --> UC9[Undang Orang Tua]
+@startuml
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
 
-    UC1 --- D1[Ketik & Jawab Pertanyaan]
-    UC1 --- D2[Lihat Riwayat Chat]
+actor Siswa
 
-    UC2 --- D3[Kerjakan Soal Harian]
-    UC2 --- D4[Klaim Reward XP]
+rectangle "Sistem Spark Ai" {
+    usecase "Socratic Tutor" as UC1
+    usecase "Daily Challenge" as UC2
+    usecase "Practice Quiz" as UC3
+    usecase "Upload Dokumen" as UC4
+    usecase "Lihat Materi" as UC5
+    usecase "Lihat Progress" as UC6
+    usecase "Leaderboard" as UC7
+    usecase "Kelola Mata Pelajaran" as UC8
+    usecase "Undang Orang Tua" as UC9
 
-    UC3 --- D5[Pilih Mapel]
-    UC3 --- D6[Latihan Adaptif]
+    usecase "Ketik Pertanyaan" as UC1a
+    usecase "Jawab Pertanyaan Pancingan" as UC1b
+    usecase "Lihat Riwayat Chat" as UC1c
 
-    UC4 --- D7[Upload PDF/DOCX]
-    UC4 --- D8[Chat dengan Dokumen]
+    usecase "Kerjakan Soal Harian" as UC2a
+    usecase "Lihat Hasil & Skor" as UC2b
+    usecase "Klaim Reward XP" as UC2c
 
-    UC6 --- D9[XP, Level, Badge]
-    UC6 --- D10[Mastery per Topik]
-```
+    usecase "Pilih Mata Pelajaran" as UC3a
+    usecase "Kerjakan Soal Adaptif" as UC3b
 
-Render: buka [mermaid.live](https://mermaid.live) ➜ paste ➜ export PNG
+    usecase "Upload PDF/DOCX" as UC4a
+    usecase "Sistem Rangkum Dokumen" as UC4b
+    usecase "Chat dengan Dokumen" as UC4c
+
+    usecase "Lihat XP & Level" as UC6a
+    usecase "Lihat Streak & Badge" as UC6b
+    usecase "Lihat Mastery per Topik" as UC6c
+}
+
+Siswa --> UC1
+Siswa --> UC2
+Siswa --> UC3
+Siswa --> UC4
+Siswa --> UC5
+Siswa --> UC6
+Siswa --> UC7
+Siswa --> UC8
+Siswa --> UC9
+
+UC1 ..> UC1a : <<include>>
+UC1 ..> UC1b : <<include>>
+UC1 ..> UC1c : <<extend>>
+
+UC2 ..> UC2a : <<include>>
+UC2 ..> UC2b : <<include>>
+UC2 ..> UC2c : <<extend>>
+
+UC3 ..> UC3a : <<include>>
+UC3 ..> UC3b : <<include>>
+
+UC4 ..> UC4a : <<include>>
+UC4 ..> UC4b : <<include>>
+UC4 ..> UC4c : <<extend>>
+
+UC6 ..> UC6a : <<include>>
+UC6 ..> UC6b : <<include>>
+UC6 ..> UC6c : <<include>>
+@enduml
+
+Render: buka https://www.plantuml.com/plantuml/uml/ ➜ paste ➜ export PNG
