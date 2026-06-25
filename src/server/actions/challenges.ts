@@ -235,12 +235,10 @@ export async function generateAndStoreDailyChallenges(
   userId: string,
   date: Date,
 ): Promise<void> {
-  console.log("[DAILY_CHALLENGE] Starting generation", {
-    userId,
-    date: date.toISOString(),
-  });
+  const dateStr = date.toISOString().split("T")[0];
+  console.log(`[DAILY] 🚀 Memulai generate challenge untuk ${dateStr}`);
 
-  // 🔴 Cek apakah udah ada challenge buat hari ini — kalo udah, skip
+  // Cek apakah udah ada challenge buat hari ini
   const today = toDateOnly(date);
   const tomorrow = new Date(today.getTime() + 86_400_000);
   const existingCount = await prisma.challenge.count({
@@ -254,19 +252,13 @@ export async function generateAndStoreDailyChallenges(
     },
   });
   if (existingCount > 0) {
-    console.log(
-      `[DAILY_CHALLENGE] Skip — udah ada ${existingCount} challenge buat hari ini`,
-      { userId, date: date.toISOString() },
-    );
+    console.log(`[DAILY] ⏭️  Udah ada ${existingCount} challenge hari ini, skip generate`);
     return;
   }
 
-  // 🔴 Lock: cegah generation dobel dari polling simultan (DB-backed for Vercel)
+  // Lock: cegah generation dobel dari polling simultan
   if (!(await acquireDbLock(userId, "DAILY"))) {
-    console.log(
-      "[DAILY_CHALLENGE] Skip — generation udah berjalan, tunggu selesai",
-      { userId, date: date.toISOString() },
-    );
+    console.log("[DAILY] 🔒 Ada proses generate lain yang lagi jalan, skip duplikat");
     return;
   }
 
@@ -283,66 +275,62 @@ export async function generateAndStoreDailyChallenges(
   });
 
   if (!profile) {
-    console.log("[DAILY_CHALLENGE] No profile found", { userId });
+    console.log("[DAILY] ❌ Profil ga ketemu, batal generate");
     return;
   }
 
-  console.log("[DAILY_CHALLENGE] Profile loaded", {
-    grade: profile.grade,
-    learningStyle: profile.learningStyle,
-    challengeSubjectIds: profile.challengeSubjectIds.length,
+  console.log("[DAILY] 👤 Profil loaded", {
+    nama: profile.user?.name ?? "(unknown)",
+    kelas: profile.grade,
+    gayaBelajar: profile.learningStyle ?? "VISUAL",
+    jumlahSubjectDipilih: profile.challengeSubjectIds.length,
   });
 
   const subjectIds = pickChallengeSubjectIds(
     {
       challengeSubjectIds: profile?.challengeSubjectIds ?? [],
-      focusedSubjects: [], // Tidak dipakai — aturan baru: WAJIB challengeSubjectIds
+      focusedSubjects: [],
     },
     [],
   );
 
-  console.log("[DAILY_CHALLENGE] Subject selection", {
-    picked: subjectIds.length,
-    subjectIds,
-  });
-
   if (subjectIds.length === 0) {
-    console.log("[DAILY_CHALLENGE] No subjects selected — skipping generation", { userId });
+    console.log("[DAILY] ⚠️  Belum pilih mapel, skip generate");
     return;
   }
 
-  const now = new Date();
+  // Ambil nama subject untuk logging
+  const subjects = await prisma.subject.findMany({
+    where: { id: { in: subjectIds } },
+    select: { id: true, name: true },
+  });
+  const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+
   const distributedSubjects = distributeChallengeSubjects(
     subjectIds,
     DAILY_CHALLENGE_SUBJECTS,
   );
 
-  console.log("[DAILY_CHALLENGE] Distribution result", {
-    total: distributedSubjects.length,
-    distributedSubjects,
-  });
+  console.log("[DAILY] 📚 Mapel yang dipilih:", distributedSubjects.map(id => subjectMap.get(id) ?? id).join(", "));
 
+  const now = new Date();
   let successCount = 0;
   let failCount = 0;
 
   for (const subjectId of distributedSubjects) {
+    const subjectName = subjectMap.get(subjectId) ?? subjectId;
     try {
-      console.log("[DAILY_CHALLENGE] Generating for subject", { subjectId });
+      console.log(`[DAILY] ⏳ Generating untuk ${subjectName}...`);
       await generateOneDailyChallenge(userId, date, subjectId, profile, now);
       successCount++;
-      console.log("[DAILY_CHALLENGE] ✓ Success", { subjectId });
+      console.log(`[DAILY] ✅ Berhasil generate untuk ${subjectName}`);
     } catch (err) {
       failCount++;
-      console.error(`[DAILY_CHALLENGE] ✗ Failed for subject ${subjectId}`, err);
+      console.error(`[DAILY] ❌ Gagal generate untuk ${subjectName}:`, err);
     }
   }
 
-  console.log("[DAILY_CHALLENGE] Generation complete", {
-    userId,
-    successCount,
-    failCount,
-    total: distributedSubjects.length,
-  });
+  console.log(`[DAILY] 🎉 Selesai! ${successCount} berhasil, ${failCount} gagal dari ${distributedSubjects.length} mapel`);
   } finally {
     releaseDbLock(userId, "DAILY");
   }
@@ -2524,8 +2512,10 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
     };
   }
 
-  regenerateWeeklyChallenge(userId).catch(console.error);
-  return null;
+  if (!existing) {
+    regenerateWeeklyChallenge(userId).catch(() => {});
+    return null;
+  }
 }
 
 export async function updateWeeklyChallengeProgress(userId: string) {

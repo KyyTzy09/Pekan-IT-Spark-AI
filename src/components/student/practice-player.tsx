@@ -129,6 +129,8 @@ export function PracticePlayer({
   const [hintLoading, setHintLoading] = React.useState(false);
   const [socraticLoading, setSocraticLoading] = React.useState(false);
   const [showWhy, setShowWhy] = React.useState(false);
+  const [questionsAnswered, setQuestionsAnswered] = React.useState(0);
+  const [correctCount, setCorrectCount] = React.useState(0);
   const startedAt = React.useRef<number>(Date.now());
 
   React.useEffect(() => {
@@ -165,6 +167,10 @@ export function PracticePlayer({
         return;
       }
       setResult(r);
+      setQuestionsAnswered((prev) => prev + 1);
+      if (r.isCorrect) {
+        setCorrectCount((prev) => prev + 1);
+      }
       if (r.masteredNow) {
         setShowCelebration(true);
       }
@@ -253,6 +259,8 @@ export function PracticePlayer({
         difficulty={session.currentDifficulty}
         diffMeta={diffMeta}
         stats={stats}
+        questionsAnswered={questionsAnswered}
+        correctCount={correctCount}
       />
 
       <AnimatePresence mode="wait">
@@ -402,9 +410,27 @@ export function PracticePlayer({
                 </Button>
               )}
               {error && (
-                <p className="text-[12px] font-medium text-destructive">
-                  {error}
-                </p>
+                <div className={cn(
+                  "rounded-2xl border p-4 text-[12.5px] leading-relaxed",
+                  error.includes("🎉")
+                    ? "border-emerald-300/50 bg-emerald-50/80 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200"
+                    : "border-rose-300/50 bg-rose-50/80 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200"
+                )}>
+                  <p className="font-medium">{error}</p>
+                  {error.includes("🎉") && (
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 rounded-full"
+                    >
+                      <Link href="/practice">
+                        Pilih topik lain
+                        <ArrowRight size={12} className="ml-1" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -520,7 +546,7 @@ export function PracticePlayer({
                 {loadingNext ? (
                   <>
                     <Loader2 size={14} className="mr-1.5 animate-spin" />
-                    Memuat…
+                    Memuat...
                   </>
                 ) : (
                   <>
@@ -528,6 +554,16 @@ export function PracticePlayer({
                     <ArrowRight size={14} className="ml-1.5" />
                   </>
                 )}
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+              >
+                <Link href="/dashboard">
+                  Selesai latihan
+                </Link>
               </Button>
             </div>
           )}
@@ -576,18 +612,37 @@ function SessionHeader({
   difficulty,
   diffMeta,
   stats,
+  questionsAnswered,
+  correctCount,
 }: {
   accuracyPct: number;
   recentTotal: number;
   difficulty: string;
   diffMeta: { label: string; chip: string; emoji: string };
   stats: PracticeStats;
+  questionsAnswered: number;
+  correctCount: number;
 }) {
+  const sessionAccuracy = questionsAnswered > 0 ? Math.round((correctCount / questionsAnswered) * 100) : 0;
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-4">
       <div className="rounded-2xl border border-border/40 bg-card/70 p-4 backdrop-blur-xl">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Akurasi kamu
+          Sesi ini
+        </p>
+        <p className="mt-1 font-heading text-[26px] font-bold leading-none">
+          {questionsAnswered}
+          <span className="text-[14px] font-medium text-muted-foreground">
+            soal
+          </span>
+        </p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {correctCount} benar ({sessionAccuracy}%)
+        </p>
+      </div>
+      <div className="rounded-2xl border border-border/40 bg-card/70 p-4 backdrop-blur-xl">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Akurasi total
         </p>
         <p className="mt-1 font-heading text-[26px] font-bold leading-none">
           {accuracyPct}

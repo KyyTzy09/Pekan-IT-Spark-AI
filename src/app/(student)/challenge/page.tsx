@@ -24,6 +24,8 @@ export default async function ChallengePage() {
 
   const userId = session.id;
 
+  console.log("[CHALLENGE] 📄 Loading halaman challenge...");
+
   const [result, progress, profile, weeklyChallenge] = await Promise.all([
     getTodayChallenges(),
     getDailyProgress(),
@@ -37,6 +39,12 @@ export default async function ChallengePage() {
     }),
     getOrCreateWeeklyChallenge(),
   ]);
+
+  console.log("[CHALLENGE] ✅ Data loaded", {
+    challengeHariIni: result.challenges.length,
+    adaWeekly: !!weeklyChallenge,
+    weeklySubjectCount: profile?.weeklyChallengeSubjectIds.length ?? 0,
+  });
 
   const allSubjectIds = Array.from(
     new Set([

@@ -107,12 +107,12 @@ export async function generateOnDemandMaterial(input: {
     const learningStyle = profile?.learningStyle ?? "VISUAL";
     const masteryScore = knowledgeProfile?.masteryScore ?? 0.3;
 
-    console.log("[MATERIAL] Generating on-demand material", {
-      userId,
-      subjectId,
-      subjectName: subject.name,
-      difficulty,
-      learningStyle,
+    console.log("[MATERIAL] 🚀 Generating materi untuk " + subject.name);
+    console.log("[MATERIAL] 📊 Detail:", {
+      mapel: subject.name,
+      kesulitan: difficulty,
+      gayaBelajar: learningStyle,
+      mastery: Math.round(masteryScore * 100) + "%",
     });
 
     const material = await generateAdaptiveMaterial({
@@ -136,16 +136,17 @@ export async function generateOnDemandMaterial(input: {
       },
     });
 
-    console.log("[MATERIAL] ✓ Generated", {
-      materialId: created.id,
-      title: created.title,
+    console.log("[MATERIAL] ✅ Berhasil generate!", {
+      id: created.id,
+      judul: created.title,
+      estimasi: created.estimatedMinutes + " menit",
     });
 
     return { ok: true, materialId: created.id };
   } catch (err) {
     // BUG-10 FIX: Restore quota on AI failure
     await decrementAiQuota(userId, "materials", 1).catch(() => {});
-    console.error("[MATERIAL] ✗ Failed to generate", err);
+    console.error("[MATERIAL] ❌ Gagal generate:", err);
     return { ok: false, error: "Gagal generate materi. Coba lagi." };
   } finally {
     releaseDbLock(userId, "ON_DEMAND");

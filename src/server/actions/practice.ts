@@ -288,6 +288,35 @@ export async function getNextPracticeQuestion(
     eligibleConcepts.push(fallbackConcept);
   }
 
+  // Cek apakah semua konsep sudah mastered
+  const masteredCount = eligibleConcepts.filter((c) => {
+    const m = masteryByConcept.get(c.id);
+    return m?.status === "MASTERED" || (m?.score ?? 0) >= 0.9;
+  }).length;
+  const totalEligible = eligibleConcepts.length;
+  const allMastered = masteredCount === totalEligible && totalEligible > 0;
+
+  if (allMastered) {
+    // Cek apakah user udah attempt minimal 5 soal di topik ini
+    const topicAttempts = await prisma.questionAttempt.count({
+      where: {
+        userId,
+        question: {
+          concept: {
+            topicId: topicId ?? undefined,
+          },
+        },
+      },
+    });
+
+    if (topicAttempts >= 5) {
+      return {
+        ok: false,
+        error: `🎉 Topik ini sudah tuntas! Semua ${totalEligible} konsep sudah mastered. Coba topik lain ya!`,
+      };
+    }
+  }
+
   const candidateConcept = pickConceptWeighted(
     eligibleConcepts,
     masteryByConcept,

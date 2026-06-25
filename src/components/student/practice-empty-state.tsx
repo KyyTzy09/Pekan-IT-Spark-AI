@@ -46,13 +46,17 @@ export function PracticeEmptyState({
           {error || "Generate soal untuk mapel yang kamu inginkan."}
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button
-            size="sm"
-            className="rounded-full bg-[var(--purple)] text-white"
-            onClick={() => setGenerateDialogOpen(true)}
-          >
-            <Sparkles size={13} />
-            Generate Latihan Soal
+          <Button asChild size="sm" className="rounded-full bg-[var(--purple)] text-white">
+            <Link href="/practice">
+              <Sparkles size={13} />
+              Pilih Mode Latihan
+            </Link>
+          </Button>
+          <Button asChild size="sm" className="rounded-full bg-[var(--coral)] text-white">
+            <Link href="/practice/generate">
+              <Sparkles size={13} />
+              Generate Soal Custom
+            </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="rounded-full">
             <Link href="/subjects">Jelajahi mapel</Link>

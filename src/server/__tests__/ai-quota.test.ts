@@ -12,7 +12,7 @@ describe("canIncrementQuota", () => {
   it("allows increment when under limit", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 5, materialsCount: 2, chatCount: 0 },
+        { questionsCount: 5, materialsCount: 2, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
         "questions",
         1,
       ),
@@ -22,7 +22,7 @@ describe("canIncrementQuota", () => {
   it("rejects increment when at limit", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 20, materialsCount: 2, chatCount: 0 },
+        { questionsCount: 20, materialsCount: 2, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
         "questions",
         1,
       ),
@@ -32,7 +32,7 @@ describe("canIncrementQuota", () => {
   it("rejects increment when adding would exceed limit", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 18, materialsCount: 0, chatCount: 0 },
+        { questionsCount: 18, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
         "questions",
         5,
       ),
@@ -42,7 +42,7 @@ describe("canIncrementQuota", () => {
   it("uses separate limits per kind", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 20, materialsCount: 0, chatCount: 0 },
+        { questionsCount: 20, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
         "materials",
         1,
       ),

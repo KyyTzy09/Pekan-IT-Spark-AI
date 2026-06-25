@@ -6,15 +6,15 @@ import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 
 const generatedMaterialSchema = z.object({
-  title: z.string(),
+  title: z.string().min(1, "Judul tidak boleh kosong"),
   contentMd: z
     .string()
-    .min(5000)
-    .refine((text) => countWords(text) >= 1000, {
-      message: "Materi terlalu pendek, minimal 1000 kata",
+    .min(500, "Konten terlalu pendek, minimal 500 karakter")
+    .refine((text) => countWords(text) >= 300, {
+      message: "Materi terlalu pendek, minimal 300 kata",
     }),
-  keyPoints: z.array(z.string()),
-  estimatedMinutes: z.number(),
+  keyPoints: z.array(z.string()).min(1, "Minimal 1 key point"),
+  estimatedMinutes: z.number().min(1).max(60),
 });
 
 export type GeneratedAdaptiveMaterial = z.infer<typeof generatedMaterialSchema>;
@@ -53,7 +53,7 @@ export async function generateAdaptiveMaterial(input: {
   learningStyle: string;
   masteryScore: number;
 }): Promise<GeneratedAdaptiveMaterial> {
-  return retryOnZodError(() => _generateAdaptiveMaterialInner(input));
+  return retryOnZodError(() => _generateAdaptiveMaterialInner(input), 2);
 }
 
 async function _generateAdaptiveMaterialInner(
@@ -116,7 +116,7 @@ Gaya belajar: ${styleInstructions[input.learningStyle] || styleInstructions.VISU
 
 Aturan:
 1. Materi dalam format Markdown yang bersih
-2. Panjang: 1000-2000 kata (WAJIB minimal 1000 kata)
+2. Panjang: 500-1500 kata
 3. Sertakan minimal 3 key points
 4. Estimasi waktu baca: 10-30 menit
 5. Gunakan bahasa Indonesia yang baik dan benar
@@ -126,30 +126,32 @@ STRUKTUR WAJIB (semua di dalam field contentMd JSON):
 - Judul dan pengantar (kaitkan dengan kehidupan siswa)
 - Penjelasan konsep utama (mendalam, bukan permukaan)
 - Contoh soal beserta pembahasan langkah demi langkah
-- Studi kasus atau aplikasi dunia nyata
 - Ringkasan poin-poin penting
-- Callout refleksi: "💭 Coba pikirkan: <pertanyaan>"
 
-PENTING: Jangan output materi secara terpisah! Seluruh konten markdown WAJIB ada di dalam field contentMd pada JSON. Jangan gunakan placeholder atau ringkasan.
+PENTING: Jangan output materi secara terpisah! Seluruh konten markdown WAJIB ada di dalam field contentMd pada JSON.
 
-Output HANYA JSON (tanpa teks lain sebelum atau sesudah):
-{
-  "title": "Judul Materi",
-  "contentMd": "# Judul Materi\n\nIsi materi LENGKAP dalam Markdown di sini...",
-  "keyPoints": ["Point 1", "Point 2", "Point 3"],
-  "estimatedMinutes": 15
-}`,
-    temperature: 0.5,
+Output HANYA JSON valid (tanpa markdown code block, tanpa teks lain):
+{"title":"Judul Materi","contentMd":"# Judul Materi\n\nIsi materi LENGKAP...","keyPoints":["Point 1","Point 2","Point 3"],"estimatedMinutes":15}`,
+    temperature: 0.4,
   });
 
   let json: unknown;
   try {
     json = safeParseJson(text);
-  } catch {
+  } catch (parseErr) {
+    console.error("[MATERIAL_AI] Failed to parse AI output:", {
+      rawText: text.slice(0, 500),
+      error: parseErr,
+    });
     throw new Error("AI returned invalid JSON for material");
   }
+
   const parsed = generatedMaterialSchema.safeParse(json);
   if (!parsed.success) {
+    console.error("[MATERIAL_AI] Zod validation failed:", {
+      issues: parsed.error.issues,
+      receivedKeys: json && typeof json === "object" ? Object.keys(json) : [],
+    });
     throw new Error(
       `Failed to parse generated material: ${parsed.error.message}`,
     );

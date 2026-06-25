@@ -4,6 +4,8 @@ export const AI_QUOTA_LIMITS = {
   questions: 20,
   materials: 5,
   chat: 50,
+  practiceGen: 2,
+  topicGen: 2,
 } as const;
 
 export type AiQuotaKind = keyof typeof AI_QUOTA_LIMITS;
@@ -12,6 +14,8 @@ export type AiQuotaSnapshot = {
   questionsCount: number;
   materialsCount: number;
   chatCount: number;
+  practiceGenCount: number;
+  topicGenCount: number;
 };
 
 function startOfUtcDay(d: Date): Date {

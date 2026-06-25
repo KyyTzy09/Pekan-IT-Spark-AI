@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BookOpen, Library, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Library, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
@@ -265,93 +265,164 @@ export function MaterialsLibraryView({
 
       {/* Generate Material Dialog */}
       {generateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl border border-border/40 bg-card p-5 shadow-xl">
-            <h2 className="font-heading text-[16px] font-bold">
-              Generate Materi
-            </h2>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              Pilih mapel dan tingkat kesulitan. Limit 7x per hari.
-            </p>
-
-            <div className="mt-4 space-y-3">
-              <div>
-                <label
-                  htmlFor="gen-subject"
-                  className="text-[11px] font-bold text-muted-foreground"
-                >
-                  Mapel
-                </label>
-                <select
-                  id="gen-subject"
-                  value={genSubject}
-                  onChange={(e) => setGenSubject(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-lg border border-border/40 bg-background px-3 text-[12px] outline-none"
-                >
-                  {subjectOptions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.icon ? `${s.icon} ` : ""}
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <span className="text-[11px] font-bold text-muted-foreground">
-                  Kesulitan
-                </span>
-                <div className="mt-1 flex gap-1.5">
-                  {(["EASY", "MEDIUM", "HARD"] as const).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setGenDifficulty(d)}
-                      className={cn(
-                        "flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all",
-                        genDifficulty === d
-                          ? "bg-[var(--teal)] text-white"
-                          : "border border-border/40 text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {d === "EASY"
-                        ? "Mudah"
-                        : d === "MEDIUM"
-                          ? "Sedang"
-                          : "Sulit"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {genError && (
-                <p className="text-[11px] text-red-500">{genError}</p>
-              )}
-            </div>
-
-            <div className="mt-5 flex gap-2">
-              <Button
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !generating) {
+              setGenerateOpen(false);
+              setGenError(null);
+            }
+          }}
+        >
+          <div className="relative mx-4 w-full max-w-md overflow-hidden rounded-3xl border border-border/40 bg-card shadow-2xl">
+            {/* Header gradient */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[var(--teal)] to-[var(--blue)] p-6 pb-5">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-white/10 blur-2xl"
+              />
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1 rounded-lg"
                 onClick={() => {
-                  setGenerateOpen(false);
-                  setGenError(null);
+                  if (!generating) {
+                    setGenerateOpen(false);
+                    setGenError(null);
+                  }
                 }}
+                className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
                 disabled={generating}
               >
-                Batal
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="flex-1 rounded-lg"
-                onClick={handleGenerate}
-                disabled={generating || !genSubject}
-              >
-                {generating ? "Generating..." : "Generate"}
-              </Button>
+                <X size={16} />
+              </button>
+              <div className="relative">
+                <div className="grid size-10 place-items-center rounded-2xl bg-white/20 text-white">
+                  <Sparkles size={20} />
+                </div>
+                <h2 className="mt-3 font-heading text-[20px] font-bold text-white">
+                  Generate Materi
+                </h2>
+                <p className="mt-1 text-[12.5px] text-white/80">
+                  Buat materi belajar custom sesuai kebutuhanmu
+                </p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Subject Select */}
+                <div>
+                  <label
+                    htmlFor="gen-subject"
+                    className="mb-1.5 block text-[12px] font-bold text-foreground"
+                  >
+                    📚 Pilih Mapel
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="gen-subject"
+                      value={genSubject}
+                      onChange={(e) => setGenSubject(e.target.value)}
+                      className="h-11 w-full appearance-none rounded-xl border border-border/60 bg-background px-4 pr-10 text-[13px] font-medium outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal)]/20"
+                    >
+                      {subjectOptions.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.icon ? `${s.icon} ` : ""}
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      ▾
+                    </div>
+                  </div>
+                </div>
+
+                {/* Difficulty Select */}
+                <div>
+                  <span className="mb-1.5 block text-[12px] font-bold text-foreground">
+                    🎯 Tingkat Kesulitan
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { value: "EASY", label: "Mudah", emoji: "🌱", desc: "Pemula" },
+                        { value: "MEDIUM", label: "Sedang", emoji: "⚡", desc: "Menengah" },
+                        { value: "HARD", label: "Sulit", emoji: "🔥", desc: "Lanjutan" },
+                      ] as const
+                    ).map((d) => (
+                      <button
+                        key={d.value}
+                        type="button"
+                        onClick={() => setGenDifficulty(d.value)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 rounded-xl border-2 py-3 transition-all",
+                          genDifficulty === d.value
+                            ? "border-[var(--teal)] bg-[var(--teal)]/10 text-[var(--teal)]"
+                            : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
+                        )}
+                      >
+                        <span className="text-[18px]">{d.emoji}</span>
+                        <span className="text-[12px] font-bold">{d.label}</span>
+                        <span className="text-[10px] opacity-70">{d.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="rounded-xl bg-muted/50 px-4 py-3">
+                  <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                    ℹ️ Materi akan di-generate oleh AI sesuai gaya belajarmu.
+                    Limit <span className="font-bold text-foreground">7x per hari</span>.
+                  </p>
+                </div>
+
+                {/* Error */}
+                {genError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                    <p className="text-[12px] font-medium text-red-600">
+                      ❌ {genError}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="mt-6 flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  className="flex-1 rounded-xl"
+                  onClick={() => {
+                    setGenerateOpen(false);
+                    setGenError(null);
+                  }}
+                  disabled={generating}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="button"
+                  size="default"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-[var(--teal)] to-[var(--blue)] font-bold text-white shadow-lg shadow-[var(--teal)]/25"
+                  onClick={handleGenerate}
+                  disabled={generating || !genSubject}
+                >
+                  {generating ? (
+                    <>
+                      <span className="mr-2 inline-block size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={15} className="mr-1.5" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

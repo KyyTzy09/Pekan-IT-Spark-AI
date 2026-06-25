@@ -11,15 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getSession();
-  console.log("[DASHBOARD] Session:", {
-    id: session?.id,
-    isOnboarded: session?.isOnboarded,
-    role: session?.role,
-  });
   if (!session?.id) {
-    console.log("[DASHBOARD] No session, redirecting to /auth/login");
     redirect("/auth/login");
   }
+  console.log("[DASHBOARD] 👤 Session:", session.id);
   if (session.role === "PARENT") {
     console.log("[DASHBOARD] Role is PARENT, redirecting to /parent");
     redirect("/parent");

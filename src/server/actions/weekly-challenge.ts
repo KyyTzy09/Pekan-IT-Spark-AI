@@ -102,31 +102,24 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   weeklyChallengeId?: string;
   error?: string;
 }> {
-  console.log("[WEEKLY_CHALLENGE] Starting regeneration", { userId });
+  console.log("[WEEKLY] 🚀 Memulai generate challenge mingguan");
 
   const monday = startOfWeek(new Date());
-  console.log("[WEEKLY_CHALLENGE] Week start", {
-    monday: monday.toISOString(),
-  });
 
-  // 🔴 Cek apakah udah ada weekly challenge buat minggu ini
+  // Cek apakah udah ada weekly challenge buat minggu ini
   const existingWeekly = await prisma.weeklyChallenge.findUnique({
     where: { userId_weekStart: { userId, weekStart: monday } },
   });
   if (existingWeekly) {
-    console.log(
-      "[WEEKLY_CHALLENGE] Skip — udah ada weekly challenge minggu ini",
-      { userId, weekStart: monday.toISOString() },
-    );
+    console.log("[WEEKLY] ⏭️  Udah ada challenge minggu ini, skip generate");
     return { ok: true, weeklyChallengeId: existingWeekly.id };
   }
 
-  // 🔴 Lock: cegah regenerasi dobel (DB-backed for Vercel)
+  console.log("[WEEKLY] 📅 Belum ada challenge minggu ini, mulai generate...");
+
+  // Lock: cegah regenerasi dobel
   if (!(await acquireDbLock(userId, "WEEKLY"))) {
-    console.log(
-      "[WEEKLY_CHALLENGE] Skip — regenerasi udah berjalan, tunggu selesai",
-      { userId },
-    );
+    console.log("[WEEKLY] 🔒 Ada proses generate lain yang lagi jalan, skip duplikat");
     return { ok: false, error: "Regenerasi sedang berjalan" };
   }
 
@@ -142,36 +135,50 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   });
 
   if (!profile) {
-    console.log("[WEEKLY_CHALLENGE] No profile found", { userId });
+    console.log("[WEEKLY] ❌ Profil ga ketemu, batal generate");
     return { ok: false, error: "Profil tidak ditemukan" };
   }
 
-  console.log("[WEEKLY_CHALLENGE] Profile loaded", {
-    grade: profile.grade,
-    learningStyle: profile.learningStyle,
-    weeklyChallengeSubjectIds: profile.weeklyChallengeSubjectIds.length,
+  console.log("[WEEKLY] 👤 Profil loaded", {
+    nama: profile.user?.name ?? "(unknown)",
+    kelas: profile.grade,
+    gayaBelajar: profile.learningStyle ?? "VISUAL",
+    jumlahSubjectDipilih: profile.weeklyChallengeSubjectIds.length,
   });
 
   // RULE: WAJIB ada weeklyChallengeSubjectIds. Tidak ada fallback ke focusedSubjects.
   const subjectIds = profile.weeklyChallengeSubjectIds.slice(0, MAX_CHALLENGE_SUBJECTS);
 
-  console.log("[WEEKLY_CHALLENGE] Subject selection", {
-    picked: subjectIds.length,
-    subjectIds,
-  });
-
   if (subjectIds.length === 0) {
-    console.log("[WEEKLY_CHALLENGE] No subjects selected — skipping generation", { userId });
+    console.log("[WEEKLY] ⚠️  Belum pilih mapel untuk weekly challenge, skip generate");
     return { ok: false, error: "Pilih mapel dulu di Settings untuk tantangan mingguan." };
   }
 
+  // Ambil nama subject untuk logging
+  const subjectRows = await prisma.subject.findMany({
+    where: { id: { in: subjectIds } },
+    select: { id: true, name: true },
+  });
+  const subjectNameMap = new Map(subjectRows.map((s) => [s.id, s.name]));
+
+  console.log("[WEEKLY] 📚 Mapel yang dipilih:", subjectIds.map(id => subjectNameMap.get(id) ?? id).join(", "));
+
   const subjectInputs: WeeklySubjectInput[] = [];
   for (const id of subjectIds) {
+    const subjectName = subjectNameMap.get(id) ?? id;
+    console.log(`[WEEKLY] ⏳ Analisis performa untuk ${subjectName}...`);
     const input = await buildWeeklySubjectInput(userId, id, new Date());
-    if (input) subjectInputs.push(input);
+    if (input) {
+      const strengthLabel = classifyStrength(input.avgMastery);
+      console.log(`[WEEKLY] ✅ ${subjectName}: rata-rata mastery ${(input.avgMastery * 100).toFixed(0)}% (${strengthLabel})`);
+      subjectInputs.push(input);
+    } else {
+      console.log(`[WEEKLY] ⚠️  ${subjectName}: ga ketemu atau nonaktif, skip`);
+    }
   }
 
   if (subjectInputs.length === 0) {
+    console.log("[WEEKLY] ❌ Semua mapel ga valid, batal generate");
     return { ok: false, error: "Mapel tidak valid" };
   }
 
@@ -184,6 +191,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     description:
       "Selesaikan semua item tantangan mingguan untuk klaim reward 100 XP!",
   }));
+
+  console.log("[WEEKLY] 🎯 Judul challenge: " + aiTitle.title);
 
   let totalGoal = 0;
   const allContent: Array<{
@@ -215,30 +224,20 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
 
   for (let idx = 0; idx < MAX_CHALLENGE_SUBJECTS; idx++) {
     const input = subjectInputs[idx % subjectInputs.length];
-    console.log(
-      `[WEEKLY_CHALLENGE] Processing challenge ${idx + 1}/${MAX_CHALLENGE_SUBJECTS}`,
-      {
-        subjectId: input.subjectId,
-        subjectName: input.subjectName,
-        avgMastery: input.avgMastery,
-      },
-    );
-
     const strength = classifyStrength(input.avgMastery);
     const counts = computeWeeklyItemCounts(strength);
-    console.log(`[WEEKLY_CHALLENGE] Item counts for ${input.subjectName}`, {
-      strength,
-      questions: counts.questions,
-      materials: counts.materials,
-    });
+
+    console.log(`[WEEKLY] 📝 Paket ${idx + 1}/${MAX_CHALLENGE_SUBJECTS} untuk ${input.subjectName}: ${counts.questions} soal, ${counts.materials} materi`);
 
     totalGoal += counts.questions + counts.materials;
 
     const aiQuota = await incrementAiQuota(userId, "questions", counts.questions);
     if (!aiQuota.allowed) {
-      console.warn("[WEEKLY_CHALLENGE] AI quota exceeded, skipping generation");
+      console.warn("[WEEKLY] ⚠️  Kuota AI habis, skip paket ini");
       continue;
     }
+
+    console.log(`[WEEKLY] 🤖 Generating soal & materi untuk ${input.subjectName}...`);
 
     const aiContent = await generateWeeklyPerSubjectAI({
       subjectName: input.subjectName,
@@ -340,13 +339,11 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
       })),
       materials: validMaterials,
     });
+
+    console.log(`[WEEKLY] ✅ ${input.subjectName}: ${validQuestions.length} soal, ${validMaterials.length} materi siap`);
   }
 
-  console.log("[WEEKLY_CHALLENGE] Content generation complete", {
-    userId,
-    totalChallenges: allContent.length,
-    totalGoal,
-  });
+  console.log(`[WEEKLY] 📦 Total konten: ${allContent.length} paket, ${totalGoal} item`);
 
   const challengesCreated: string[] = [];
   let weeklyId: string | null = null;
@@ -464,26 +461,15 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
   });
 
   if (challengesCreated.length === 0) {
-    console.log("[WEEKLY_CHALLENGE] No challenges created", { userId });
+    console.log("[WEEKLY] ❌ Gagal membuat challenge, 0 challenge tersimpan");
     return { ok: false, error: "Gagal membuat tantangan mingguan" };
   }
-
-  console.log("[WEEKLY_CHALLENGE] Transaction complete", {
-    userId,
-    challengesCreated: challengesCreated.length,
-    challengeIds: challengesCreated,
-  });
 
   // UX-FIX: Don't call revalidatePath here — callers handle revalidation.
   // Calling revalidatePath during render causes Next.js errors.
 
-    console.log("[WEEKLY_CHALLENGE] ✓ Complete", {
-      userId,
-      weeklyChallengeId: weeklyId,
-      totalChallenges: challengesCreated.length,
-    });
-
-    return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
+  console.log(`[WEEKLY] 🎉 Selesai! ${challengesCreated.length} challenge berhasil dibuat`);
+  return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
   } finally {
     releaseDbLock(userId, "WEEKLY");
   }

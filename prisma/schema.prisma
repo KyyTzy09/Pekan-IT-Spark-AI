@@ -568,14 +568,16 @@ model AvatarCustomization {
 }
 
 model DailyAiQuota {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date           DateTime @db.Date
-  questionsCount Int      @default(0)
-  materialsCount Int      @default(0)
-  chatCount      Int      @default(0)
-  updatedAt      DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                 DateTime @db.Date
+  questionsCount       Int      @default(0)
+  materialsCount       Int      @default(0)
+  chatCount            Int      @default(0)
+  practiceGenCount     Int      @default(0)
+  topicGenCount        Int      @default(0)
+  updatedAt            DateTime @updatedAt
 
   @@index([date])
   @@map("daily_ai_quotas")
