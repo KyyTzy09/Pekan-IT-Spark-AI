@@ -17,9 +17,17 @@ export default async function MaterialsPage() {
 
   const [result, subjects] = await Promise.all([
     getMaterialLibrary({ limit: 50, offset: 0 }),
+    // Show subjects that have materials OR custom subjects with content
     prisma.subject.findMany({
       where: {
-        materials: { some: { userId: session.id } },
+        OR: [
+          { materials: { some: { userId: session.id } } },
+          {
+            isCustom: true,
+            createdById: session.id,
+            topics: { some: { concepts: { some: { contentMd: { not: null } } } } },
+          },
+        ],
       },
       select: { id: true, name: true, slug: true, icon: true, color: true },
       orderBy: { order: "asc" },

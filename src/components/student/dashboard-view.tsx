@@ -55,7 +55,7 @@ export function DashboardView({
       {/* Weekly Activity Chart */}
       {weeklyTimeline && weeklyTimeline.length > 0 && (
         <Reveal delay={60}>
-          <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-xl sm:p-6">
+          <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
             <div
               aria-hidden
               className="pointer-events-none absolute -left-16 -top-16 size-44 rounded-full opacity-25 blur-3xl"
@@ -116,7 +116,7 @@ function HeroGreeting({ summary }: { summary: DashboardSummary }) {
   const firstName = summary.student.name?.split(" ")[0] ?? "Teman";
   return (
     <Reveal>
-      <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-xl backdrop-saturate-150 sm:p-7">
+      <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_10px_30px_rgba(80,20,50,0.08)] backdrop-blur-md sm:p-7">
         <div
           aria-hidden
           className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-40 blur-3xl"

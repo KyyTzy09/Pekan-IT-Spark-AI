@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowUpRight, Lock, Star } from "lucide-react";
+import {
+  ArrowUpRight,
+  Lock,
+  Sparkles,
+  Star,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 import * as React from "react";
 import { ConceptDetailDialog } from "@/components/student/concept-detail-dialog";
 import { cn } from "@/lib/utils";
@@ -18,39 +25,133 @@ type Concept = {
 
 interface ConstellationProps {
   concepts: Concept[];
+  subjectColor?: string | null;
 }
 
-export function Constellation({ concepts }: ConstellationProps) {
+const STATUS_CONFIG = {
+  MASTERED: {
+    border: "border-[var(--yellow)]/30",
+    bg: "bg-[var(--yellow)]/5",
+    shadow: "shadow-[0_0_20px_rgba(245,158,11,0.1)]",
+    iconBg: "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]",
+    badge: "bg-[var(--yellow)]/10 text-[var(--yellow)]",
+    label: "Dikuasai",
+    icon: Star,
+  },
+  LEARNING: {
+    border: "border-[var(--teal)]/30",
+    bg: "bg-[var(--teal)]/5",
+    shadow: "shadow-[0_0_16px_rgba(20,184,166,0.08)]",
+    iconBg: "bg-gradient-to-br from-[var(--teal)] to-[var(--blue)]",
+    badge: "bg-[var(--teal)]/10 text-[var(--teal)]",
+    label: "Lagi dipelajari",
+    icon: TrendingUp,
+  },
+  STRUGGLING: {
+    border: "border-[var(--coral)]/30",
+    bg: "bg-[var(--coral)]/5",
+    shadow: "shadow-[0_0_16px_rgba(225,29,72,0.08)]",
+    iconBg: "bg-gradient-to-br from-[var(--coral)] to-[var(--pink)]",
+    badge: "bg-[var(--coral)]/10 text-[var(--coral)]",
+    label: "Butuh bantuan",
+    icon: Target,
+  },
+  NOT_STARTED: {
+    border: "border-border/40",
+    bg: "bg-card/60",
+    shadow: "",
+    iconBg: "bg-muted",
+    badge: "bg-muted text-muted-foreground",
+    label: "Belum mulai",
+    icon: Sparkles,
+  },
+} as const;
+
+export function Constellation({ concepts, subjectColor }: ConstellationProps) {
   const [selectedConceptId, setSelectedConceptId] = React.useState<
     string | null
   >(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const handleConceptClick = (c: Concept) => {
-    // We can open the dialog for any concept.
-    // If it's locked, the dialog will show information about the prerequisite requirements.
     setSelectedConceptId(c.id);
     setIsDialogOpen(true);
   };
 
+  // Sort: mastered first, then learning, then struggling, then not started, locked last
+  const sortedConcepts = React.useMemo(() => {
+    const order = { MASTERED: 0, LEARNING: 1, STRUGGLING: 2, NOT_STARTED: 3 };
+    return [...concepts].sort((a, b) => {
+      if (a.isLocked !== b.isLocked) return a.isLocked ? 1 : -1;
+      return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+    });
+  }, [concepts]);
+
+  const masteredCount = concepts.filter(
+    (c) => c.status === "MASTERED" && !c.isLocked,
+  ).length;
+
   return (
     <>
-      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-[oklch(0.16_0.04_260)] via-[oklch(0.18_0.04_280)] to-[oklch(0.2_0.05_300)] p-5 shadow-[0_12px_36px_rgba(20,10,50,0.18)] sm:p-7">
+      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
+        {/* Subtle background glow */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-40"
+          className="pointer-events-none absolute -right-20 -top-20 size-52 rounded-full opacity-20 blur-3xl"
           style={{
-            backgroundImage:
-              "radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
+            background: subjectColor
+              ? `radial-gradient(circle, ${subjectColor}40, transparent 70%)`
+              : "radial-gradient(circle, var(--yellow), transparent 70%)",
           }}
         />
+
+        {/* Summary bar */}
+        <div className="relative mb-4 flex items-center justify-between gap-3 rounded-xl border border-border/30 bg-background/40 px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-lg bg-[var(--yellow)]/10">
+              <Star
+                size={13}
+                className="text-[var(--yellow)]"
+                fill="currentColor"
+              />
+            </span>
+            <span className="text-[12px] font-bold text-foreground">
+              {masteredCount} / {concepts.length} konsep dikuasai
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {["MASTERED", "LEARNING", "STRUGGLING", "NOT_STARTED"].map(
+              (status) => {
+                const count = concepts.filter(
+                  (c) => c.status === status && !c.isLocked,
+                ).length;
+                if (count === 0) return null;
+                const cfg =
+                  STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
+                return (
+                  <span
+                    key={status}
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[9px] font-bold",
+                      cfg.badge,
+                    )}
+                  >
+                    {count}
+                  </span>
+                );
+              },
+            )}
+          </div>
+        </div>
+
+        {/* Concept grid */}
         <div className="relative grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-          {concepts.map((c, i) => {
-            const mastered = c.status === "MASTERED" && !c.isLocked;
-            const learning = c.status === "LEARNING" && !c.isLocked;
-            const struggling = c.status === "STRUGGLING" && !c.isLocked;
+          {sortedConcepts.map((c) => {
+            const cfg = c.isLocked
+              ? null
+              : STATUS_CONFIG[c.status] ?? STATUS_CONFIG.NOT_STARTED;
             const masteryPct = Math.round(c.masteryScore * 100);
+            const StatusIcon = cfg?.icon ?? Sparkles;
 
             return (
               <button
@@ -58,91 +159,99 @@ export function Constellation({ concepts }: ConstellationProps) {
                 type="button"
                 onClick={() => handleConceptClick(c)}
                 className={cn(
-                  "group/cs relative overflow-hidden rounded-2xl border p-3 text-left backdrop-blur-md transition-all hover:-translate-y-0.5 w-full",
+                  "group/cs relative overflow-hidden rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md w-full",
                   c.isLocked
-                    ? "border-white/5 bg-white/5 opacity-60 hover:opacity-95"
-                    : mastered
-                      ? "border-[var(--yellow)]/40 bg-[color-mix(in_oklch,var(--yellow)_10%,transparent)] shadow-[0_0_24px_rgba(245,158,11,0.18)]"
-                      : learning
-                        ? "border-[var(--teal)]/40 bg-[color-mix(in_oklch,var(--teal)_10%,transparent)]"
-                        : struggling
-                          ? "border-[var(--coral)]/40 bg-[color-mix(in_oklch,var(--coral)_10%,transparent)]"
-                          : "border-white/10 bg-white/5",
+                    ? "border-border/20 bg-muted/30 opacity-60 hover:opacity-90"
+                    : cn(cfg?.border, cfg?.bg, cfg?.shadow),
                 )}
-                style={{
-                  animation: mastered
-                    ? `pulse-soft 4s ease-in-out ${(i % 6) * 0.4}s infinite`
-                    : undefined,
-                }}
               >
+                {/* Icon & Score row */}
                 <div className="flex items-start justify-between gap-2">
                   <span
                     className={cn(
-                      "grid size-7 place-items-center rounded-full text-white shadow-[0_0_12px_rgba(255,255,255,0.18)]",
-                      c.isLocked
-                        ? "bg-muted text-muted-foreground border border-border/30"
-                        : mastered
-                          ? "bg-gradient-to-br from-[var(--yellow)] to-[var(--orange)]"
-                          : learning
-                            ? "bg-gradient-to-br from-[var(--teal)] to-[var(--blue)]"
-                            : struggling
-                              ? "bg-gradient-to-br from-[var(--coral)] to-[var(--pink)]"
-                              : "bg-white/15",
+                      "grid size-8 place-items-center rounded-xl text-white shadow-sm",
+                      c.isLocked ? "bg-muted text-muted-foreground" : cfg?.iconBg,
                     )}
                   >
                     {c.isLocked ? (
-                      <Lock size={11} className="text-muted-foreground/85" />
+                      <Lock size={13} className="text-muted-foreground/80" />
                     ) : (
-                      <Star
-                        size={12}
-                        fill={mastered ? "currentColor" : "none"}
-                        className={cn(
-                          mastered ? "text-white" : "text-white/70",
-                        )}
+                      <StatusIcon
+                        size={14}
+                        fill={
+                          c.status === "MASTERED" ? "currentColor" : "none"
+                        }
                         strokeWidth={2.5}
                       />
                     )}
                   </span>
-                  <span className="font-heading text-[11px] font-bold tabular-nums text-white/90">
+                  <span
+                    className={cn(
+                      "font-heading text-[11px] font-bold tabular-nums",
+                      c.isLocked
+                        ? "text-muted-foreground"
+                        : "text-foreground/80",
+                    )}
+                  >
                     {c.isLocked ? "🔒" : `${masteryPct}%`}
                   </span>
                 </div>
-                <p className="mt-2 line-clamp-2 text-[12px] font-bold leading-snug text-white">
+
+                {/* Concept name */}
+                <p
+                  className={cn(
+                    "mt-2.5 line-clamp-2 text-[12.5px] font-bold leading-snug",
+                    c.isLocked
+                      ? "text-muted-foreground"
+                      : "text-foreground",
+                  )}
+                >
                   {c.name}
                 </p>
-                <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/60">
-                  {c.isLocked
-                    ? "Terkunci"
-                    : c.status === "MASTERED"
-                      ? "Dikuasai"
-                      : c.status === "LEARNING"
-                        ? "Lagi dipelajari"
-                        : c.status === "STRUGGLING"
-                          ? "Butuh bantuan"
-                          : "Belum mulai"}
-                </p>
+
+                {/* Status badge */}
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider",
+                      c.isLocked
+                        ? "bg-muted/60 text-muted-foreground/70"
+                        : cfg?.badge,
+                    )}
+                  >
+                    {c.isLocked ? "Terkunci" : cfg?.label}
+                  </span>
+                </div>
+
+                {/* Locked prerequisites hint */}
                 {c.isLocked && c.unmetPrerequisites.length > 0 && (
-                  <div className="mt-2 border-t border-white/5 pt-1.5">
-                    <p className="text-[8.5px] font-semibold text-amber-400 leading-tight">
+                  <div className="mt-2 border-t border-border/20 pt-1.5">
+                    <p className="text-[9px] font-semibold text-[var(--coral)] leading-tight">
                       Butuh: {c.unmetPrerequisites[0].name}
-                    </p>
-                    <p className="text-[7.5px] text-white/40 leading-none mt-0.5">
-                      (Klik untuk melihat)
                     </p>
                   </div>
                 )}
+
+                {/* Hover arrow */}
                 <ArrowUpRight
                   size={12}
-                  className="absolute right-2 bottom-2 text-white/40 transition-transform group-hover/cs:translate-x-0.5 group-hover/cs:-translate-y-0.5 group-hover/cs:text-white/80"
+                  className="absolute right-2.5 bottom-2.5 text-muted-foreground/30 transition-all group-hover/cs:translate-x-0.5 group-hover/cs:-translate-y-0.5 group-hover/cs:text-foreground/50"
                 />
               </button>
             );
           })}
         </div>
+
+        {/* Empty state */}
         {concepts.length === 0 && (
-          <p className="relative text-center text-[12.5px] text-white/70">
-            Belum ada konsep di topik ini.
-          </p>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground mb-3">
+              <Sparkles size={20} />
+            </span>
+            <p className="text-[13px] font-semibold text-muted-foreground">
+              Belum ada konsep di topik ini.
+            </p>
+          </div>
         )}
       </div>
 

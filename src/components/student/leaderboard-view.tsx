@@ -185,7 +185,7 @@ export function LeaderboardView({
           {secondPlace && (
             <Link
               href={`/profile/${secondPlace.user.id}`}
-              className="group flex flex-col items-center p-5 rounded-3xl border border-border/40 bg-card/45 shadow-sm hover:shadow-md backdrop-blur-xl transition-all order-2 sm:order-1 hover:-translate-y-1 w-full text-center cursor-pointer"
+              className="group flex flex-col items-center p-5 rounded-3xl border border-border/40 bg-card/45 shadow-sm hover:shadow-md backdrop-blur-md transition-all order-2 sm:order-1 hover:-translate-y-1 w-full text-center cursor-pointer"
             >
               <div className="relative">
                 <span className="absolute -top-3.5 -right-3.5 grid size-7 place-items-center rounded-full bg-slate-300 font-extrabold text-[12px] text-slate-800 border-2 border-background shadow-md z-10">
@@ -213,7 +213,7 @@ export function LeaderboardView({
           {firstPlace && (
             <Link
               href={`/profile/${firstPlace.user.id}`}
-              className="group flex flex-col items-center p-6 rounded-3xl border border-amber-500/25 bg-amber-500/5 shadow-md hover:shadow-lg backdrop-blur-xl transition-all order-1 sm:order-2 sm:scale-105 hover:-translate-y-1.5 w-full text-center cursor-pointer"
+              className="group flex flex-col items-center p-6 rounded-3xl border border-amber-500/25 bg-amber-500/5 shadow-md hover:shadow-lg backdrop-blur-md transition-all order-1 sm:order-2 sm:scale-105 hover:-translate-y-1.5 w-full text-center cursor-pointer"
             >
               <div className="relative">
                 <span className="absolute -top-4 -right-4 grid size-8 place-items-center rounded-full bg-amber-400 font-extrabold text-[13px] text-amber-950 border-2 border-background shadow-lg animate-bounce z-10">
@@ -241,7 +241,7 @@ export function LeaderboardView({
           {thirdPlace && (
             <Link
               href={`/profile/${thirdPlace.user.id}`}
-              className="group flex flex-col items-center p-5 rounded-3xl border border-border/40 bg-card/45 shadow-sm hover:shadow-md backdrop-blur-xl transition-all order-3 hover:-translate-y-1 w-full text-center cursor-pointer"
+              className="group flex flex-col items-center p-5 rounded-3xl border border-border/40 bg-card/45 shadow-sm hover:shadow-md backdrop-blur-md transition-all order-3 hover:-translate-y-1 w-full text-center cursor-pointer"
             >
               <div className="relative">
                 <span className="absolute -top-3.5 -right-3.5 grid size-7 place-items-center rounded-full bg-amber-700/70 font-extrabold text-[12px] text-white border-2 border-background shadow-md z-10">

@@ -383,7 +383,8 @@ export async function getSubjectDetail(
   subjectSlug: string,
   userId: string,
 ): Promise<SubjectExplorerSummary | null> {
-  const subject = await prisma.subject.findFirst({
+  // First try to find by slug (exact match for official, or custom slug)
+  let subject = await prisma.subject.findFirst({
     where: { slug: { equals: subjectSlug, mode: "insensitive" } },
     include: {
       topics: {
@@ -394,6 +395,25 @@ export async function getSubjectDetail(
       },
     },
   });
+
+  // If not found by slug, try to find by name (for custom subjects)
+  if (!subject) {
+    subject = await prisma.subject.findFirst({
+      where: {
+        name: { equals: subjectSlug.replace(/-/g, " "), mode: "insensitive" },
+        OR: [{ createdById: null }, { createdById: userId }],
+      },
+      include: {
+        topics: {
+          orderBy: { order: "asc" },
+          include: {
+            concepts: { select: { id: true } },
+          },
+        },
+      },
+    });
+  }
+
   if (!subject) return null;
 
   const [profiles, pretestQuestionCount] = await Promise.all([

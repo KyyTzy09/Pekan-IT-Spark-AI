@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
-type MaterialSource = "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+type MaterialSource = "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE" | "AI_GENERATED";
 
 interface MaterialDetail {
   id: string;

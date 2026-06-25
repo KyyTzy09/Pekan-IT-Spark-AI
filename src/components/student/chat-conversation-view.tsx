@@ -2,7 +2,6 @@
 
 import {
   ArrowLeft,
-  ArrowRight,
   Loader2,
   MessageCircle,
   Send,
@@ -73,13 +72,13 @@ export function ChatConversationView({
       processedMsgId.current !== lastMsg.id
     ) {
       let active = true;
-      processedMsgId.current = lastMsg.id;
       setPending(true);
       setError(null);
 
       generateAssistantResponse(sessionId)
         .then(() => {
           if (active) {
+            processedMsgId.current = lastMsg.id;
             router.refresh();
           }
         })
@@ -88,7 +87,6 @@ export function ChatConversationView({
             setError(
               err instanceof Error ? err.message : "Gagal memuat jawaban.",
             );
-            processedMsgId.current = null;
           }
         })
         .finally(() => {
@@ -154,7 +152,7 @@ export function ChatConversationView({
   };
 
   return (
-    <div className="flex h-[calc(100svh-7rem)] flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/70 shadow-[0_8px_24px_rgba(80,20,50,0.08)] backdrop-blur-xl sm:h-[calc(100svh-8rem)]">
+    <div className="flex h-[calc(100svh-7rem)] flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/70 shadow-[0_8px_24px_rgba(80,20,50,0.08)] backdrop-blur-md sm:h-[calc(100svh-8rem)]">
       <ChatHeader
         title={title}
         subject={subject}
@@ -182,9 +180,12 @@ export function ChatConversationView({
       {error && (
         <div
           role="alert"
-          className="mx-auto max-w-2xl px-4 pb-2 text-[12px] font-medium text-destructive"
+          className="mx-auto max-w-2xl px-4 pb-3"
         >
-          {error}
+          <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-[12.5px] font-medium text-destructive">
+            <span className="shrink-0">⚠️</span>
+            <span>{error}</span>
+          </div>
         </div>
       )}
 
@@ -356,4 +357,3 @@ function EmptyChat() {
   );
 }
 
-void ArrowRight;

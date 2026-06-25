@@ -25,6 +25,7 @@ import type {
   BloomTaxonomy,
   ConceptStatus,
   Difficulty,
+  MaterialSource,
   QuestionType,
   SubjectSlug,
 } from "../../../generated/prisma/client";
@@ -69,9 +70,10 @@ export async function addCustomSubject(
   const userId = session.id;
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
-    select: { educationLevel: true, grade: true, focusedSubjects: true },
+    select: { educationLevel: true, grade: true, focusedSubjects: true, learningStyle: true, challengeSubjectIds: true },
   });
   const educationLevel = profile?.educationLevel === "SMK" ? "SMK" : "SMA";
+  const learningStyle = profile?.learningStyle ?? null;
 
   const existing = await prisma.subject.findFirst({
     where: {
@@ -118,6 +120,7 @@ export async function addCustomSubject(
         topicName: t.name,
         topicDescription: t.description,
         concepts: t.concepts,
+        learningStyle,
       });
       return { topicName: t.name, ok: true, data: result };
     } catch (err) {
@@ -150,6 +153,7 @@ export async function addCustomSubject(
   const topicsData: any[] = [];
   const conceptsData: any[] = [];
   const questionsData: any[] = [];
+  const materialsData: any[] = [];
 
   for (let tIdx = 0; tIdx < outline.topics.length; tIdx++) {
     const t = outline.topics[tIdx];
@@ -209,6 +213,23 @@ export async function addCustomSubject(
             updatedAt: new Date(),
           });
         }
+      }
+
+      // Create Material record for the materials library
+      if (contentMd && contentMd.length > 50) {
+        materialsData.push({
+          id: randomUUID(),
+          userId,
+          subjectId,
+          topicId,
+          conceptId,
+          title: c.name,
+          content: contentMd,
+          difficulty: "MEDIUM" as Difficulty,
+          estimatedMinutes: Math.max(5, Math.floor(contentMd.length / 100)),
+          source: "AI_GENERATED" as MaterialSource,
+          createdAt: new Date(),
+        });
       }
     }
   }
@@ -278,6 +299,13 @@ export async function addCustomSubject(
         });
       }
 
+      if (materialsData.length > 0) {
+        await tx.material.createMany({
+          data: materialsData,
+          skipDuplicates: true,
+        });
+      }
+
       return subjectRecord;
     },
     {
@@ -331,10 +359,25 @@ export async function addCustomSubject(
     const currentFocused = Array.isArray(profile?.focusedSubjects)
       ? profile.focusedSubjects
       : [];
+    const currentChallengeIds = Array.isArray(profile?.challengeSubjectIds)
+      ? profile.challengeSubjectIds
+      : [];
+    
+    const updateData: Record<string, any> = {};
+    
     if (!currentFocused.includes(subject.id)) {
+      updateData.focusedSubjects = { push: subject.id };
+    }
+    
+    // Also add to challengeSubjectIds so it gets daily challenges
+    if (!currentChallengeIds.includes(subject.id)) {
+      updateData.challengeSubjectIds = { push: subject.id };
+    }
+    
+    if (Object.keys(updateData).length > 0) {
       await prisma.studentProfile.update({
         where: { userId },
-        data: { focusedSubjects: { push: subject.id } },
+        data: updateData,
       });
     }
   } catch (err) {
@@ -738,15 +781,15 @@ export async function generateMaterialsForSubject(
     return { ok: false, error: "Mapel belum memiliki topik." };
   }
 
-  // Check if content already exists
-  const hasContent = topics.some((t) =>
-    t.concepts.some((c) => c.contentMd && c.contentMd.length > 50),
-  );
+  // Check if Material records already exist for this subject
+  const existingMaterialCount = await prisma.material.count({
+    where: { subjectId, userId },
+  });
 
-  if (hasContent) {
+  if (existingMaterialCount > 0) {
     return {
       ok: false,
-      error: "Materi sudah ada. Generate ulang akan menimpa materi yang ada.",
+      error: "Materi sudah ada. Hapus materi lama dulu jika ingin generate ulang.",
     };
   }
 
@@ -805,7 +848,7 @@ export async function generateMaterialsForSubject(
       }
     }
 
-    // Update concepts with contentMd and create practice questions
+    // Update concepts with contentMd, create practice questions, AND create Material records
     const questionsData: Array<{
       id: string;
       conceptId: string;
@@ -820,6 +863,18 @@ export async function generateMaterialsForSubject(
       tags: string[];
       isActive: boolean;
     }> = [];
+    const materialsData: Array<{
+      id: string;
+      userId: string;
+      subjectId: string;
+      topicId: string;
+      conceptId: string;
+      title: string;
+      content: string;
+      difficulty: Difficulty;
+      estimatedMinutes: number;
+      source: "AI_GENERATED";
+    }> = [];
 
     for (const topic of topics) {
       for (const concept of topic.concepts) {
@@ -832,6 +887,20 @@ export async function generateMaterialsForSubject(
         await prisma.concept.update({
           where: { id: concept.id },
           data: { contentMd: details.contentMd },
+        });
+
+        // Create Material record for the materials library
+        materialsData.push({
+          id: randomUUID(),
+          userId,
+          subjectId,
+          topicId: topic.id,
+          conceptId: concept.id,
+          title: concept.name,
+          content: details.contentMd,
+          difficulty: "MEDIUM" as Difficulty,
+          estimatedMinutes: 5,
+          source: "AI_GENERATED",
         });
 
         // Create practice questions
@@ -852,6 +921,14 @@ export async function generateMaterialsForSubject(
           });
         }
       }
+    }
+
+    // Bulk insert materials
+    if (materialsData.length > 0) {
+      await prisma.material.createMany({ data: materialsData, skipDuplicates: true });
+      console.log(
+        `[SUBJECTS] Created ${materialsData.length} material records`,
+      );
     }
 
     // Bulk insert practice questions

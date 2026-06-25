@@ -327,7 +327,7 @@ export const StudentNav = memo(function StudentNav({
         <nav
           aria-label="Navigasi utama"
           className={cn(
-            "fixed inset-x-0 bottom-0 z-40 border-t border-border/40 bg-background/85 px-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 md:hidden",
+            "fixed inset-x-0 bottom-0 z-40 border-t border-border/40 bg-background/85 px-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
             className,
           )}
         >

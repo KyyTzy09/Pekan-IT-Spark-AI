@@ -1597,7 +1597,7 @@ export interface MaterialLibraryItem {
   title: string;
   estimatedMinutes: number;
   difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
-  source: "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+  source: "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE" | "AI_GENERATED";
   createdAt: string;
   read: { completed: boolean; readAt: string; readSeconds: number } | null;
   subject: {
@@ -1669,7 +1669,7 @@ export interface MaterialDetail {
   keyPoints: string[];
   estimatedMinutes: number;
   difficulty: "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
-  source: "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+  source: "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE" | "AI_GENERATED";
   createdAt: string;
   read: { completed: boolean; readAt: string; readSeconds: number } | null;
   subject: {

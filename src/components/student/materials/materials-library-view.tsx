@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
-type MaterialSource = "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+type MaterialSource = "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE" | "AI_GENERATED";
 
 interface MaterialLibraryItem {
   id: string;
@@ -46,6 +46,7 @@ const SOURCE_FILTER: Array<MaterialSource | "ALL"> = [
   "CHALLENGE",
   "ON_DEMAND",
   "ADAPTIVE",
+  "AI_GENERATED",
 ];
 
 const SOURCE_LABEL: Record<MaterialSource | "ALL", string> = {
@@ -53,6 +54,7 @@ const SOURCE_LABEL: Record<MaterialSource | "ALL", string> = {
   CHALLENGE: "Tantangan",
   ON_DEMAND: "Custom",
   ADAPTIVE: "Adaptif",
+  AI_GENERATED: "AI",
 };
 
 export function MaterialsLibraryView({

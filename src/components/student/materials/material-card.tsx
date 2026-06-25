@@ -6,7 +6,7 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
-type MaterialSource = "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE";
+type MaterialSource = "CHALLENGE" | "ON_DEMAND" | "ADAPTIVE" | "AI_GENERATED";
 
 interface MaterialLibraryItem {
   id: string;
@@ -55,6 +55,7 @@ const SOURCE_LABEL: Record<MaterialSource, string> = {
   CHALLENGE: "Tantangan",
   ON_DEMAND: "Custom",
   ADAPTIVE: "Adaptif",
+  AI_GENERATED: "AI",
 };
 
 export const MaterialCard = memo(function MaterialCard({

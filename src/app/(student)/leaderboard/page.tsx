@@ -21,9 +21,9 @@ export default async function LeaderboardPage() {
     redirect("/dashboard");
   }
 
-  // Fetch top 50 student profiles ordered by total XP
+  // Fetch top 30 student profiles ordered by total XP (reduced from 50)
   const leaderboardRaw = await prisma.studentProfile.findMany({
-    take: 50,
+    take: 30,
     orderBy: {
       totalXp: "desc",
     },
@@ -43,18 +43,6 @@ export default async function LeaderboardPage() {
           streak: {
             select: {
               currentStreak: true,
-            },
-          },
-          userBadges: {
-            include: {
-              badge: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                  xpReward: true,
-                },
-              },
             },
           },
         },
@@ -78,15 +66,7 @@ export default async function LeaderboardPage() {
       streak: entry.user.streak
         ? { current: entry.user.streak.currentStreak }
         : null,
-      userBadges: entry.user.userBadges.map((ub) => ({
-        id: ub.id,
-        badge: {
-          id: ub.badge.id,
-          name: ub.badge.name,
-          description: ub.badge.description,
-          xpReward: ub.badge.xpReward,
-        },
-      })),
+      userBadges: [],
     },
   }));
 

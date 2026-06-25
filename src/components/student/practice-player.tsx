@@ -146,7 +146,7 @@ export function PracticePlayer({
     if (result) return;
     const t = window.setInterval(() => {
       setElapsedMs(Date.now() - startedAt.current);
-    }, 500);
+    }, 1000); // Update every second instead of 500ms
     return () => window.clearInterval(t);
   }, [result]);
 

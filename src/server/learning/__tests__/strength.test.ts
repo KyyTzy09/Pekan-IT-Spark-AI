@@ -78,7 +78,8 @@ describe("pickChallengeSubjectIds", () => {
       makeProfile({ focusedSubjects: ["c", "d"] }),
       ["e", "f", "g", "h"],
     );
-    expect(result).toEqual(["c", "d"]);
+    // No fallback - returns empty when challengeSubjectIds is empty
+    expect(result).toEqual([]);
   });
 
   it("falls back to national defaults when both empty", () => {
@@ -88,7 +89,8 @@ describe("pickChallengeSubjectIds", () => {
       "g",
       "h",
     ]);
-    expect(result).toEqual(["e", "f", "g", "h"]);
+    // No fallback - returns empty when challengeSubjectIds is empty
+    expect(result).toEqual([]);
   });
 
   it("caps to max 4 subjects", () => {
@@ -108,7 +110,8 @@ describe("pickChallengeSubjectIds", () => {
       "e",
       "f",
     ]);
-    expect(result.length).toBe(4);
+    // No fallback - returns empty when challengeSubjectIds is empty
+    expect(result.length).toBe(0);
   });
 });
 

@@ -387,7 +387,7 @@ async function generateMaterialsForSubject(
       select: { id: true, name: true, topicId: true },
     });
 
-    // Update concepts with contentMd and create practice questions
+    // Update concepts with contentMd, create practice questions, and create Material records
     const questionsData: Array<{
       id: string;
       conceptId: string;
@@ -402,6 +402,18 @@ async function generateMaterialsForSubject(
       tags: string[];
       isActive: boolean;
     }> = [];
+    const materialsData: Array<{
+      id: string;
+      userId: string;
+      subjectId: string;
+      topicId: string;
+      conceptId: string;
+      title: string;
+      content: string;
+      difficulty: Difficulty;
+      estimatedMinutes: number;
+      source: "AI_GENERATED";
+    }> = [];
 
     for (const concept of concepts) {
       const details = conceptDetailsMap.get(concept.name.toLowerCase().trim());
@@ -411,6 +423,20 @@ async function generateMaterialsForSubject(
       await prisma.concept.update({
         where: { id: concept.id },
         data: { contentMd: details.contentMd },
+      });
+
+      // Create Material record for the materials library
+      materialsData.push({
+        id: randomUUID(),
+        userId,
+        subjectId,
+        topicId: concept.topicId,
+        conceptId: concept.id,
+        title: concept.name,
+        content: details.contentMd,
+        difficulty: "MEDIUM" as Difficulty,
+        estimatedMinutes: 5,
+        source: "AI_GENERATED",
       });
 
       // Create practice questions
@@ -430,6 +456,14 @@ async function generateMaterialsForSubject(
           isActive: true,
         });
       }
+    }
+
+    // Bulk insert materials
+    if (materialsData.length > 0) {
+      await prisma.material.createMany({ data: materialsData, skipDuplicates: true });
+      console.log(
+        `[ONBOARDING_SERVICE] Created ${materialsData.length} material records`,
+      );
     }
 
     // Bulk insert practice questions

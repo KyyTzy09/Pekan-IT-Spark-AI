@@ -18,6 +18,7 @@ export async function evaluateAnswer(
   studentAnswer: string,
   questionType: string,
   conceptName?: string,
+  learningStyle?: string | null,
 ): Promise<EvaluationResult> {
   aiLog.info(`${EMOJI.start} evaluateAnswer — tipe: ${questionType}`);
   if (questionType === "MULTIPLE_CHOICE" || questionType === "TRUE_FALSE") {
@@ -35,6 +36,17 @@ export async function evaluateAnswer(
     };
   }
 
+  const styleInstructions: Record<string, string> = {
+    VISUAL: "Berikan feedback dengan analogi visual atau contoh konkret.",
+    TEXTUAL: "Berikan feedback dengan penjelasan teori yang terstruktur.",
+    EXAMPLE_HEAVY: "Berikan feedback dengan contoh serupa untuk pemahaman.",
+    SOCRATIC: "Berikan feedback dalam bentuk pertanyaan pemantik untuk refleksi.",
+  };
+
+  const styleLine = learningStyle
+    ? `\nGaya belajar siswa: ${learningStyle}. ${styleInstructions[learningStyle] || ""}`
+    : "";
+
   const prompt = `Kamu adalah evaluator jawaban siswa SMA/SMK.
 
 SOAL:
@@ -46,13 +58,19 @@ ${correctAnswer}
 JAWABAN SISWA:
 ${studentAnswer}
 
-${conceptName ? `KONSEP: ${conceptName}` : ""}
+${conceptName ? `KONSEP: ${conceptName}` : ""}${styleLine}
 
 Evaluasi jawaban siswa. Berikan:
 1. isCorrect (boolean) - apakah jawaban siswa benar secara konsep
-2. feedback (string) - umpan balik dalam Bahasa Indonesia, kasual dan supportif
+2. feedback (string) - umpan balik dalam Bahasa Indonesia, kasual dan supportif. Sesuaikan dengan gaya belajar siswa jika ada.
 3. explanation (string) - penjelasan mengapa benar/salah, dalam Bahasa Indonesia
 4. mastered (boolean) - apakah siswa sudah menguasai konsep ini
+
+ATURAN:
+- Jangan judge siswa kalau salah, bantu mereka paham
+- Gunakan bahasa Indonesia kasual yang ramah (pake "kamu", "aku")
+- Berikan contoh atau analogi jika relevan
+-akhiri dengan motivasi
 
 Jawab dalam format JSON.`;
 

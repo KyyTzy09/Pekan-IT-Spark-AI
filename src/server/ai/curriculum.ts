@@ -248,31 +248,64 @@ export interface TopicConceptsInput {
   learningStyle?: "VISUAL" | "TEXTUAL" | "EXAMPLE_HEAVY" | "SOCRATIC" | null;
 }
 
-const CONCEPTS_SYSTEM_PROMPT_BASE = `Kamu adalah pakar edukasi dan pembuat konten pembelajaran untuk platform tutor AI Spark Ai.
+const CONCEPTS_SYSTEM_PROMPT_BASE = `Kamu adalah pakar edukasi dan pembuat konten pembelajaran untuk platform tutor AI Spark Ai (SMA/SMK Indonesia).
 Tugasmu adalah membuat materi belajar Markdown mendalam dan soal latihan pilihan ganda untuk konsep-konsep di bawah suatu topik.
 
 ATURAN WAJIB:
-1. Materi belajar (contentMd) harus mendalam, komprehensif, memiliki 2-3 paragraf format Markdown yang bersih, menyertakan contoh konkret/analogi sehari-hari, dan bahasa yang asyik bagi siswa SMA/SMK Indonesia.
+1. Materi belajar (contentMd) WAJIB mendalam dan komprehensif:
+   - Minimal 300 kata per konsep
+   - Gunakan heading (##) untuk section utama
+   - Sertakan contoh konkret/analogi sehari-hari yang relevan dengan kehidupan siswa SMA/SMK
+   - Gunakan bahasa Indonesia yang kasual tapi edukatif (pake "kamu", bukan formal)
+   - Sertakan emoji untuk penanda section (🎯 📊 💡)
+   -akhiri dengan refleksi: "💭 Coba pikirkan: <pertanyaan>"
 2. Setiap konsep HARUS dibuatkan tepat 3 soal latihan pilihan ganda (1 EASY, 1 MEDIUM, 1 HARD).
 3. Soal harus memiliki 4 opsi jawaban, dan correctAnswer HARUS persis sama dengan salah satu opsi (case-sensitive).
 4. Berikan explanation (penjelasan jawaban) yang jelas dan edukatif.
 5. Berikan hint (petunjuk) berupa pertanyaan panduan/Sokratik singkat yang memicu pemikiran siswa (bukan langsung membocorkan jawaban).
-6. Format output HARUS selalu JSON valid sesuai dengan struktur yang diminta.`;
+6. Format output HARUS selalu JSON valid sesuai dengan struktur yang diminta.
+
+KONTEN YANG BAIIK:
+- Definisi konsep dengan bahasa sederhana
+- Penjelasan "mengapa" konsep ini penting
+- Contoh nyata dari kehidupan sehari-hari
+- Step-by-step jika ada proses/langkah
+- Tips atau trik untuk mengingat
+- Hubungan dengan konsep lain yang sudah dipelajari`;
 
 function getStyleInstructions(learningStyle?: string | null): string {
   switch (learningStyle) {
     case "VISUAL":
       return `
-7. Gaya belajar VISUAL: Wajib sertakan visualisasi konsep menggunakan diagram alir atau peta konsep dengan sintaks Mermaid.js (misal: \`\`\`mermaid\ngraph TD\n...\n\`\`\`). Gunakan analogi visual yang kuat. Materi harus kaya akan representasi visual.`;
+7. Gaya belajar VISUAL: WAJIB terapkan format berikut:
+   - Sertakan minimal 1 diagram Mermaid.js (graph TD/LR) untuk memetakan hubungan konsep atau alur proses
+   - PENTING: Label node dengan karakter khusus WAJIB dibungkus tanda kutip ganda (contoh: A["Verb 1 (Base Form)"])
+   - Gunakan analogi visual yang imajinatif (contoh: "Bayangkan konsep ini seperti pohon...")
+   - Format data numerik atau perbandingan dalam tabel Markdown
+   - Gunakan emoji visual (🎯 📊 🔄 💡) sebagai penanda section`;
     case "EXAMPLE_HEAVY":
       return `
-7. Gaya belajar EXAMPLE_HEAVY: Struktur materi wajib dimulai dengan Studi Kasus nyata atau contoh soal konkret, diikuti bedah solusi langkah-demi-langkah (Step-by-Step Walkthrough). Fokus pada contoh praktis.`;
+7. Gaya belajar EXAMPLE_HEAVY: WAJIB fokus pada studi kasus dan contoh:
+   - Setiap konsep utama WAJIB diikuti minimal 2 contoh konkret dengan pembahasan lengkap
+   - Struktur: Teori singkat → Contoh 1 + pembahasan step-by-step → Contoh 2 + pembahasan → Ringkasan
+   - Prioritaskan "cara mengerjakan" daripada teori murni
+   - Gunakan studi kasus nyata dari kehidupan sehari-hari siswa SMA/SMK`;
     case "SOCRATIC":
       return `
-7. Gaya belajar SOCRATIC: Sajikan materi dalam bentuk dialog tanya-jawab interaktif antara "Siswa" dan "Spark" untuk memandu siswa menemukan konsepnya secara mandiri. Gunakan pertanyaan pemantik.`;
+7. Gaya belajar SOCRATIC: WAJIB sajikan materi dalam bentuk dialog:
+   - Format: Dialog tanya-jawab antara 'Siswa' dan 'Spark'
+   - Jangan langsung kasih jawaban lengkap, gunakan pertanyaan retoris untuk menuntun pemahaman
+   - Contoh: **Spark**: "Menurut kamu, apa yang terjadi jika...?" → **Siswa**: [Jawaban] → **Spark**: "Hmm, coba pikirkan lagi..."
+   - Gunakan pertanyaan bertingkat dari mudah ke sulit
+   - Akhiri dengan refleksi: "💭 Sekarang coba jelaskan dengan kata-katamu sendiri..."`;
     case "TEXTUAL":
       return `
-7. Gaya belajar TEXTUAL: Berikan penjelasan akademis terstruktur yang mendalam dengan glosarium istilah dan referensi teori formal. Materi harus runtut dan komprehensif.`;
+7. Gaya belajar TEXTUAL: WAJIB berikan penjelasan akademis terstruktur:
+   - Gunakan heading bertingkat (## untuk section utama, ### untuk subsection)
+   - Sertakan glosarium istilah teknis (format: **Istilah**: definisi)
+   - Penjelasan runtut: Definisi → Teori → Contoh → Kesimpulan
+   - Gunakan bullet points dan numbered lists untuk langkah-langkah
+   - Bahasa formal tapi tetap mudah dipahami`;
     default:
       return "";
   }

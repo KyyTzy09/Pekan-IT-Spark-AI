@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { ThreeErrorBoundary } from "@/components/shared/three-error-boundary";
 import { Tree3DView } from "@/components/student/tree-3d-view";
 import { getSession } from "@/lib/session";
 import { getDashboardSummary } from "@/server/actions/dashboard";
@@ -35,7 +36,8 @@ export default async function TreePage() {
     buddyResult && "buddy" in buddyResult ? buddyResult.buddy : null;
 
   return (
-    <Tree3DView
+    <ThreeErrorBoundary>
+      <Tree3DView
       studentName={summary.student.name}
       level={summary.level.level}
       levelName={summary.level.name}
@@ -74,5 +76,6 @@ export default async function TreePage() {
       buddyType={buddy?.type ?? "bunga"}
       buddyStage={buddy?.stage ?? 1}
     />
+    </ThreeErrorBoundary>
   );
 }

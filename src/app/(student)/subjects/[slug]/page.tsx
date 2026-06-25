@@ -55,6 +55,7 @@ function normalizeSlug(raw: string): string {
   if (OFFICIAL_SLUGS.has(upperCandidate)) {
     return upperCandidate;
   }
+  // Return as-is for custom subject slugs
   return raw.trim();
 }
 

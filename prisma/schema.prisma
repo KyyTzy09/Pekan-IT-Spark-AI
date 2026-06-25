@@ -708,6 +708,7 @@ enum MaterialSource {
   CHALLENGE
   ON_DEMAND
   ADAPTIVE
+  AI_GENERATED
 }
 
 enum ReflectionSentiment {
