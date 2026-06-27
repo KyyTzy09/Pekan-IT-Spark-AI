@@ -83,7 +83,9 @@ export function ChallengeQuestionForm({
     setError(null);
     setShowExplanation(false);
     setLoadingExplanation(false);
-  }, [prefillAnswer, prefillIsCorrect, question]);
+    // Only reset when prefill values change, not on every question object reference change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillAnswer, prefillIsCorrect]);
 
   const isDone = status === "COMPLETED" || result !== null;
 

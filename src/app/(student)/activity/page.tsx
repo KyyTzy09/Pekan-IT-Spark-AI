@@ -14,7 +14,7 @@ export default async function ActivityPage() {
   const userId = session.id;
 
   const [activity, profile] = await Promise.all([
-    getStudentActivity(userId, 180), // Reduced from 365 to 180 days
+    getStudentActivity(userId, 365),
     prisma.studentProfile.findUnique({
       where: { userId },
       select: { totalXp: true, level: true },

@@ -236,25 +236,35 @@ Format JSON:
 }`;
 
 function sanitizeJsonString(raw: string): string {
+  const validEscapeChars = new Set(['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u']);
   let inString = false;
-  let escaped = false;
   let result = "";
+  
   for (let i = 0; i < raw.length; i++) {
     const char = raw[i];
-    if (char === '"' && !escaped) {
+    
+    if (char === '"') {
       inString = !inString;
-    }
-    if (inString && (char === "\n" || char === "\r")) {
-      result += "\\n";
+      result += char;
+    } else if (char === '\\' && inString && i + 1 < raw.length) {
+      // Check if next char makes a valid escape sequence
+      const nextChar = raw[i + 1];
+      if (validEscapeChars.has(nextChar)) {
+        // Valid escape: keep both chars
+        result += char;
+      } else if (nextChar === '\n' || nextChar === '\r') {
+        // Newline in string: replace with escaped newline
+        result += '\\n';
+        i++; // skip the newline
+      } else {
+        // Invalid escape (like \p, \c, etc.): drop the backslash
+        aiLog.warn(`Sanitizing invalid escape: \\${nextChar}`);
+      }
+    } else if (inString && (char === '\n' || char === '\r')) {
+      // Unescaped newline in string: escape it
+      result += '\\n';
     } else {
       result += char;
-    }
-    // Track escape state: backslash toggles escaped, everything else resets
-    if (escaped) {
-      // Previous char was an unescaped backslash — this char is escaped
-      escaped = false;
-    } else if (char === "\\" && inString) {
-      escaped = true;
     }
   }
   return result;

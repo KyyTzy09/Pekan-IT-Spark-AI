@@ -82,7 +82,8 @@ interface ChallengeListViewProps {
   hasSubjects?: boolean;
 }
 
-type Filter = "all" | "active" | "completed";
+type StatusFilter = "today" | "active" | "completed";
+type TypeFilter = "all" | "daily" | "weekly";
 
 export function ChallengeListView({
   challenges: propChallenges,
@@ -102,7 +103,10 @@ export function ChallengeListView({
   const [progress, setProgress] = React.useState(propProgress);
   const [dailyProgress, setDailyProgress] = React.useState(propDailyProgress);
   const [loading, setLoading] = React.useState(!!initiallyEmpty);
-  const [filter, setFilter] = React.useState<Filter>("all");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("today");
+  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>("all");
+  const [allChallenges, setAllChallenges] = React.useState<ChallengeListItem[]>([]);
+  const [loadingAll, setLoadingAll] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState<{
     variant: "daily" | "weekly";
   } | null>(null);
@@ -163,13 +167,45 @@ export function ChallengeListView({
     };
   }, [initiallyEmpty, propChallenges, propProgress, propDailyProgress]);
 
+  // Fetch all challenges when switching to active/completed filter
+  React.useEffect(() => {
+    if (statusFilter === "today") return;
+    if (allChallenges.length > 0) return; // already fetched
+
+    setLoadingAll(true);
+    fetch("/api/challenge/history?limit=100")
+      .then((res) => res.json())
+      .then((json) => {
+        setAllChallenges(json.items || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAll(false));
+  }, [statusFilter, allChallenges.length]);
+
+  const sourceChallenges = statusFilter === "today" ? challenges : allChallenges;
+
   const filtered = React.useMemo(() => {
-    if (filter === "active")
-      return challenges.filter((c) => c.status === "ACTIVE");
-    if (filter === "completed")
-      return challenges.filter((c) => c.status === "COMPLETED");
-    return challenges;
-  }, [challenges, filter]);
+    let result = sourceChallenges;
+
+    // Status filter
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (statusFilter === "today") {
+      result = result.filter((c) => c.scheduledFor.startsWith(todayStr));
+    } else if (statusFilter === "active") {
+      result = result.filter((c) => c.status === "ACTIVE");
+    } else if (statusFilter === "completed") {
+      result = result.filter((c) => c.status === "COMPLETED");
+    }
+
+    // Type filter
+    if (typeFilter === "daily") {
+      result = result.filter((c) => c.source === "AUTO_DAILY" || c.source === "ON_DEMAND");
+    } else if (typeFilter === "weekly") {
+      result = result.filter((c) => c.source === "AUTO_WEEKLY");
+    }
+
+    return result;
+  }, [sourceChallenges, statusFilter, typeFilter]);
 
   const allDone =
     challenges.length > 0 && challenges.every((c) => c.status === "COMPLETED");
@@ -408,25 +444,21 @@ export function ChallengeListView({
       )}
 
       <Reveal delay={80}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 p-1 backdrop-blur-sm">
-            {(["all", "active", "completed"] as Filter[]).map((f) => {
-              const isActive = filter === f;
-              const label =
-                f === "all"
-                  ? "Semua"
-                  : f === "active"
-                    ? "Belum selesai"
-                    : "Selesai";
+        <div className="space-y-3">
+          {/* Type filter tabs */}
+          <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 p-1 backdrop-blur-sm w-fit">
+            {(["all", "daily", "weekly"] as TypeFilter[]).map((f) => {
+              const isActive = typeFilter === f;
+              const label = f === "all" ? "Semua" : f === "daily" ? "Harian" : "Mingguan";
               return (
                 <button
                   key={f}
                   type="button"
-                  onClick={() => setFilter(f)}
+                  onClick={() => setTypeFilter(f)}
                   className={cn(
                     "rounded-full px-3 py-1 text-[11.5px] font-bold transition-all",
                     isActive
-                      ? "bg-[var(--coral)] text-white shadow-[0_4px_10px_rgba(225,29,72,0.25)]"
+                      ? "bg-[var(--purple)] text-white shadow-[0_4px_10px_rgba(168,85,247,0.25)]"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -435,18 +467,35 @@ export function ChallengeListView({
               );
             })}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-9 rounded-full text-[12px] text-muted-foreground"
-            >
-              <Link href="/challenge/history">
-                Riwayat
-                <ChevronDown size={12} />
-              </Link>
-            </Button>
+
+          {/* Status filter + action buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 p-1 backdrop-blur-sm">
+              {(["today", "active", "completed"] as StatusFilter[]).map((f) => {
+                const isActive = statusFilter === f;
+                const label =
+                  f === "today"
+                    ? "Hari ini"
+                    : f === "active"
+                      ? "Belum selesai"
+                      : "Selesai";
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setStatusFilter(f)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-[11.5px] font-bold transition-all",
+                      isActive
+                        ? "bg-[var(--coral)] text-white shadow-[0_4px_10px_rgba(225,29,72,0.25)]"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             <OnDemandGenerator
               onGenerate={handleGenerate}
               subjectOptions={subjectOptions}
@@ -484,7 +533,7 @@ export function ChallengeListView({
                   tambahan?
                 </p>
               </>
-            ) : filter !== "all" ? (
+            ) : statusFilter !== "today" || typeFilter !== "all" ? (
               <>
                 <p className="mt-3 font-heading text-[16px] font-bold">
                   Belum ada tantangan di filter ini
