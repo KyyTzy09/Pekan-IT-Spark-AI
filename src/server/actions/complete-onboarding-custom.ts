@@ -4,10 +4,13 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getSession, refreshSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getSession, refreshSession } from "@/lib/session";
 import { generateTopicConceptsContent } from "@/server/ai/curriculum";
-import { DAILY_CHALLENGE_SUBJECTS, MAX_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
+import {
+  DAILY_CHALLENGE_SUBJECTS,
+  MAX_CHALLENGE_SUBJECTS,
+} from "@/server/learning/strength";
 import type {
   BloomTaxonomy,
   Difficulty,
@@ -52,7 +55,11 @@ const profileSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
     .nullable(),
-  focusedSubjects: z.array(z.string()).min(1, "Pilih minimal 1 mapel").max(4).default([]),
+  focusedSubjects: z
+    .array(z.string())
+    .min(1, "Pilih minimal 1 mapel")
+    .max(4)
+    .default([]),
 });
 
 const completeSchema = z.object({
@@ -233,8 +240,14 @@ export async function completeOnboardingCustom(
       const focusedSubjects = [...data.profile.focusedSubjects, subjectId];
 
       // RULE: Auto-set challenge subjects from onboarding selection
-      const challengeSubjectIds = pickRandom(focusedSubjects, DAILY_CHALLENGE_SUBJECTS);
-      const weeklyChallengeSubjectIds = pickRandom(focusedSubjects, MAX_CHALLENGE_SUBJECTS);
+      const challengeSubjectIds = pickRandom(
+        focusedSubjects,
+        DAILY_CHALLENGE_SUBJECTS,
+      );
+      const weeklyChallengeSubjectIds = pickRandom(
+        focusedSubjects,
+        MAX_CHALLENGE_SUBJECTS,
+      );
 
       await tx.studentProfile.upsert({
         where: { userId },
@@ -292,12 +305,27 @@ export async function completeOnboardingCustom(
         userId,
         data.profile.learningStyle,
       ).catch((err) =>
-        console.error("[ONBOARDING_SERVICE] background materials generation failed:", err),
+        console.error(
+          "[ONBOARDING_SERVICE] background materials generation failed:",
+          err,
+        ),
       );
     }
 
     revalidatePath("/dashboard");
-    return { ok: true };
+    console.log("[ONBOARDING_SERVICE] completeOnboardingCustom redirecting to /dashboard", {
+      userId,
+      subjectName: data.subjectName,
+    });
+    // IMPORTANT: Use server-side redirect instead of returning { ok: true }.
+    // The proxy.ts middleware reads the session cookie on EVERY request.
+    // If we return and let the client do router.replace(), the browser might
+    // send the request BEFORE the Set-Cookie header from refreshSession()
+    // is fully processed, causing the proxy to read the OLD cookie
+    // (isOnboarded: false) and redirect back to /onboarding.
+    // Server-side redirect() happens in the same HTTP response as the
+    // Set-Cookie header, so the cookie is guaranteed to be fresh.
+    redirect("/dashboard");
   } catch (err) {
     console.error("[ONBOARDING_SERVICE] completeOnboardingCustom error", {
       error: err instanceof Error ? err.message : String(err),
@@ -460,7 +488,10 @@ async function generateMaterialsForSubject(
 
     // Bulk insert materials
     if (materialsData.length > 0) {
-      await prisma.material.createMany({ data: materialsData, skipDuplicates: true });
+      await prisma.material.createMany({
+        data: materialsData,
+        skipDuplicates: true,
+      });
       console.log(
         `[ONBOARDING_SERVICE] Created ${materialsData.length} material records`,
       );

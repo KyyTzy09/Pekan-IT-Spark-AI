@@ -94,7 +94,10 @@ export function CustomSubjectStep({
           <input
             id="subject-name"
             value={name}
-            onChange={(e) => onNameChange(e.target.value)}
+            onChange={(e) => {
+              onNameChange(e.target.value);
+            }}
+            onBlur={() => console.log("[ONBOARDING_CLIENT] customSubjectName", { name: name.trim(), length: name.trim().length })}
             placeholder="Contoh: Bahasa Jawa, Coding, Musik..."
             maxLength={60}
             disabled={isGenerating}
@@ -117,7 +120,10 @@ export function CustomSubjectStep({
                 <button
                   key={opt}
                   type="button"
-                  onClick={() => onEducationLevelChange(opt)}
+                  onClick={() => {
+                    console.log("[ONBOARDING_CLIENT] customEducationLevel", { level: opt, wasLevel: educationLevel });
+                    onEducationLevelChange(opt);
+                  }}
                   className={cn(
                     "flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-[13px] font-bold transition-all active:scale-95",
                     active
@@ -142,7 +148,10 @@ export function CustomSubjectStep({
               <button
                 key={g}
                 type="button"
-                onClick={() => onGradeChange(g)}
+                onClick={() => {
+                  console.log("[ONBOARDING_CLIENT] customGrade", { grade: g, wasGrade: grade });
+                  onGradeChange(g);
+                }}
                 className={cn(
                   "rounded-lg border-2 py-2.5 text-center text-[14px] font-bold transition-all active:scale-95",
                   grade === g
@@ -197,7 +206,10 @@ export function CustomSubjectStep({
             <button
               key={s}
               type="button"
-              onClick={() => onNameChange(s)}
+              onClick={() => {
+                console.log("[ONBOARDING_CLIENT] suggestedSubjectSelected", { subject: s, wasSubject: name });
+                onNameChange(s);
+              }}
               disabled={isGenerating}
               className={cn(
                 "rounded-full border-2 px-4 py-2 text-[12px] font-bold transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-40",

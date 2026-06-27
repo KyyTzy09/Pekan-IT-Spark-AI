@@ -2,9 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getSession, refreshSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { DAILY_CHALLENGE_SUBJECTS, MAX_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
+import { getSession, refreshSession } from "@/lib/session";
+import {
+  DAILY_CHALLENGE_SUBJECTS,
+  MAX_CHALLENGE_SUBJECTS,
+} from "@/server/learning/strength";
 import type { Prisma } from "../../../generated/prisma/client";
 
 function pickRandom<T>(arr: T[], count: number): T[] {
@@ -89,8 +92,14 @@ export async function completeOnboarding(
     school: data.school,
     focusedSubjects: data.focusedSubjects,
     // RULE: Auto-set challenge subjects from onboarding selection
-    challengeSubjectIds: pickRandom(data.focusedSubjects, DAILY_CHALLENGE_SUBJECTS),
-    weeklyChallengeSubjectIds: pickRandom(data.focusedSubjects, MAX_CHALLENGE_SUBJECTS),
+    challengeSubjectIds: pickRandom(
+      data.focusedSubjects,
+      DAILY_CHALLENGE_SUBJECTS,
+    ),
+    weeklyChallengeSubjectIds: pickRandom(
+      data.focusedSubjects,
+      MAX_CHALLENGE_SUBJECTS,
+    ),
     learningStyle: data.learningStyle,
     reminderEnabled: data.reminderEnabled,
     reminderTime,
@@ -193,14 +202,12 @@ export async function completeOnboarding(
 
   await refreshSession();
 
-  return {
-    ok: true,
-    pretestStats:
-      data.pretestAnswers.length > 0
-        ? {
-            total: data.pretestAnswers.length,
-            correct: data.pretestAnswers.filter((a) => a.isCorrect).length,
-          }
-        : undefined,
-  };
+  console.log("[ONBOARDING_SERVICE] completeOnboarding redirecting to /dashboard", {
+    userId,
+    focusedSubjects: data.focusedSubjects,
+    pretestCount: data.pretestAnswers.length,
+  });
+
+  // Use server-side redirect to avoid race condition with proxy.ts
+  redirect("/dashboard");
 }

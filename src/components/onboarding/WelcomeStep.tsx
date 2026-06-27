@@ -54,7 +54,10 @@ export function WelcomeStep({
         {/* National curriculum card */}
         <button
           type="button"
-          onClick={onChooseNational}
+          onClick={() => {
+            console.log("[ONBOARDING_CLIENT] chooseNational");
+            onChooseNational();
+          }}
           className="group relative w-full overflow-hidden rounded-2xl border-2 border-border/60 bg-card/80 p-6 text-left backdrop-blur-sm transition-all duration-300 hover:border-[var(--teal)]/70 hover:shadow-[0_16px_48px_rgba(20,184,166,0.18)] active:scale-[0.98]"
         >
           {/* Gradient accent */}
@@ -101,7 +104,10 @@ export function WelcomeStep({
         {/* Custom subject card */}
         <button
           type="button"
-          onClick={onChooseCustom}
+          onClick={() => {
+            console.log("[ONBOARDING_CLIENT] chooseCustom");
+            onChooseCustom();
+          }}
           className="group relative w-full overflow-hidden rounded-2xl border-2 border-border/60 bg-card/80 p-6 text-left backdrop-blur-sm transition-all duration-300 hover:border-[var(--coral)]/70 hover:shadow-[0_16px_48px_rgba(225,29,72,0.18)] active:scale-[0.98]"
         >
           {/* Gradient accent */}

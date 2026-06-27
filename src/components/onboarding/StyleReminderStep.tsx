@@ -89,7 +89,10 @@ export function StyleReminderStep({
               <button
                 key={s.value}
                 type="button"
-                onClick={() => setLearningStyle(s.value)}
+                onClick={() => {
+                  console.log("[ONBOARDING_CLIENT] learningStyleSelected", { style: s.value, wasStyle: learningStyle });
+                  setLearningStyle(s.value);
+                }}
                 className={cn(
                   "group relative rounded-xl border-2 p-5 text-left transition-all duration-200 active:scale-[0.98]",
                   active
@@ -207,7 +210,11 @@ export function StyleReminderStep({
               type="button"
               role="switch"
               aria-checked={reminderEnabled}
-              onClick={() => setReminderEnabled(!reminderEnabled)}
+              onClick={() => {
+                const next = !reminderEnabled;
+                console.log("[ONBOARDING_CLIENT] reminderToggle", { wasEnabled: reminderEnabled, nowEnabled: next });
+                setReminderEnabled(next);
+              }}
               className={cn(
                 "relative h-8 w-14 shrink-0 rounded-full transition-colors duration-300",
                 reminderEnabled ? "bg-[var(--coral)]" : "bg-muted",
@@ -231,7 +238,10 @@ export function StyleReminderStep({
                   <button
                     key={p.value}
                     type="button"
-                    onClick={() => setReminderTime(p.value)}
+                    onClick={() => {
+                      console.log("[ONBOARDING_CLIENT] reminderTimeSelected", { time: p.value, label: p.label });
+                      setReminderTime(p.value);
+                    }}
                     className={cn(
                       "flex flex-col items-center gap-1.5 rounded-lg border-2 py-3 transition-all duration-200 active:scale-95",
                       active

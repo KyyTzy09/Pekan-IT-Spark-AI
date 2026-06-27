@@ -112,7 +112,10 @@ export function PretestStep({
                     <button
                       key={`${q.id}-${letter}`}
                       type="button"
-                      onClick={() => onAnswer(q.id, letter)}
+                      onClick={() => {
+                        console.log("[ONBOARDING_CLIENT] pretestAnswer", { questionId: q.id, subjectName: q.subjectName, conceptName: q.conceptName, letter, wasAnswer: answers[q.id] });
+                        onAnswer(q.id, letter);
+                      }}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-all duration-200 active:scale-[0.98]",
                         active

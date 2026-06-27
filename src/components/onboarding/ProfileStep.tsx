@@ -46,7 +46,10 @@ export function ProfileStep({
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setEducationLevel(opt.value)}
+                onClick={() => {
+                  console.log("[ONBOARDING_CLIENT] educationLevelSelected", { level: opt.value, wasLevel: educationLevel });
+                  setEducationLevel(opt.value);
+                }}
                 className={cn(
                   "relative rounded-xl border-2 p-5 text-left transition-all duration-200 active:scale-[0.97]",
                   active
@@ -98,7 +101,10 @@ export function ProfileStep({
               <button
                 key={g}
                 type="button"
-                onClick={() => setGrade(g)}
+                onClick={() => {
+                  console.log("[ONBOARDING_CLIENT] gradeSelected", { grade: g, wasGrade: grade });
+                  setGrade(g);
+                }}
                 className={cn(
                   "flex-1 rounded-xl border-2 py-4 text-center transition-all duration-200 active:scale-95",
                   active
@@ -144,6 +150,7 @@ export function ProfileStep({
             type="text"
             value={school}
             onChange={(e) => setSchool(e.target.value)}
+            onBlur={() => console.log("[ONBOARDING_CLIENT] schoolInput", { school: school.trim(), length: school.trim().length })}
             placeholder="Contoh: SMAN 1 Jakarta"
             autoComplete="off"
             className="h-12 w-full bg-transparent pr-4 text-[15px] outline-none placeholder:text-muted-foreground/60"

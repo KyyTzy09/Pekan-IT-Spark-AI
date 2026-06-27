@@ -115,7 +115,10 @@ export function CustomPretestStep({
                     <button
                       key={`${qi}-${letter}`}
                       type="button"
-                      onClick={() => onAnswer(qi, letter)}
+                      onClick={() => {
+                        console.log("[ONBOARDING_CLIENT] customPretestAnswer", { questionIndex: qi, letter, wasAnswer: answers[qi] });
+                        onAnswer(qi, letter);
+                      }}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-all duration-200 active:scale-[0.98]",
                         active

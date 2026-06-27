@@ -84,6 +84,7 @@ export function OnboardingWizardClient({
   >({});
   const [pretestLoading, setPretestLoading] = React.useState(false);
   const pretestFetched = React.useRef(false);
+  const submittingRef = React.useRef(false);
 
   // Shared profile state
   const [educationLevel, setEducationLevel] =
@@ -200,14 +201,21 @@ export function OnboardingWizardClient({
 
   const goNext = () => {
     if (!isStepValid(step)) return;
-    setStep((s) => Math.min(s + 1, steps.length - 1));
+    const nextStep = Math.min(step + 1, steps.length - 1);
+    console.log("[ONBOARDING_CLIENT] goNext", { flow, fromStep: step, toStep: nextStep, stepKey: steps[nextStep]?.key });
+    setStep(nextStep);
   };
 
   const goBack = () => {
+    console.log("[ONBOARDING_CLIENT] goBack", { flow, step });
     if (step === 0) {
       // UX-3 FIX: Add confirmation before resetting onboarding progress
       if (flow !== null) {
-        if (window.confirm("Kembali ke awal? Semua data yang sudah diisi akan hilang.")) {
+        if (
+          window.confirm(
+            "Kembali ke awal? Semua data yang sudah diisi akan hilang.",
+          )
+        ) {
           setFlow(null);
           setStep(0);
         }
@@ -216,7 +224,11 @@ export function OnboardingWizardClient({
     }
     if (step === 1 && flow !== null) {
       // UX-3 FIX: Add confirmation before resetting onboarding progress
-      if (window.confirm("Kembali ke awal? Semua data yang sudah diisi akan hilang.")) {
+      if (
+        window.confirm(
+          "Kembali ke awal? Semua data yang sudah diisi akan hilang.",
+        )
+      ) {
         setFlow(null);
         setStep(0);
       }
@@ -226,23 +238,29 @@ export function OnboardingWizardClient({
   };
 
   const toggleSubject = (id: string) => {
-    setFocusedSubjects((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
-    );
+    setFocusedSubjects((prev) => {
+      const next = prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id];
+      console.log("[ONBOARDING_CLIENT] toggleSubject", { id, wasSelected: prev.includes(id), nowSelected: next.includes(id), totalSelected: next.length });
+      return next;
+    });
   };
 
   const handleChooseNational = () => {
+    console.log("[ONBOARDING_CLIENT] handleChooseNational");
     setFlow("national");
     setStep(1);
   };
 
   const handleChooseCustom = () => {
+    console.log("[ONBOARDING_CLIENT] handleChooseCustom");
     setFlow("custom");
     setStep(1);
   };
 
   const handleCustomGenerate = async () => {
+    console.log("[ONBOARDING_CLIENT] handleCustomGenerate", { name: customName.trim(), context: customContext.trim(), educationLevel, grade });
     if (customName.trim().length < 2) {
+      console.log("[ONBOARDING_CLIENT] handleCustomGenerate failed: name too short");
       setError("Nama mapel minimal 2 karakter");
       return;
     }
@@ -255,7 +273,9 @@ export function OnboardingWizardClient({
         educationLevel,
         grade,
       });
+      console.log("[ONBOARDING_CLIENT] handleCustomGenerate result", { ok: result.ok, questionsCount: result.ok ? result.questions.length : 0 });
       if (!result.ok) {
+        console.log("[ONBOARDING_CLIENT] handleCustomGenerate error:", result.error);
         setError(result.error ?? "Gagal generate. Coba lagi.");
         setIsGenerating(false);
         return;
@@ -265,7 +285,7 @@ export function OnboardingWizardClient({
       setIsGenerating(false);
     } catch (err) {
       console.error(
-        "[ONBOARDING_SERVICE] generateCustomSubjectPretest error:",
+        "[ONBOARDING_CLIENT] generateCustomSubjectPretest error:",
         err,
       );
       setError("Gagal terhubung ke AI. Coba lagi.");
@@ -274,6 +294,7 @@ export function OnboardingWizardClient({
   };
 
   const handleCustomSubjectCreated = (result: GeneratedPretestResult) => {
+    console.log("[ONBOARDING_CLIENT] handleCustomSubjectCreated", { name: result.subjectData.name, questionsCount: result.questions.length });
     setGeneratedQuestions(result.questions);
     setGeneratedSubjectData(result.subjectData);
     setCustomName(result.subjectData.name);
@@ -281,97 +302,150 @@ export function OnboardingWizardClient({
   };
 
   const handleNationalSubmit = async () => {
-    if (submitting) return;
+    console.log("[ONBOARDING_CLIENT] handleNationalSubmit called", { submitting: submittingRef.current });
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
-    const answers = visiblePretest.map((q, _qi) => {
-      const userAnswer = pretestAnswers[q.id] ?? "";
-      const correct = correctAnswers[q.id] ?? "";
-      const letterIndex = userAnswer.charCodeAt(0) - 65;
-      const resolvedAnswer =
-        q.options && letterIndex >= 0 && letterIndex < q.options.length
-          ? q.options[letterIndex]
-          : userAnswer;
-      return {
-        questionId: q.id,
-        conceptId: q.conceptId,
-        answer: userAnswer,
-        isCorrect:
-          resolvedAnswer.trim().toUpperCase() === correct.trim().toUpperCase(),
-      };
-    });
-    const result: CompleteOnboardingResult = await completeOnboarding({
-      educationLevel,
-      grade,
-      school: school.trim(),
-      focusedSubjects,
-      learningStyle,
-      reminderEnabled,
-      reminderTime: reminderEnabled ? reminderTime : null,
-      pretestAnswers: answers,
-    });
-    if (!result.ok) {
+
+    try {
+      const answers = visiblePretest.map((q, _qi) => {
+        const userAnswer = pretestAnswers[q.id] ?? "";
+        const correct = correctAnswers[q.id] ?? "";
+        const letterIndex = userAnswer.charCodeAt(0) - 65;
+        const resolvedAnswer =
+          q.options && letterIndex >= 0 && letterIndex < q.options.length
+            ? q.options[letterIndex]
+            : userAnswer;
+        return {
+          questionId: q.id,
+          conceptId: q.conceptId,
+          answer: userAnswer,
+          isCorrect:
+            resolvedAnswer.trim().toUpperCase() ===
+            correct.trim().toUpperCase(),
+        };
+      });
+
+      console.log("[ONBOARDING_CLIENT] handleNationalSubmit calling completeOnboarding", {
+        educationLevel,
+        grade,
+        school: school.trim(),
+        focusedSubjectsCount: focusedSubjects.length,
+        learningStyle,
+        reminderEnabled,
+        answersCount: answers.length,
+        correctCount: answers.filter((a) => a.isCorrect).length,
+      });
+
+      // Server action now calls redirect("/dashboard") on success.
+      // If it returns, it means there was an error.
+      const result: CompleteOnboardingResult = await completeOnboarding({
+        educationLevel,
+        grade,
+        school: school.trim(),
+        focusedSubjects,
+        learningStyle,
+        reminderEnabled,
+        reminderTime: reminderEnabled ? reminderTime : null,
+        pretestAnswers: answers,
+      });
+
+      // If we reach here, the action returned an error (success would redirect)
+      console.log("[ONBOARDING_CLIENT] handleNationalSubmit returned (error case)", { ok: result.ok, message: result.message });
       setError(result.message ?? "Gagal menyimpan. Coba lagi, ya.");
+      submittingRef.current = false;
       setSubmitting(false);
-      return;
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+        console.log("[ONBOARDING_CLIENT] handleNationalSubmit redirect triggered");
+        throw err;
+      }
+      console.error("[ONBOARDING_CLIENT] handleNationalSubmit error:", err);
+      setError("Terjadi kesalahan. Coba lagi.");
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    console.log("[ONBOARDING_CLIENT] National submit OK, redirecting to /dashboard");
-    router.replace("/dashboard");
   };
 
   const handleCustomSubmit = async () => {
-    if (submitting) return;
+    console.log("[ONBOARDING_CLIENT] handleCustomSubmit called", { submitting: submittingRef.current, hasQuestions: !!generatedQuestions, hasSubjectData: !!generatedSubjectData });
+    // Use ref guard to prevent duplicate calls (React strict mode, double-clicks)
+    if (submittingRef.current) return;
     if (!generatedQuestions || !generatedSubjectData) return;
-    console.log("[ONBOARDING_CLIENT] handleCustomSubmit called, submitting:", submitting);
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
 
-    const pretestAnswers = generatedQuestions.map((q, qi) => {
-      const userAnswer = customPretestAnswers[qi] ?? "";
-      const letterIndex = userAnswer.charCodeAt(0) - 65;
-      const resolvedAnswer =
-        letterIndex >= 0 && letterIndex < q.options.length
-          ? q.options[letterIndex]
-          : userAnswer;
-      return {
-        questionIndex: qi,
-        answer: userAnswer,
-        isCorrect:
-          resolvedAnswer.trim().toUpperCase() ===
-          q.correctAnswer.trim().toUpperCase(),
-        questionText: q.questionText,
-        options: q.options,
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation,
-        difficulty: q.difficulty as "EASY" | "MEDIUM" | "HARD",
-      };
-    });
-
-    const result: CompleteOnboardingCustomResult =
-      await completeOnboardingCustom({
-        profile: {
-          educationLevel,
-          grade,
-          school: school.trim(),
-          learningStyle: learningStyle ?? "VISUAL",
-          reminderEnabled,
-          reminderTime: reminderEnabled ? reminderTime : null,
-          focusedSubjects,
-        },
-        subjectName: generatedSubjectData.name,
-        subjectData: generatedSubjectData,
-        pretestAnswers,
+    try {
+      const pretestAnswers = generatedQuestions.map((q, qi) => {
+        const userAnswer = customPretestAnswers[qi] ?? "";
+        const letterIndex = userAnswer.charCodeAt(0) - 65;
+        const resolvedAnswer =
+          letterIndex >= 0 && letterIndex < q.options.length
+            ? q.options[letterIndex]
+            : userAnswer;
+        return {
+          questionIndex: qi,
+          answer: userAnswer,
+          isCorrect:
+            resolvedAnswer.trim().toUpperCase() ===
+            q.correctAnswer.trim().toUpperCase(),
+          questionText: q.questionText,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          difficulty: q.difficulty as "EASY" | "MEDIUM" | "HARD",
+        };
       });
 
-    console.log("[ONBOARDING_CLIENT] Custom submit result:", result);
-    if (!result.ok) {
-      console.log("[ONBOARDING_CLIENT] Custom submit NOT ok, showing error:", result.message);
+      console.log("[ONBOARDING_CLIENT] handleCustomSubmit calling completeOnboardingCustom", {
+        educationLevel,
+        grade,
+        school: school.trim(),
+        learningStyle: learningStyle ?? "VISUAL",
+        reminderEnabled,
+        focusedSubjectsCount: focusedSubjects.length,
+        subjectName: generatedSubjectData.name,
+        topicsCount: generatedSubjectData.topics?.length ?? 0,
+        pretestAnswersCount: pretestAnswers.length,
+        correctCount: pretestAnswers.filter((a) => a.isCorrect).length,
+      });
+
+      // Server action now calls redirect("/dashboard") on success.
+      // If it returns, it means there was an error.
+      const result: CompleteOnboardingCustomResult =
+        await completeOnboardingCustom({
+          profile: {
+            educationLevel,
+            grade,
+            school: school.trim(),
+            learningStyle: learningStyle ?? "VISUAL",
+            reminderEnabled,
+            reminderTime: reminderEnabled ? reminderTime : null,
+            focusedSubjects,
+          },
+          subjectName: generatedSubjectData.name,
+          subjectData: generatedSubjectData,
+          pretestAnswers,
+        });
+
+      // If we reach here, the action returned an error (success would redirect)
+      console.log("[ONBOARDING_CLIENT] handleCustomSubmit returned (error case)", { ok: result.ok, message: result.message });
       setError(result.message ?? "Gagal menyimpan. Coba lagi, ya.");
+      submittingRef.current = false;
       setSubmitting(false);
-      return;
+    } catch (err) {
+      // redirect() throws in server actions — rethrow it so Next.js handles it
+      if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+        console.log("[ONBOARDING_CLIENT] handleCustomSubmit redirect triggered");
+        throw err;
+      }
+      console.error("[ONBOARDING_CLIENT] handleCustomSubmit error:", err);
+      setError("Terjadi kesalahan. Coba lagi.");
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    console.log("[ONBOARDING_CLIENT] Custom submit OK, redirecting to /dashboard");
-    router.replace("/dashboard");
   };
 
   const handleSubmit =
@@ -521,7 +595,10 @@ export function OnboardingWizardClient({
           (pretestLoading ? (
             <div className="flex flex-col items-center justify-center gap-4 py-16">
               <div className="grid size-14 place-items-center rounded-full bg-gradient-to-br from-[var(--coral)]/15 to-[var(--orange)]/10">
-                <Loader2 size={28} className="animate-spin text-[var(--coral)]" />
+                <Loader2
+                  size={28}
+                  className="animate-spin text-[var(--coral)]"
+                />
               </div>
               <p className="text-[14px] font-semibold text-muted-foreground">
                 Memuat soal pretest...
