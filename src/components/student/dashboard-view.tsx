@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Reveal } from "@/components/shared/reveal";
 import { SparkCharacter } from "@/components/student/spark-character";
+import { QuotaDisplay } from "@/components/student/quota-display";
 
 const WeeklyActivityChart = dynamic(
   () =>
@@ -101,6 +102,10 @@ export function DashboardView({
           </section>
         </Reveal>
       )}
+
+      <Reveal delay={70}>
+        <QuotaDisplay />
+      </Reveal>
 
       <Reveal>
         <ContinueLearningCard
