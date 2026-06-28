@@ -357,8 +357,9 @@ function AnimatedCanopy({
   );
 }
 
-function GroundPlane({ stage }: { stage: number }) {
-  const grassCount = 30 + stage * 15;
+function GroundPlane({ stage, progressFactor }: { stage: number; progressFactor: number }) {
+  const grassCount = Math.round((10 + stage * 15) * progressFactor);
+  const groundScale = 3 + progressFactor * 5; // 3 (kecil) → 8 (besar)
 
   const grasses = useMemo(() => {
     const rng = mulberry32(42);
@@ -408,14 +409,14 @@ function GroundPlane({ stage }: { stage: number }) {
 
   return (
     <group>
-      {/* Main ground circle */}
+      {/* Main ground circle — scales with progress */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <circleGeometry args={[8, 32]} />
+        <circleGeometry args={[groundScale, 32]} />
         <meshStandardMaterial color="#4a9e5c" roughness={0.95} />
       </mesh>
       {/* Inner grass ring */}
       <mesh rotation-x={-Math.PI / 2} position-y={0}>
-        <ringGeometry args={[0, 3.5, 32]} />
+        <ringGeometry args={[0, 1.5 + progressFactor * 2, 32]} />
         <meshStandardMaterial
           color="#5cb870"
           roughness={0.9}
@@ -503,10 +504,12 @@ function TreeScene({
   stage: number;
 }) {
   const theme = BUDDY_THEMES[buddyType] ?? BUDDY_THEMES.bunga;
-  const trunkHeight = Math.min(8, 1.5 + totalXp / 400);
-  const trunkRadius = Math.max(0.1, Math.min(0.35, 0.1 + totalXp / 40000));
-  const branchCount = Math.min(totalMastered, 14);
-  const leafCount = Math.round(25 + (avgMasteryPct / 100) * 75);
+  // Scale tree size based on actual progress — new users get a tiny seedling
+  const progressFactor = Math.min(1, (totalXp + totalMastered * 50) / 500); // 0 = baru daftar, 1 = cukup aktif
+  const trunkHeight = 0.3 + progressFactor * 7.7; // 0.3 (bibit) → 8 (pohon besar)
+  const trunkRadius = 0.04 + progressFactor * 0.31; // 0.04 (tipis) → 0.35 (tebal)
+  const branchCount = totalMastered > 0 ? Math.min(totalMastered, 14) : 0;
+  const leafCount = totalMastered > 0 ? Math.round(5 + (avgMasteryPct / 100) * 95) : 0; // 0 leaves if no mastery
 
   return (
     <>
@@ -525,7 +528,7 @@ function TreeScene({
       />
 
       <group>
-        <GroundPlane stage={stage} />
+        <GroundPlane stage={stage} progressFactor={progressFactor} />
         <Flowers stage={stage} />
         <TreeRoots trunkRadius={trunkRadius} />
 
@@ -544,29 +547,33 @@ function TreeScene({
           stage={stage}
         />
 
-        {/* Sparkle particles around the canopy */}
-        <Sparkles
-          count={40 + stage * 20}
-          scale={[6, trunkHeight + 4, 6]}
-          position={[0, trunkHeight / 2 + 1, 0]}
-          size={1.5}
-          speed={0.4}
-          color={theme.glow}
-          opacity={0.6}
-        />
+        {/* Sparkle particles around the canopy — only show if tree has leaves */}
+        {leafCount > 0 && (
+          <>
+            <Sparkles
+              count={Math.round((20 + stage * 20) * progressFactor)}
+              scale={[6, trunkHeight + 4, 6]}
+              position={[0, trunkHeight / 2 + 1, 0]}
+              size={1.5}
+              speed={0.4}
+              color={theme.glow}
+              opacity={0.6}
+            />
 
-        {/* Dynamic rising sparkles */}
-        <Sparkles
-          count={15 + stage * 10}
-          scale={[8, 8, 8]}
-          position={[0, trunkHeight / 2, 0]}
-          size={2.5}
-          speed={0.35}
-          color={theme.accent}
-          opacity={0.5}
-        />
+            {/* Dynamic rising sparkles */}
+            <Sparkles
+              count={Math.round((10 + stage * 10) * progressFactor)}
+              scale={[8, 8, 8]}
+              position={[0, trunkHeight / 2, 0]}
+              size={2.5}
+              speed={0.35}
+              color={theme.accent}
+              opacity={0.5}
+            />
+          </>
+        )}
 
-        {/* Fireflies near ground */}
+        {/* Fireflies near ground — only at high stage */}
         {stage >= 3 && (
           <Sparkles
             count={20}
