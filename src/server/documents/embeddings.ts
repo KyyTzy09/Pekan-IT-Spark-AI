@@ -111,19 +111,18 @@ export async function retrieveDocumentChunks(
   documentId: string,
   query: string,
   topK: number = TOP_K_CHUNKS,
+  queryEmbedding?: number[],
 ): Promise<RetrievedChunk[]> {
   if (!query.trim()) return [];
   const rows = await prisma.documentEmbedding.findMany({
     where: { documentId },
     select: { chunkIndex: true, chunkContent: true, embedding: true },
+    take: 80,
   });
   if (rows.length === 0) return [];
 
-  const { embedding: queryEmbedding } = await embed({
-    model: embeddingModel,
-    value: query,
-  });
-  const queryVec = queryEmbedding;
+  const queryVec = queryEmbedding
+    ?? (await embed({ model: embeddingModel, value: query })).embedding;
   const scored: RetrievedChunk[] = rows.map((r) => {
     let docVec: number[];
     try {

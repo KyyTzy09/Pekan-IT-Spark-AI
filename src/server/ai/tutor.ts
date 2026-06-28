@@ -161,7 +161,7 @@ async function loadUserContext(
   subjectSlug?: string,
   topicId?: string,
 ) {
-  const [profile, concepts] = await Promise.all([
+  const [profile, concepts, subject, topic] = await Promise.all([
     prisma.studentProfile.findUnique({
       where: { userId },
       select: {
@@ -184,20 +184,19 @@ async function loadUserContext(
       },
       take: 50,
     }),
+    subjectSlug
+      ? prisma.subject.findUnique({
+          where: { slug: subjectSlug as never },
+          select: { id: true, name: true, slug: true },
+        })
+      : Promise.resolve(null),
+    topicId
+      ? prisma.topic.findUnique({
+          where: { id: topicId },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve(null),
   ]);
-
-  const subject = subjectSlug
-    ? await prisma.subject.findUnique({
-        where: { slug: subjectSlug as never },
-        select: { id: true, name: true, slug: true },
-      })
-    : null;
-  const topic = topicId
-    ? await prisma.topic.findUnique({
-        where: { id: topicId },
-        select: { id: true, name: true },
-      })
-    : null;
 
   const mastery: ConceptMastery[] = concepts
     .filter((c) => c.concept?.topic?.subject)
@@ -225,6 +224,13 @@ async function loadUserContext(
   };
 }
 
+const SHORT_MESSAGE_RE =
+  /^(halo|hai|hi|hey|ok|oke|okay|sip|ya|iya|yoi|makasih|terima\s*kasih|thx|thanks|good|bagus|nice|woh|wah|oh|ah|hmm|haha|hehe|wkwk|lol|brb|gtg|bye|dadah|see\s*ya|mantap|mantab|asik|asyik|sippp|makasi|makasihh|makasihhh|thankyou|thank\s*you|sip\s*bgt|ok\s*siap|siap|baik|baiklah|noted|understood|mengerti|paham|ngerti|iye|iyh|y|n|yep|nope|nah|lah|dong|dongg|deh|sih|kok|kenapa|apa|gimana|gimana\s*sih|emang|bener|salah|bisa|ga\s*bisa|gabisa|bgt|banget|sekali|sedikit|dikit|lagi|lagi\s*dong|coba|tolong|plis|please|pls)\s*$/i;
+
+function isShortMessage(text: string): boolean {
+  return SHORT_MESSAGE_RE.test(text);
+}
+
 export async function generateTutorStream(input: {
   userId: string;
   userName?: string;
@@ -232,6 +238,8 @@ export async function generateTutorStream(input: {
   subjectSlug?: string;
   topicId?: string;
   lastUserMessage?: string;
+  queryEmbedding?: number[];
+  hasDocumentContext?: boolean;
 }) {
   aiLog.info(`${EMOJI.start} generateTutorStream — user: ${input.userId}`);
   const ctx = await loadUserContext(
@@ -246,7 +254,13 @@ export async function generateTutorStream(input: {
     input.messages.filter((m) => m.role === "user").pop()?.content ||
     "";
 
-  if (query.trim().length >= 10) {
+  // Skip RAG entirely when document context already provides relevant chunks
+  const shouldRunRag =
+    !input.hasDocumentContext &&
+    query.trim().length >= 15 &&
+    !isShortMessage(query.trim());
+
+  if (shouldRunRag) {
     try {
       const retrieved = await retrieveContext({
         userId: input.userId,
@@ -254,6 +268,7 @@ export async function generateTutorStream(input: {
         subjectId: ctx.subject?.id,
         topicId: ctx.topic?.id,
         limit: 3,
+        queryEmbedding: input.queryEmbedding,
       });
       for (const item of retrieved) {
         contextSnippets.push(
@@ -265,6 +280,10 @@ export async function generateTutorStream(input: {
         `${EMOJI.warn} RAG context gagal diambil: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+  } else if (input.hasDocumentContext) {
+    aiLog.info(`${EMOJI.ok} RAG di-skip — dokumen linked, konteks sudah tersedia`);
+  } else if (query.trim().length > 0) {
+    aiLog.info(`${EMOJI.ok} RAG di-skip — pesan terlalu pendek/greeting`);
   }
 
   const systemPrompt = buildSystemPrompt(

@@ -41,6 +41,7 @@ interface SearchOptions {
   subjectId?: string;
   topicId?: string;
   limit?: number;
+  queryEmbedding?: number[];
 }
 
 export async function retrieveContext(
@@ -72,66 +73,28 @@ async function retrieveContextInner(
   signal?: AbortSignal,
 ): Promise<RetrievedDocument[]> {
   const { query, userId, subjectId, limit = 3 } = options;
-  const results: RetrievedDocument[] = [];
 
-  try {
-    // Check if already aborted
-    if (signal?.aborted) throw new Error("Aborted");
+  // Check if already aborted
+  if (signal?.aborted) throw new Error("Aborted");
 
-    const { embedding: queryEmbedding } = await embed({
-      model: embeddingModel,
-      value: query,
-    });
+  // Reuse pre-computed embedding if available (avoids double embedding)
+  const queryEmbedding = options.queryEmbedding
+    ?? (await embed({ model: embeddingModel, value: query })).embedding;
 
-    // Check again after potentially slow embedding call
-    if (signal?.aborted) throw new Error("Aborted");
+  // Check again after potentially slow embedding call
+  if (signal?.aborted) throw new Error("Aborted");
 
-    aiLog.info(`${EMOJI.search} Mencari konsep yang relevan...`);
-    // 1) Search concepts
-    const concepts = await prisma.concept.findMany({
+  // Parallel: fetch concepts + document chunks at the same time
+  const [concepts, chunks] = await Promise.all([
+    prisma.concept.findMany({
       where: subjectId ? { topic: { subjectId } } : undefined,
-      // BUG-17 FIX: Limit concepts to prevent OOM
-      take: 200,
+      take: 50,
       include: {
         topic: { select: { subjectId: true } },
         embeddings: { select: { embedding: true } },
       },
-    });
-    aiLog.info(`${EMOJI.ok} Ditemukan ${concepts.length} konsep`);
-
-    const conceptScored = concepts
-      .map((c) => {
-        const raw = c.embeddings[0]?.embedding;
-        if (!raw) return null;
-        const docVec = parseEmbedding(raw);
-        const score = cosineSimilarityVectors(queryEmbedding, docVec);
-        if (score <= 0) return null;
-        const content = `${c.description ?? ""} ${c.contentMd ?? ""}`.trim();
-        return {
-          id: c.id,
-          name: c.name,
-          content: content || c.name,
-          score,
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-
-    for (const r of conceptScored) {
-      results.push({
-        id: r.id,
-        content: r.content.substring(0, 2000),
-        title: r.name,
-        type: "concept",
-        score: r.score,
-      });
-    }
-
-    aiLog.info(`${EMOJI.search} Mencari chunk dokumen...`);
-    // 2) Search user document chunks directly using the pre-calculated chunk embeddings
-    // Limit to 200 chunks max to prevent OOM with large document collections
-    const chunks = await prisma.documentEmbedding.findMany({
+    }),
+    prisma.documentEmbedding.findMany({
       where: { document: { userId } },
       select: {
         documentId: true,
@@ -139,42 +102,53 @@ async function retrieveContextInner(
         embedding: true,
         document: { select: { originalName: true } },
       },
-      take: 200,
+      take: 50,
       orderBy: { createdAt: "desc" },
-    });
-    aiLog.info(`${EMOJI.ok} Ditemukan ${chunks.length} chunk dokumen`);
+    }),
+  ]);
 
-    if (chunks.length > 0) {
-      const chunkScored = chunks
-        .map((c) => {
-          const chunkVec = parseEmbedding(c.embedding);
-          if (chunkVec.length === 0) return null;
-          const score = cosineSimilarityVectors(queryEmbedding, chunkVec);
-          if (score <= 0.3) return null; // threshold
-          return {
-            id: c.documentId,
-            content: c.chunkContent,
-            title: c.document.originalName,
-            type: "document" as const,
-            score,
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => x !== null)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
+  if (signal?.aborted) throw new Error("Aborted");
 
-      results.push(...chunkScored);
-    }
+  // Score concepts
+  const conceptScored = concepts
+    .map((c) => {
+      const raw = c.embeddings[0]?.embedding;
+      if (!raw) return null;
+      const docVec = parseEmbedding(raw);
+      const score = cosineSimilarityVectors(queryEmbedding, docVec);
+      if (score <= 0) return null;
+      const content = `${c.description ?? ""} ${c.contentMd ?? ""}`.trim();
+      return {
+        id: c.id,
+        content: (content || c.name).substring(0, 2000),
+        title: c.name,
+        type: "concept" as const,
+        score,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    aiLog.info(
-      `${EMOJI.ok} retrieveContext selesai — ${results.length} item konteks`,
-    );
-  } catch (e: unknown) {
-    aiLog.warn(`${EMOJI.warn} Vector search gagal, pakai keyword search`);
-    return keywordSearch(options);
-  }
+  // Score document chunks
+  const chunkScored = chunks
+    .map((c) => {
+      const chunkVec = parseEmbedding(c.embedding);
+      if (chunkVec.length === 0) return null;
+      const score = cosineSimilarityVectors(queryEmbedding, chunkVec);
+      if (score <= 0.3) return null;
+      return {
+        id: c.documentId,
+        content: c.chunkContent.substring(0, 2000),
+        title: c.document.originalName,
+        type: "document" as const,
+        score,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+  // Merge and return top results
+  return [...conceptScored, ...chunkScored]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
 async function keywordSearch(
@@ -287,8 +261,7 @@ async function getRelevantConceptsInner(
       topicId: true,
       embeddings: { select: { embedding: true } },
     },
-    // BUG-17 FIX: Limit concepts to prevent OOM
-    take: 200,
+    take: 50,
   });
 
   const scored = concepts

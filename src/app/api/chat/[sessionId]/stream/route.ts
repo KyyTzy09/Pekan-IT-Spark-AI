@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { embed, embeddingModel } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
 import { generateTutorStream } from "@/server/ai/tutor";
 import { decrementAiQuota, incrementAiQuota } from "@/server/ai-quota";
@@ -17,8 +18,22 @@ export async function POST(
   const { sessionId } = await params;
   const userId = session.id;
 
-  // Check quota
-  const quota = await incrementAiQuota(userId, "chat", 1);
+  // Parallel: quota + session + user fetch
+  const [quota, chatSession, user] = await Promise.all([
+    incrementAiQuota(userId, "chat", 1),
+    prisma.chatSession.findFirst({
+      where: { id: sessionId, userId },
+      include: {
+        messages: { orderBy: { createdAt: "asc" }, take: 20 },
+        documents: { select: { id: true, originalName: true }, take: 1 },
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    }),
+  ]);
+
   if (!quota.allowed) {
     return NextResponse.json(
       { error: "Kuota AI chat harian sudah habis. Coba lagi besok ya!" },
@@ -26,28 +41,18 @@ export async function POST(
     );
   }
 
-  // Get chat session
-  const chatSession = await prisma.chatSession.findFirst({
-    where: { id: sessionId, userId },
-    include: {
-      messages: { orderBy: { createdAt: "asc" }, take: 20 },
-      documents: { select: { id: true, originalName: true }, take: 1 },
-    },
-  });
-
   if (!chatSession) {
     await decrementAiQuota(userId, "chat", 1);
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }
 
-  // Check if last message is from user
   const lastMessage = chatSession.messages[chatSession.messages.length - 1];
   if (!lastMessage || lastMessage.role !== "USER") {
     await decrementAiQuota(userId, "chat", 1);
     return NextResponse.json({ error: "No user message to respond to" }, { status: 400 });
   }
 
-  // Get subject slug
+  // Subject fetch (depends on chatSession.subjectId)
   const subjectSlug = chatSession.subjectId
     ? (
         await prisma.subject.findUnique({
@@ -57,21 +62,19 @@ export async function POST(
       )?.slug
     : undefined;
 
-  // Get user name
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true },
-  });
-
-  // Build document context if linked
+  // Build document context if linked — embed query once, reuse for RAG
   const linkedDoc = chatSession.documents[0];
   let documentContext: string | null = null;
+  let queryEmbedding: number[] | undefined;
   if (linkedDoc) {
     try {
+      const result = await embed({ model: embeddingModel, value: lastMessage.content });
+      queryEmbedding = result.embedding;
       const { context, hasContext } = await buildDocumentChatContext(
         linkedDoc.id,
         lastMessage.content,
         4,
+        queryEmbedding,
       );
       if (hasContext) {
         documentContext = `DOKUMEN YANG DIBICARAKAN: "${linkedDoc.originalName}"\n\n${context}\n\nATURAN: 
@@ -109,6 +112,8 @@ export async function POST(
           subjectSlug: subjectSlug ?? undefined,
           topicId: chatSession.topicId ?? undefined,
           lastUserMessage: lastMessage.content,
+          queryEmbedding,
+          hasDocumentContext: !!documentContext,
         });
 
         // Stream chunks to client
