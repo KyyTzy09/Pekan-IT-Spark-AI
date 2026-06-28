@@ -20,7 +20,11 @@ import {
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { PasswordStrength } from "@/components/auth/password-strength";
 import { Button } from "@/components/ui/button";
-import { type AuthActionState, registerAction, getIsGoogleEnabled } from "@/server/actions/auth";
+import {
+  type AuthActionState,
+  registerAction,
+  getIsGoogleEnabled,
+} from "@/server/actions/auth";
 
 const studentSchema = z.object({
   role: z.literal("STUDENT"),

@@ -106,7 +106,10 @@ Output HANYA JSON valid (tanpa code block):
       }
     } catch {
       await decrementAiQuota(userId, "topicGen", 1);
-      return { ok: false, error: "AI mengembalikan format tidak valid. Coba lagi." };
+      return {
+        ok: false,
+        error: "AI mengembalikan format tidak valid. Coba lagi.",
+      };
     }
 
     const topicData = json as {
@@ -121,15 +124,25 @@ Output HANYA JSON valid (tanpa code block):
     };
 
     // Validate the response
-    if (!topicData.name || !topicData.concepts || topicData.concepts.length === 0) {
+    if (
+      !topicData.name ||
+      !topicData.concepts ||
+      topicData.concepts.length === 0
+    ) {
       await decrementAiQuota(userId, "topicGen", 1);
-      return { ok: false, error: "AI mengembalikan data tidak lengkap. Coba lagi." };
+      return {
+        ok: false,
+        error: "AI mengembalikan data tidak lengkap. Coba lagi.",
+      };
     }
 
     // Check if topic already exists
     if (existingNames.includes(topicData.name.toLowerCase())) {
       await decrementAiQuota(userId, "topicGen", 1);
-      return { ok: false, error: "Topik dengan nama itu sudah ada. Coba generate lagi." };
+      return {
+        ok: false,
+        error: "Topik dengan nama itu sudah ada. Coba generate lagi.",
+      };
     }
 
     // Create topic with concepts
@@ -138,7 +151,8 @@ Output HANYA JSON valid (tanpa code block):
         subjectId,
         name: topicData.name,
         description: topicData.description,
-        slug: topicData.slug || topicData.name.toLowerCase().replace(/\s+/g, "-"),
+        slug:
+          topicData.slug || topicData.name.toLowerCase().replace(/\s+/g, "-"),
         isCustom: true,
         concepts: {
           create: topicData.concepts.map((c, idx) => ({
@@ -264,7 +278,10 @@ Output HANYA JSON valid (tanpa code block):
       }
     } catch {
       await decrementAiQuota(userId, "practiceGen", 1);
-      return { ok: false, error: "AI mengembalikan format tidak valid. Coba lagi." };
+      return {
+        ok: false,
+        error: "AI mengembalikan format tidak valid. Coba lagi.",
+      };
     }
 
     const data = json as {
@@ -287,8 +304,9 @@ Output HANYA JSON valid (tanpa code block):
     const createdQuestions = await Promise.all(
       data.questions.map(async (q) => {
         // Use the specified conceptId if valid, otherwise use first concept
-        const conceptId = concepts.find((c) => c.id === q.conceptId)?.id ?? concepts[0].id;
-        
+        const conceptId =
+          concepts.find((c) => c.id === q.conceptId)?.id ?? concepts[0].id;
+
         return prisma.question.create({
           data: {
             conceptId,
@@ -440,7 +458,10 @@ Output HANYA JSON valid (tanpa code block):
     } catch {
       await decrementAiQuota(userId, "topicGen", 1).catch(() => {});
       await decrementAiQuota(userId, "practiceGen", 1).catch(() => {});
-      return { ok: false, error: "AI mengembalikan format tidak valid. Coba lagi." };
+      return {
+        ok: false,
+        error: "AI mengembalikan format tidak valid. Coba lagi.",
+      };
     }
 
     const data = json as {
@@ -459,7 +480,10 @@ Output HANYA JSON valid (tanpa code block):
     if (!data.topic || !data.concepts || !data.questions) {
       await decrementAiQuota(userId, "topicGen", 1).catch(() => {});
       await decrementAiQuota(userId, "practiceGen", 1).catch(() => {});
-      return { ok: false, error: "AI mengembalikan data tidak lengkap. Coba lagi." };
+      return {
+        ok: false,
+        error: "AI mengembalikan data tidak lengkap. Coba lagi.",
+      };
     }
 
     // Create topic with concepts
@@ -468,7 +492,8 @@ Output HANYA JSON valid (tanpa code block):
         subjectId: customSubject.id,
         name: data.topic.name,
         description: data.topic.description,
-        slug: data.topic.slug || data.topic.name.toLowerCase().replace(/\s+/g, "-"),
+        slug:
+          data.topic.slug || data.topic.name.toLowerCase().replace(/\s+/g, "-"),
         isCustom: true,
         concepts: {
           create: data.concepts.map((c, idx) => ({
@@ -486,7 +511,10 @@ Output HANYA JSON valid (tanpa code block):
     // Create questions
     const createdQuestions = await Promise.all(
       data.questions.map(async (q) => {
-        const conceptIdx = Math.min(q.conceptIndex ?? 0, topic.concepts.length - 1);
+        const conceptIdx = Math.min(
+          q.conceptIndex ?? 0,
+          topic.concepts.length - 1,
+        );
         const conceptId = topic.concepts[conceptIdx].id;
 
         return prisma.question.create({

@@ -171,14 +171,26 @@ describe("canIncrementQuota", () => {
     expect(canIncrementQuota(null, "questions", 1)).toBe(true);
     expect(
       canIncrementQuota(
-        { questionsCount: 5, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
+        {
+          questionsCount: 5,
+          materialsCount: 0,
+          chatCount: 0,
+          practiceGenCount: 0,
+          topicGenCount: 0,
+        },
         "questions",
         1,
       ),
     ).toBe(true);
     expect(
       canIncrementQuota(
-        { questionsCount: 19, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
+        {
+          questionsCount: 19,
+          materialsCount: 0,
+          chatCount: 0,
+          practiceGenCount: 0,
+          topicGenCount: 0,
+        },
         "questions",
         1,
       ),
@@ -188,14 +200,26 @@ describe("canIncrementQuota", () => {
   it("return false kalo quota udah penuh", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 20, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
+        {
+          questionsCount: 20,
+          materialsCount: 0,
+          chatCount: 0,
+          practiceGenCount: 0,
+          topicGenCount: 0,
+        },
         "questions",
         1,
       ),
     ).toBe(false);
     expect(
       canIncrementQuota(
-        { questionsCount: 5, materialsCount: 5, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
+        {
+          questionsCount: 5,
+          materialsCount: 5,
+          chatCount: 0,
+          practiceGenCount: 0,
+          topicGenCount: 0,
+        },
         "materials",
         1,
       ),
@@ -205,7 +229,13 @@ describe("canIncrementQuota", () => {
   it("return false kalo increment melebihi limit", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 19, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
+        {
+          questionsCount: 19,
+          materialsCount: 0,
+          chatCount: 0,
+          practiceGenCount: 0,
+          topicGenCount: 0,
+        },
         "questions",
         2,
       ),
@@ -215,7 +245,13 @@ describe("canIncrementQuota", () => {
   it("return true kalo masih ada sisa dengan by > 1", () => {
     expect(
       canIncrementQuota(
-        { questionsCount: 18, materialsCount: 0, chatCount: 0, practiceGenCount: 0, topicGenCount: 0 },
+        {
+          questionsCount: 18,
+          materialsCount: 0,
+          chatCount: 0,
+          practiceGenCount: 0,
+          topicGenCount: 0,
+        },
         "questions",
         2,
       ),

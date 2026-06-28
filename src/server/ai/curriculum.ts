@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { chatModel, generateText } from "@/lib/ai";
+import { chatModel, generateText, safeParseJson } from "@/lib/ai";
 
 const outlineSchema = z.object({
   description: z
@@ -96,7 +96,19 @@ ATURAN WAJIB:
 
 PENTING: Outline ini akan dipakai untuk generate soal pretest dan materi belajar personal. Kualitas tinggi = pengalaman belajar yang baik.
 
-Format output harus selalu JSON valid sesuai struktur berikut:
+═══════════════════════════════════════════════════
+⛔ RULES KETAT UNTUK OUTPUT FORMAT — WAJIB DIIKUTI:
+═══════════════════════════════════════════════════
+1. Output WAJIB berupa JSON mentah SAJA. TIDAK BOLEH ADA TEKS LAIN.
+2. JANGAN tulis kalimat pembuka seperti "Berikut adalah", "Ini adalah", atau apapun sebelum JSON.
+3. JANGAN tulis kalimat penutup atau kesimpulan setelah JSON.
+4. JANGAN pakai markdown code block. Langsung mulai dengan karakter { di baris pertama.
+5. Karakter PERTAMA output harus { dan karakter TERAKHIR harus }.
+6. Pastikan semua string di-escape dengan benar.
+7. Pastikan JSON valid dan bisa di-parse oleh JSON.parse().
+═══════════════════════════════════════════════════
+
+Struktur JSON yang HARUS kamu ikuti (mulai dari { sampai }):
 {
   "description": "Deskripsi singkat mapel",
   "icon": "🎨",
@@ -120,50 +132,10 @@ Format output harus selalu JSON valid sesuai struktur berikut:
       "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
       "correctAnswer": "Opsi yang benar",
       "explanation": "Penjelasan jawaban benar",
-      "difficulty": "EASY" | "MEDIUM" | "HARD"
+      "difficulty": "EASY"
     }
   ]
 }`;
-
-function safeParseJson(text: string): unknown {
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/```\s*$/, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const firstBrace = cleaned.indexOf("{");
-    if (firstBrace === -1) {
-      throw new Error(
-        `Failed to parse JSON from AI response (no JSON object found): ${text.slice(0, 200)}...`,
-      );
-    }
-    // Find matching closing brace using depth counting
-    let depth = 0;
-    let end = -1;
-    for (let i = firstBrace; i < cleaned.length; i++) {
-      if (cleaned[i] === "{") depth++;
-      if (cleaned[i] === "}") depth--;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
-    }
-    if (end <= firstBrace) {
-      throw new Error(
-        `Failed to parse JSON from AI response (unbalanced braces): ${text.slice(0, 200)}...`,
-      );
-    }
-    try {
-      return JSON.parse(cleaned.slice(firstBrace, end + 1));
-    } catch {
-      throw new Error(
-        `Failed to parse JSON from AI response (invalid JSON after extraction): ${text.slice(0, 200)}...`,
-      );
-    }
-  }
-}
 
 export function computeDifficultyDistribution(
   masteryScore: number,
@@ -211,19 +183,42 @@ export async function generateCurriculumOutline(
 Nama mapel: ${input.subjectName}
 ${input.context ? `Konteks tambahan dari siswa: ${input.context}` : ""}
 
-Generate outline lengkap sesuai instruksi.`;
+Generate outline lengkap sesuai instruksi.
 
-  const { text } = await generateText({
-    model: chatModel,
-    system: SYSTEM_PROMPT,
-    prompt: userPrompt,
-    temperature: 0.4,
-  });
+INGAT: Output HARUS JSON mentah saja. Mulai dengan { di karakter pertama, akhir dengan } di karakter terakhir. Tidak boleh ada teks lain.`;
 
-  const parsedJson = safeParseJson(text);
-  const validated = outlineSchema.parse(parsedJson);
-  validateOutline(validated);
-  return validated;
+  // Retry up to 3 times — AI kadang return teks biasa bukan JSON
+  const maxRetries = 3;
+  let lastErr: unknown;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const retrySuffix =
+      attempt > 1
+        ? `\n\n⛔ KAMU GAGAL. Output sebelumnya BUKAN JSON. Kamu menulis teks pembuka yang SALAH.\nOUTPUT HANYA JSON MENTAH. Mulai dengan { di karakter pertama. Akhir dengan } di karakter terakhir. TIDAK BOLEH ADA TEKS LAIN. Coba lagi.`
+        : "";
+
+    try {
+      const { text } = await generateText({
+        model: chatModel,
+        system: SYSTEM_PROMPT,
+        prompt: userPrompt + retrySuffix,
+        temperature: attempt > 1 ? 0.1 : 0.4,
+      });
+
+      const parsedJson = safeParseJson(text);
+      const validated = outlineSchema.parse(parsedJson);
+      validateOutline(validated);
+      return validated;
+    } catch (err) {
+      lastErr = err;
+      console.warn(
+        `[AI_SERVICE] generateCurriculumOutline attempt ${attempt}/${maxRetries} failed for ${input.subjectName}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  throw lastErr;
 }
 
 function validateOutline(outline: CurriculumOutline): void {
@@ -263,15 +258,26 @@ ATURAN WAJIB:
 3. Soal harus memiliki 4 opsi jawaban, dan correctAnswer HARUS persis sama dengan salah satu opsi (case-sensitive).
 4. Berikan explanation (penjelasan jawaban) yang jelas dan edukatif.
 5. Berikan hint (petunjuk) berupa pertanyaan panduan/Sokratik singkat yang memicu pemikiran siswa (bukan langsung membocorkan jawaban).
-6. Format output HARUS selalu JSON valid sesuai dengan struktur yang diminta.
 
-KONTEN YANG BAIIK:
+KONTEN YANG BAIK:
 - Definisi konsep dengan bahasa sederhana
 - Penjelasan "mengapa" konsep ini penting
 - Contoh nyata dari kehidupan sehari-hari
 - Step-by-step jika ada proses/langkah
 - Tips atau trik untuk mengingat
-- Hubungan dengan konsep lain yang sudah dipelajari`;
+- Hubungan dengan konsep lain yang sudah dipelajari
+
+═══════════════════════════════════════════════════
+⛔ RULES KETAT UNTUK OUTPUT FORMAT — WAJIB DIIKUTI:
+═══════════════════════════════════════════════════
+1. Output WAJIB berupa JSON mentah SAJA. TIDAK BOLEH ADA TEKS LAIN.
+2. JANGAN tulis kalimat pembuka seperti "Berikut adalah", "Ini adalah", atau apapun sebelum JSON.
+3. JANGAN tulis kalimat penutup atau kesimpulan setelah JSON.
+4. JANGAN pakai markdown code block. Langsung mulai dengan karakter { di baris pertama.
+5. Karakter PERTAMA output harus { dan karakter TERAKHIR harus }.
+6. Pastikan semua string di-escape dengan benar.
+7. Pastikan JSON valid dan bisa di-parse oleh JSON.parse().
+═══════════════════════════════════════════════════`;
 
 function getStyleInstructions(learningStyle?: string | null): string {
   switch (learningStyle) {
@@ -330,7 +336,10 @@ ${input.learningStyle ? `Gaya belajar siswa: ${input.learningStyle}` : ""}
 Konsep yang harus dibuatkan kontennya:
 ${input.concepts.map((c, i) => `${i + 1}. ${c.name} (${c.description})`).join("\n")}
 
-Format output JSON harus persis seperti ini:
+INGAT: Output HARUS JSON mentah saja. Jangan ada teks lain sebelum atau sesudah JSON.
+Karakter pertama harus { dan karakter terakhir harus }.
+
+Struktur JSON:
 {
   "concepts": [
     {
@@ -343,19 +352,40 @@ Format output JSON harus persis seperti ini:
           "correctAnswer": "Opsi yang benar",
           "explanation": "Penjelasan...",
           "hint": "Petunjuk...",
-          "difficulty": "EASY" | "MEDIUM" | "HARD"
+          "difficulty": "EASY"
         }
       ]
     }
   ]
 }`;
 
-  const { text } = await generateText({
-    model: chatModel,
-    system: systemPrompt,
-    prompt: userPrompt,
-    temperature: 0.5,
-  });
+  // Retry up to 3 times — AI kadang return teks biasa bukan JSON
+  const maxRetries = 3;
+  let lastErr: unknown;
 
-  return safeParseJson(text);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const retrySuffix =
+      attempt > 1
+        ? `\n\n⛔ KAMU GAGAL. Output sebelumnya BUKAN JSON. Kamu menulis teks pembuka yang SALAH.\nOUTPUT HANYA JSON MENTAH. Mulai dengan { di karakter pertama. Akhir dengan } di karakter terakhir. TIDAK BOLEH ADA TEKS LAIN. Coba lagi.`
+        : "";
+
+    try {
+      const { text } = await generateText({
+        model: chatModel,
+        system: systemPrompt,
+        prompt: userPrompt + retrySuffix,
+        temperature: attempt > 1 ? 0.1 : 0.5, // Very low temp on retry
+      });
+
+      return safeParseJson(text);
+    } catch (err) {
+      lastErr = err;
+      console.warn(
+        `[AI_SERVICE] generateTopicConceptsContent attempt ${attempt}/${maxRetries} failed for ${input.topicName}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  throw lastErr;
 }

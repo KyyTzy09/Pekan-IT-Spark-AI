@@ -97,7 +97,12 @@ export function CustomSubjectStep({
             onChange={(e) => {
               onNameChange(e.target.value);
             }}
-            onBlur={() => console.log("[ONBOARDING_CLIENT] customSubjectName", { name: name.trim(), length: name.trim().length })}
+            onBlur={() =>
+              console.log("[ONBOARDING_CLIENT] customSubjectName", {
+                name: name.trim(),
+                length: name.trim().length,
+              })
+            }
             placeholder="Contoh: Bahasa Jawa, Coding, Musik..."
             maxLength={60}
             disabled={isGenerating}
@@ -121,7 +126,10 @@ export function CustomSubjectStep({
                   key={opt}
                   type="button"
                   onClick={() => {
-                    console.log("[ONBOARDING_CLIENT] customEducationLevel", { level: opt, wasLevel: educationLevel });
+                    console.log("[ONBOARDING_CLIENT] customEducationLevel", {
+                      level: opt,
+                      wasLevel: educationLevel,
+                    });
                     onEducationLevelChange(opt);
                   }}
                   className={cn(
@@ -149,7 +157,10 @@ export function CustomSubjectStep({
                 key={g}
                 type="button"
                 onClick={() => {
-                  console.log("[ONBOARDING_CLIENT] customGrade", { grade: g, wasGrade: grade });
+                  console.log("[ONBOARDING_CLIENT] customGrade", {
+                    grade: g,
+                    wasGrade: grade,
+                  });
                   onGradeChange(g);
                 }}
                 className={cn(
@@ -207,7 +218,10 @@ export function CustomSubjectStep({
               key={s}
               type="button"
               onClick={() => {
-                console.log("[ONBOARDING_CLIENT] suggestedSubjectSelected", { subject: s, wasSubject: name });
+                console.log("[ONBOARDING_CLIENT] suggestedSubjectSelected", {
+                  subject: s,
+                  wasSubject: name,
+                });
                 onNameChange(s);
               }}
               disabled={isGenerating}

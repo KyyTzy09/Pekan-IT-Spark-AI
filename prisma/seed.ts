@@ -3807,6 +3807,11 @@ async function seedQuestions(
         where: { conceptId, questionText: q.question },
         select: { id: true },
       });
+      const difficultyScoreMap: Record<string, number> = {
+        EASY: 20,
+        MEDIUM: 45,
+        HARD: 70,
+      };
       const data = {
         conceptId,
         questionText: q.question,
@@ -3814,6 +3819,7 @@ async function seedQuestions(
         options: q.options,
         correctAnswer: String.fromCharCode(65 + q.correctIndex),
         difficulty: q.difficulty,
+        difficultyScore: difficultyScoreMap[q.difficulty] ?? 50,
         explanation: buildExplanation(q, conceptName, conceptBody),
         hint: buildHint(conceptName, q.difficulty),
         commonMisconceptions: buildMisconceptions(q, conceptName, conceptBody),

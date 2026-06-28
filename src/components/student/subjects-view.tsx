@@ -958,7 +958,10 @@ export function TopicDetailView({
               Bintang menyala = sudah dikuasai
             </span>
           </header>
-          <Constellation concepts={topic.concepts} subjectColor={topic.subjectColor} />
+          <Constellation
+            concepts={topic.concepts}
+            subjectColor={topic.subjectColor}
+          />
         </section>
       </Reveal>
 

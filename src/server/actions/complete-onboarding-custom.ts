@@ -48,18 +48,14 @@ const pretestAnswerSchema = z.object({
 const profileSchema = z.object({
   educationLevel: z.enum(["SMA", "SMK"]),
   grade: z.number().int().min(10).max(12),
-  school: z.string().min(2).max(80),
+  school: z.string().max(80).default(""),
   learningStyle: z.enum(["VISUAL", "TEXTUAL", "EXAMPLE_HEAVY", "SOCRATIC"]),
   reminderEnabled: z.boolean(),
   reminderTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
     .nullable(),
-  focusedSubjects: z
-    .array(z.string())
-    .min(1, "Pilih minimal 1 mapel")
-    .max(4)
-    .default([]),
+  focusedSubjects: z.array(z.string()).max(4).default([]),
 });
 
 const completeSchema = z.object({
@@ -313,10 +309,13 @@ export async function completeOnboardingCustom(
     }
 
     revalidatePath("/dashboard");
-    console.log("[ONBOARDING_SERVICE] completeOnboardingCustom redirecting to /dashboard", {
-      userId,
-      subjectName: data.subjectName,
-    });
+    console.log(
+      "[ONBOARDING_SERVICE] completeOnboardingCustom redirecting to /dashboard",
+      {
+        userId,
+        subjectName: data.subjectName,
+      },
+    );
     // IMPORTANT: Use server-side redirect instead of returning { ok: true }.
     // The proxy.ts middleware reads the session cookie on EVERY request.
     // If we return and let the client do router.replace(), the browser might
@@ -327,6 +326,11 @@ export async function completeOnboardingCustom(
     // Set-Cookie header, so the cookie is guaranteed to be fresh.
     redirect("/dashboard");
   } catch (err) {
+    // redirect() in Next.js throws a NEXT_REDIRECT error — re-throw it
+    // so the redirect actually happens instead of being swallowed.
+    if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+      throw err;
+    }
     console.error("[ONBOARDING_SERVICE] completeOnboardingCustom error", {
       error: err instanceof Error ? err.message : String(err),
     });

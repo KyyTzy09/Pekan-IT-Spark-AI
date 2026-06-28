@@ -39,7 +39,7 @@ export async function signToken(payload: SessionUser): Promise<string> {
 export async function verifyToken(token: string): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    
+
     // Validate required fields
     if (
       typeof payload.id !== "string" ||
@@ -49,7 +49,7 @@ export async function verifyToken(token: string): Promise<SessionUser | null> {
     ) {
       return null;
     }
-    
+
     return {
       id: payload.id,
       email: payload.email,
@@ -57,7 +57,8 @@ export async function verifyToken(token: string): Promise<SessionUser | null> {
       role: payload.role,
       isOnboarded: payload.isOnboarded,
       image: typeof payload.image === "string" ? payload.image : null,
-      sessionVersion: typeof payload.sessionVersion === "number" ? payload.sessionVersion : 0,
+      sessionVersion:
+        typeof payload.sessionVersion === "number" ? payload.sessionVersion : 0,
     };
   } catch {
     return null;
@@ -95,22 +96,30 @@ export async function refreshSession(): Promise<void> {
   if (!session?.id) return;
   const user = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      isOnboarded: true,
+      image: true,
+      sessionVersion: true,
+    },
   });
-  
+
   // Clear session if user was deleted
   if (!user) {
     await clearSession();
     return;
   }
-  
+
   // BUG-4 FIX: Invalidate session if version changed (e.g., password changed).
   // Clear the cookie AND return early — don't re-issue a token.
   if (user.sessionVersion !== (session.sessionVersion ?? 0)) {
     await clearSession();
     return;
   }
-  
+
   await setSession({
     id: user.id,
     email: user.email,

@@ -3,7 +3,10 @@ import "server-only";
 import { chatModel, streamText } from "@/lib/ai";
 import { aiLog, EMOJI } from "@/lib/ai-logger";
 import { prisma } from "@/lib/prisma";
-import { sanitizeNameForPrompt, sanitizeForPrompt } from "@/lib/prompt-sanitize";
+import {
+  sanitizeNameForPrompt,
+  sanitizeForPrompt,
+} from "@/lib/prompt-sanitize";
 import type {
   LearningStyle,
   ResponseDepth,
@@ -47,7 +50,9 @@ function buildSystemPrompt(
     ? `Topik saat ini: ${sanitizeForPrompt(options.topic.name)}.`
     : "";
   const gradeLine = options.grade ? `Kelas siswa: ${options.grade}.` : "";
-  const schoolLine = options.school ? `Asal sekolah: ${sanitizeForPrompt(options.school)}.` : "";
+  const schoolLine = options.school
+    ? `Asal sekolah: ${sanitizeForPrompt(options.school)}.`
+    : "";
   const styleLine = options.learningStyle
     ? `Gaya belajar siswa: ${styleLabel(options.learningStyle)}.`
     : "";
@@ -256,7 +261,9 @@ export async function generateTutorStream(input: {
         );
       }
     } catch (err) {
-      aiLog.warn(`${EMOJI.warn} RAG context gagal diambil: ${err instanceof Error ? err.message : String(err)}`);
+      aiLog.warn(
+        `${EMOJI.warn} RAG context gagal diambil: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 

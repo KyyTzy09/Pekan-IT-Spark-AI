@@ -25,7 +25,9 @@ export default async function MaterialsPage() {
           {
             isCustom: true,
             createdById: session.id,
-            topics: { some: { concepts: { some: { contentMd: { not: null } } } } },
+            topics: {
+              some: { concepts: { some: { contentMd: { not: null } } } },
+            },
           },
         ],
       },

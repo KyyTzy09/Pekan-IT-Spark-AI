@@ -14,7 +14,6 @@ import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
 import {
   deleteChatSession,
-  generateAssistantResponse,
   sendMessage,
 } from "@/server/actions/chat";
 
@@ -62,6 +61,10 @@ export function ChatConversationView({
     setMessages(initialMessages);
   }, [initialMessages]);
 
+  // Streaming state
+  const [streamingContent, setStreamingContent] = React.useState("");
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   // Trigger assistant response if the last message is from user and we are not pending
   React.useEffect(() => {
     const lastMsg = messages[messages.length - 1];
@@ -74,29 +77,88 @@ export function ChatConversationView({
       let active = true;
       setPending(true);
       setError(null);
+      setStreamingContent("");
 
-      generateAssistantResponse(sessionId)
-        .then(() => {
-          if (active) {
-            processedMsgId.current = lastMsg.id;
-            router.refresh();
+      // Use streaming API
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      const startStreaming = async () => {
+        try {
+          const response = await fetch(`/api/chat/${sessionId}/stream`, {
+            method: "POST",
+            signal: abortController.signal,
+          });
+
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Gagal memuat jawaban.");
           }
-        })
-        .catch((err) => {
-          if (active) {
+
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error("No reader");
+
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let fullText = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  if (data.error) {
+                    throw new Error(data.error);
+                  }
+
+                  if (data.chunk) {
+                    fullText += data.chunk;
+                    if (active) {
+                      setStreamingContent(fullText);
+                    }
+                  }
+
+                  if (data.done) {
+                    // Stream complete
+                    if (active) {
+                      processedMsgId.current = lastMsg.id;
+                      setStreamingContent("");
+                      router.refresh();
+                    }
+                  }
+                } catch (e) {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        } catch (err) {
+          if (active && !abortController.signal.aborted) {
             setError(
               err instanceof Error ? err.message : "Gagal memuat jawaban.",
             );
           }
-        })
-        .finally(() => {
+        } finally {
           if (isMounted.current) {
             setPending(false);
+            setStreamingContent("");
           }
-        });
+        }
+      };
+
+      startStreaming();
 
       return () => {
         active = false;
+        abortController.abort();
       };
     }
   }, [messages, sessionId, pending, router]);
@@ -106,7 +168,7 @@ export function ChatConversationView({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length, pending]);
+  }, [messages.length, pending, streamingContent]);
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,16 +234,24 @@ export function ChatConversationView({
             {messages.map((m) => (
               <MessageBubble key={m.id} message={m} />
             ))}
-            {pending && <TypingIndicator />}
+            {streamingContent && (
+              <MessageBubble
+                key="streaming"
+                message={{
+                  id: "streaming",
+                  role: "ASSISTANT",
+                  content: streamingContent,
+                  createdAt: new Date().toISOString(),
+                }}
+              />
+            )}
+            {pending && !streamingContent && <TypingIndicator />}
           </div>
         )}
       </div>
 
       {error && (
-        <div
-          role="alert"
-          className="mx-auto max-w-2xl px-4 pb-3"
-        >
+        <div role="alert" className="mx-auto max-w-2xl px-4 pb-3">
           <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-[12.5px] font-medium text-destructive">
             <span className="shrink-0">⚠️</span>
             <span>{error}</span>
@@ -356,4 +426,3 @@ function EmptyChat() {
     </div>
   );
 }
-

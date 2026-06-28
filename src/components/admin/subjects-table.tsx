@@ -99,7 +99,8 @@ export function SubjectsTable({
             defaultValue={search}
             onChange={(e) => {
               const value = e.target.value;
-              if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+              if (searchTimeoutRef.current)
+                clearTimeout(searchTimeoutRef.current);
               searchTimeoutRef.current = setTimeout(() => {
                 startTransition(() => {
                   const params = new URLSearchParams(searchParams);

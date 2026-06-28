@@ -21,20 +21,26 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const savedState = cookieStore.get("oauth_state")?.value;
   if (!savedState || !returnedState || returnedState !== savedState) {
-    return NextResponse.redirect(new URL("/auth/login?error=google_csrf", request.url));
+    return NextResponse.redirect(
+      new URL("/auth/login?error=google_csrf", request.url),
+    );
   }
   // Clear state cookie immediately
   cookieStore.delete("oauth_state");
 
   const code = request.nextUrl.searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("/auth/login?error=google", request.url));
+    return NextResponse.redirect(
+      new URL("/auth/login?error=google", request.url),
+    );
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL("/auth/login?error=google", request.url));
+    return NextResponse.redirect(
+      new URL("/auth/login?error=google", request.url),
+    );
   }
 
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/auth/google/callback`;
@@ -56,17 +62,24 @@ export async function GET(request: NextRequest) {
     const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
     if (!tokenData.access_token) {
       console.error("Google token exchange failed:", tokenData);
-      return NextResponse.redirect(new URL("/auth/login?error=google", request.url));
+      return NextResponse.redirect(
+        new URL("/auth/login?error=google", request.url),
+      );
     }
 
     // 2. Fetch user info from Google
-    const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
+    const userRes = await fetch(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      },
+    );
 
     const googleUser = (await userRes.json()) as GoogleUserInfo;
     if (!googleUser.email) {
-      return NextResponse.redirect(new URL("/auth/login?error=google", request.url));
+      return NextResponse.redirect(
+        new URL("/auth/login?error=google", request.url),
+      );
     }
 
     const email = googleUser.email.toLowerCase();
@@ -75,7 +88,14 @@ export async function GET(request: NextRequest) {
     // 3. Upsert user in DB
     const existing = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        isOnboarded: true,
+        image: true,
+        sessionVersion: true,
+      },
     });
 
     let user;
@@ -86,7 +106,15 @@ export async function GET(request: NextRequest) {
           name: googleUser.name ?? existing.name,
           image: googleUser.picture ?? existing.image,
         },
-        select: { id: true, name: true, email: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isOnboarded: true,
+          image: true,
+          sessionVersion: true,
+        },
       });
     } else {
       user = await prisma.user.create({
@@ -97,7 +125,15 @@ export async function GET(request: NextRequest) {
           role: "STUDENT",
           studentProfile: { create: {} },
         },
-        select: { id: true, name: true, email: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isOnboarded: true,
+          image: true,
+          sessionVersion: true,
+        },
       });
     }
 
@@ -116,6 +152,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/redirect", request.url));
   } catch (err) {
     console.error("Google OAuth callback error:", err);
-    return NextResponse.redirect(new URL("/auth/login?error=google", request.url));
+    return NextResponse.redirect(
+      new URL("/auth/login?error=google", request.url),
+    );
   }
 }

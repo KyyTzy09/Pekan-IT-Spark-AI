@@ -17,8 +17,6 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
-
-
 // Mock dependencies
 vi.mock("@/lib/session", () => ({
   getSession: vi.fn(),
@@ -103,7 +101,9 @@ describe("Invite & Link Flow", () => {
   describe("generateInvite", () => {
     it("should redirect unauthenticated user", async () => {
       vi.mocked(getSession).mockResolvedValue(null);
-      mockRedirect.mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+      mockRedirect.mockImplementation(() => {
+        throw new Error("NEXT_REDIRECT");
+      });
 
       await expect(generateInvite()).rejects.toThrow("NEXT_REDIRECT");
       expect(mockRedirect).toHaveBeenCalledWith("/auth/login");
@@ -111,7 +111,9 @@ describe("Invite & Link Flow", () => {
 
     it("should redirect non-student role", async () => {
       vi.mocked(getSession).mockResolvedValue(parentSession as any);
-      mockRedirect.mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+      mockRedirect.mockImplementation(() => {
+        throw new Error("NEXT_REDIRECT");
+      });
 
       await expect(generateInvite()).rejects.toThrow("NEXT_REDIRECT");
       expect(mockRedirect).toHaveBeenCalledWith("/");
@@ -153,7 +155,8 @@ describe("Invite & Link Flow", () => {
         expect(result.inviteCode).toBe("XYZ98765");
       }
       expect(prisma.parentStudentLink.create).toHaveBeenCalled();
-      const createCall = vi.mocked(prisma.parentStudentLink.create).mock.calls[0][0];
+      const createCall = vi.mocked(prisma.parentStudentLink.create).mock
+        .calls[0][0];
       expect(createCall.data.studentId).toBe("student-1");
       expect(createCall.data.status).toBe("PENDING");
     });
@@ -162,17 +165,25 @@ describe("Invite & Link Flow", () => {
   describe("linkChildWithCode", () => {
     it("should redirect unauthenticated user", async () => {
       vi.mocked(getSession).mockResolvedValue(null);
-      mockRedirect.mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+      mockRedirect.mockImplementation(() => {
+        throw new Error("NEXT_REDIRECT");
+      });
 
-      await expect(linkChildWithCode({ inviteCode: "ABC12345" })).rejects.toThrow("NEXT_REDIRECT");
+      await expect(
+        linkChildWithCode({ inviteCode: "ABC12345" }),
+      ).rejects.toThrow("NEXT_REDIRECT");
       expect(mockRedirect).toHaveBeenCalledWith("/auth/login");
     });
 
     it("should redirect non-parent role", async () => {
       vi.mocked(getSession).mockResolvedValue(studentSession as any);
-      mockRedirect.mockImplementation(() => { throw new Error("NEXT_REDIRECT"); });
+      mockRedirect.mockImplementation(() => {
+        throw new Error("NEXT_REDIRECT");
+      });
 
-      await expect(linkChildWithCode({ inviteCode: "ABC12345" })).rejects.toThrow("NEXT_REDIRECT");
+      await expect(
+        linkChildWithCode({ inviteCode: "ABC12345" }),
+      ).rejects.toThrow("NEXT_REDIRECT");
       expect(mockRedirect).toHaveBeenCalledWith("/");
     });
 
@@ -551,7 +562,9 @@ describe("Parent Dashboard & History", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok && result.alerts) {
-        const struggleAlerts = result.alerts.filter((a) => a.type === "struggle");
+        const struggleAlerts = result.alerts.filter(
+          (a) => a.type === "struggle",
+        );
         expect(struggleAlerts.length).toBeGreaterThan(0);
         expect(result.strugglingConcepts).toHaveLength(1);
       }
@@ -689,7 +702,9 @@ describe("Parent Dashboard & History", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok && result.history) {
-        const practiceItems = result.history.filter((h) => h.type === "practice");
+        const practiceItems = result.history.filter(
+          (h) => h.type === "practice",
+        );
         expect(practiceItems).toHaveLength(1); // all same date, aggregated
         expect(practiceItems[0].title).toContain("2/3");
         expect(practiceItems[0].score).toBe(67); // 2/3 ≈ 67%

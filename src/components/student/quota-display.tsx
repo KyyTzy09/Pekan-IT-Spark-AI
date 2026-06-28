@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import { Zap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import {
-  getMyQuota,
-  type QuotaStatus,
-} from "@/server/actions/quota";
+import { getMyQuota, type QuotaStatus } from "@/server/actions/quota";
 
 function getQuotaColor(used: number, limit: number): string {
   const pct = used / limit;
@@ -87,7 +84,12 @@ export function QuotaDisplay({ className }: { className?: string }) {
                 <span className="text-[11px] font-semibold text-muted-foreground">
                   {q.icon} {q.label}
                 </span>
-                <span className={cn("text-[11px] font-bold tabular-nums", colorClass)}>
+                <span
+                  className={cn(
+                    "text-[11px] font-bold tabular-nums",
+                    colorClass,
+                  )}
+                >
                   {q.used}/{q.limit}
                 </span>
               </div>

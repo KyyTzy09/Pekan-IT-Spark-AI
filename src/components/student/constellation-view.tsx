@@ -126,8 +126,7 @@ export function Constellation({ concepts, subjectColor }: ConstellationProps) {
                   (c) => c.status === status && !c.isLocked,
                 ).length;
                 if (count === 0) return null;
-                const cfg =
-                  STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
+                const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
                 return (
                   <span
                     key={status}
@@ -149,7 +148,7 @@ export function Constellation({ concepts, subjectColor }: ConstellationProps) {
           {sortedConcepts.map((c) => {
             const cfg = c.isLocked
               ? null
-              : STATUS_CONFIG[c.status] ?? STATUS_CONFIG.NOT_STARTED;
+              : (STATUS_CONFIG[c.status] ?? STATUS_CONFIG.NOT_STARTED);
             const masteryPct = Math.round(c.masteryScore * 100);
             const StatusIcon = cfg?.icon ?? Sparkles;
 
@@ -170,7 +169,9 @@ export function Constellation({ concepts, subjectColor }: ConstellationProps) {
                   <span
                     className={cn(
                       "grid size-8 place-items-center rounded-xl text-white shadow-sm",
-                      c.isLocked ? "bg-muted text-muted-foreground" : cfg?.iconBg,
+                      c.isLocked
+                        ? "bg-muted text-muted-foreground"
+                        : cfg?.iconBg,
                     )}
                   >
                     {c.isLocked ? (
@@ -178,9 +179,7 @@ export function Constellation({ concepts, subjectColor }: ConstellationProps) {
                     ) : (
                       <StatusIcon
                         size={14}
-                        fill={
-                          c.status === "MASTERED" ? "currentColor" : "none"
-                        }
+                        fill={c.status === "MASTERED" ? "currentColor" : "none"}
                         strokeWidth={2.5}
                       />
                     )}
@@ -201,9 +200,7 @@ export function Constellation({ concepts, subjectColor }: ConstellationProps) {
                 <p
                   className={cn(
                     "mt-2.5 line-clamp-2 text-[12.5px] font-bold leading-snug",
-                    c.isLocked
-                      ? "text-muted-foreground"
-                      : "text-foreground",
+                    c.isLocked ? "text-muted-foreground" : "text-foreground",
                   )}
                 >
                   {c.name}

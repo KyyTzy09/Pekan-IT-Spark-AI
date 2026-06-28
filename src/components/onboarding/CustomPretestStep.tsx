@@ -116,7 +116,11 @@ export function CustomPretestStep({
                       key={`${qi}-${letter}`}
                       type="button"
                       onClick={() => {
-                        console.log("[ONBOARDING_CLIENT] customPretestAnswer", { questionIndex: qi, letter, wasAnswer: answers[qi] });
+                        console.log("[ONBOARDING_CLIENT] customPretestAnswer", {
+                          questionIndex: qi,
+                          letter,
+                          wasAnswer: answers[qi],
+                        });
                         onAnswer(qi, letter);
                       }}
                       className={cn(

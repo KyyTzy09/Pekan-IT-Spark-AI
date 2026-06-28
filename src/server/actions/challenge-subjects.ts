@@ -6,7 +6,10 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { generateAndStoreDailyChallenges } from "@/server/actions/challenges";
 import { regenerateWeeklyChallenge } from "@/server/actions/weekly-challenge";
-import { MAX_CHALLENGE_SUBJECTS, DAILY_CHALLENGE_SUBJECTS } from "@/server/learning/strength";
+import {
+  MAX_CHALLENGE_SUBJECTS,
+  DAILY_CHALLENGE_SUBJECTS,
+} from "@/server/learning/strength";
 
 // BUG-FIX: Separate schemas for daily (max 2) and weekly (max 4)
 const dailySubjectIdsSchema = z
@@ -39,7 +42,9 @@ async function validateSubjectIds(ids: string[]): Promise<string[]> {
 
 function startOfToday(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
 }
 
 function startOfNextDay(): Date {

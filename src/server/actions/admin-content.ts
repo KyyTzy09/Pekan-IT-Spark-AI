@@ -108,8 +108,8 @@ export async function listAllSubjects(input: {
   }
   const allTopicIds = topicsInSubjects.map((t) => t.id);
 
-  const [conceptCounts, questionCounts, conceptsForMapping] =
-    await Promise.all([
+  const [conceptCounts, questionCounts, conceptsForMapping] = await Promise.all(
+    [
       prisma.concept.groupBy({
         by: ["topicId"],
         where: { topicId: { in: allTopicIds } },
@@ -124,7 +124,8 @@ export async function listAllSubjects(input: {
         where: { topicId: { in: allTopicIds } },
         select: { id: true, topicId: true },
       }),
-    ]);
+    ],
+  );
 
   const conceptCountByTopic = new Map<string, number>();
   for (const c of conceptCounts) {

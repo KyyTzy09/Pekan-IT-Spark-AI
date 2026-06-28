@@ -64,7 +64,8 @@ export async function addAdvancedMaterial(
   const learningStyle = studentProfile?.learningStyle ?? "VISUAL";
 
   const quota = await incrementAiQuota(session.id, "materials", 1);
-  if (!quota.allowed) return { ok: false, error: "Kuota AI harian sudah habis." };
+  if (!quota.allowed)
+    return { ok: false, error: "Kuota AI harian sudah habis." };
 
   try {
     const material = await generateAdaptiveMaterial({

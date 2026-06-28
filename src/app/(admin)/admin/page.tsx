@@ -11,7 +11,5 @@ export default async function AdminPage() {
   if (session.role !== "ADMIN") redirect("/");
 
   const stats = await getAdminStats();
-  return (
-    <AdminDashboard stats={stats} adminName={session.name ?? "Admin"} />
-  );
+  return <AdminDashboard stats={stats} adminName={session.name ?? "Admin"} />;
 }

@@ -202,7 +202,12 @@ export function OnboardingWizardClient({
   const goNext = () => {
     if (!isStepValid(step)) return;
     const nextStep = Math.min(step + 1, steps.length - 1);
-    console.log("[ONBOARDING_CLIENT] goNext", { flow, fromStep: step, toStep: nextStep, stepKey: steps[nextStep]?.key });
+    console.log("[ONBOARDING_CLIENT] goNext", {
+      flow,
+      fromStep: step,
+      toStep: nextStep,
+      stepKey: steps[nextStep]?.key,
+    });
     setStep(nextStep);
   };
 
@@ -239,8 +244,15 @@ export function OnboardingWizardClient({
 
   const toggleSubject = (id: string) => {
     setFocusedSubjects((prev) => {
-      const next = prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id];
-      console.log("[ONBOARDING_CLIENT] toggleSubject", { id, wasSelected: prev.includes(id), nowSelected: next.includes(id), totalSelected: next.length });
+      const next = prev.includes(id)
+        ? prev.filter((s) => s !== id)
+        : [...prev, id];
+      console.log("[ONBOARDING_CLIENT] toggleSubject", {
+        id,
+        wasSelected: prev.includes(id),
+        nowSelected: next.includes(id),
+        totalSelected: next.length,
+      });
       return next;
     });
   };
@@ -258,9 +270,16 @@ export function OnboardingWizardClient({
   };
 
   const handleCustomGenerate = async () => {
-    console.log("[ONBOARDING_CLIENT] handleCustomGenerate", { name: customName.trim(), context: customContext.trim(), educationLevel, grade });
+    console.log("[ONBOARDING_CLIENT] handleCustomGenerate", {
+      name: customName.trim(),
+      context: customContext.trim(),
+      educationLevel,
+      grade,
+    });
     if (customName.trim().length < 2) {
-      console.log("[ONBOARDING_CLIENT] handleCustomGenerate failed: name too short");
+      console.log(
+        "[ONBOARDING_CLIENT] handleCustomGenerate failed: name too short",
+      );
       setError("Nama mapel minimal 2 karakter");
       return;
     }
@@ -273,9 +292,15 @@ export function OnboardingWizardClient({
         educationLevel,
         grade,
       });
-      console.log("[ONBOARDING_CLIENT] handleCustomGenerate result", { ok: result.ok, questionsCount: result.ok ? result.questions.length : 0 });
+      console.log("[ONBOARDING_CLIENT] handleCustomGenerate result", {
+        ok: result.ok,
+        questionsCount: result.ok ? result.questions.length : 0,
+      });
       if (!result.ok) {
-        console.log("[ONBOARDING_CLIENT] handleCustomGenerate error:", result.error);
+        console.log(
+          "[ONBOARDING_CLIENT] handleCustomGenerate error:",
+          result.error,
+        );
         setError(result.error ?? "Gagal generate. Coba lagi.");
         setIsGenerating(false);
         return;
@@ -294,7 +319,10 @@ export function OnboardingWizardClient({
   };
 
   const handleCustomSubjectCreated = (result: GeneratedPretestResult) => {
-    console.log("[ONBOARDING_CLIENT] handleCustomSubjectCreated", { name: result.subjectData.name, questionsCount: result.questions.length });
+    console.log("[ONBOARDING_CLIENT] handleCustomSubjectCreated", {
+      name: result.subjectData.name,
+      questionsCount: result.questions.length,
+    });
     setGeneratedQuestions(result.questions);
     setGeneratedSubjectData(result.subjectData);
     setCustomName(result.subjectData.name);
@@ -302,7 +330,9 @@ export function OnboardingWizardClient({
   };
 
   const handleNationalSubmit = async () => {
-    console.log("[ONBOARDING_CLIENT] handleNationalSubmit called", { submitting: submittingRef.current });
+    console.log("[ONBOARDING_CLIENT] handleNationalSubmit called", {
+      submitting: submittingRef.current,
+    });
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
@@ -327,16 +357,19 @@ export function OnboardingWizardClient({
         };
       });
 
-      console.log("[ONBOARDING_CLIENT] handleNationalSubmit calling completeOnboarding", {
-        educationLevel,
-        grade,
-        school: school.trim(),
-        focusedSubjectsCount: focusedSubjects.length,
-        learningStyle,
-        reminderEnabled,
-        answersCount: answers.length,
-        correctCount: answers.filter((a) => a.isCorrect).length,
-      });
+      console.log(
+        "[ONBOARDING_CLIENT] handleNationalSubmit calling completeOnboarding",
+        {
+          educationLevel,
+          grade,
+          school: school.trim(),
+          focusedSubjectsCount: focusedSubjects.length,
+          learningStyle,
+          reminderEnabled,
+          answersCount: answers.length,
+          correctCount: answers.filter((a) => a.isCorrect).length,
+        },
+      );
 
       // Server action now calls redirect("/dashboard") on success.
       // If it returns, it means there was an error.
@@ -352,13 +385,18 @@ export function OnboardingWizardClient({
       });
 
       // If we reach here, the action returned an error (success would redirect)
-      console.log("[ONBOARDING_CLIENT] handleNationalSubmit returned (error case)", { ok: result.ok, message: result.message });
+      console.log(
+        "[ONBOARDING_CLIENT] handleNationalSubmit returned (error case)",
+        { ok: result.ok, message: result.message },
+      );
       setError(result.message ?? "Gagal menyimpan. Coba lagi, ya.");
       submittingRef.current = false;
       setSubmitting(false);
     } catch (err) {
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
-        console.log("[ONBOARDING_CLIENT] handleNationalSubmit redirect triggered");
+        console.log(
+          "[ONBOARDING_CLIENT] handleNationalSubmit redirect triggered",
+        );
         throw err;
       }
       console.error("[ONBOARDING_CLIENT] handleNationalSubmit error:", err);
@@ -369,7 +407,11 @@ export function OnboardingWizardClient({
   };
 
   const handleCustomSubmit = async () => {
-    console.log("[ONBOARDING_CLIENT] handleCustomSubmit called", { submitting: submittingRef.current, hasQuestions: !!generatedQuestions, hasSubjectData: !!generatedSubjectData });
+    console.log("[ONBOARDING_CLIENT] handleCustomSubmit called", {
+      submitting: submittingRef.current,
+      hasQuestions: !!generatedQuestions,
+      hasSubjectData: !!generatedSubjectData,
+    });
     // Use ref guard to prevent duplicate calls (React strict mode, double-clicks)
     if (submittingRef.current) return;
     if (!generatedQuestions || !generatedSubjectData) return;
@@ -399,18 +441,21 @@ export function OnboardingWizardClient({
         };
       });
 
-      console.log("[ONBOARDING_CLIENT] handleCustomSubmit calling completeOnboardingCustom", {
-        educationLevel,
-        grade,
-        school: school.trim(),
-        learningStyle: learningStyle ?? "VISUAL",
-        reminderEnabled,
-        focusedSubjectsCount: focusedSubjects.length,
-        subjectName: generatedSubjectData.name,
-        topicsCount: generatedSubjectData.topics?.length ?? 0,
-        pretestAnswersCount: pretestAnswers.length,
-        correctCount: pretestAnswers.filter((a) => a.isCorrect).length,
-      });
+      console.log(
+        "[ONBOARDING_CLIENT] handleCustomSubmit calling completeOnboardingCustom",
+        {
+          educationLevel,
+          grade,
+          school: school.trim(),
+          learningStyle: learningStyle ?? "VISUAL",
+          reminderEnabled,
+          focusedSubjectsCount: focusedSubjects.length,
+          subjectName: generatedSubjectData.name,
+          topicsCount: generatedSubjectData.topics?.length ?? 0,
+          pretestAnswersCount: pretestAnswers.length,
+          correctCount: pretestAnswers.filter((a) => a.isCorrect).length,
+        },
+      );
 
       // Server action now calls redirect("/dashboard") on success.
       // If it returns, it means there was an error.
@@ -431,14 +476,19 @@ export function OnboardingWizardClient({
         });
 
       // If we reach here, the action returned an error (success would redirect)
-      console.log("[ONBOARDING_CLIENT] handleCustomSubmit returned (error case)", { ok: result.ok, message: result.message });
+      console.log(
+        "[ONBOARDING_CLIENT] handleCustomSubmit returned (error case)",
+        { ok: result.ok, message: result.message },
+      );
       setError(result.message ?? "Gagal menyimpan. Coba lagi, ya.");
       submittingRef.current = false;
       setSubmitting(false);
     } catch (err) {
       // redirect() throws in server actions — rethrow it so Next.js handles it
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
-        console.log("[ONBOARDING_CLIENT] handleCustomSubmit redirect triggered");
+        console.log(
+          "[ONBOARDING_CLIENT] handleCustomSubmit redirect triggered",
+        );
         throw err;
       }
       console.error("[ONBOARDING_CLIENT] handleCustomSubmit error:", err);

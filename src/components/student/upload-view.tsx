@@ -120,7 +120,7 @@ export function UploadView({
       }
 
       setStatus({ kind: "uploading", fileName: file.name, progress: 30 });
-      await new Promise(r => setTimeout(r, 100)); // Let UI update
+      await new Promise((r) => setTimeout(r, 100)); // Let UI update
       setStatus({ kind: "processing", fileName: file.name });
       const result = await uploadDocument({ file });
       if (!result.ok) {

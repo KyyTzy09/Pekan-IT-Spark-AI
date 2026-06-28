@@ -1,7 +1,4 @@
-import {
-  GraduationCap,
-  Heart,
-} from "lucide-react";
+import { GraduationCap, Heart } from "lucide-react";
 import Link from "next/link";
 
 const links = {
@@ -44,11 +41,11 @@ export function Footer() {
               paham, makin seru, dan gak ngebosenin.
             </p>
             <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/30 bg-card/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
-              <GraduationCap size={13} />
-              spark-ai.vercel.app
-            </span>
-          </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/30 bg-card/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+                <GraduationCap size={13} />
+                spark-ai.vercel.app
+              </span>
+            </div>
           </div>
 
           {Object.entries(links).map(([title, items]) => (

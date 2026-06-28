@@ -60,9 +60,6 @@ export default async function GeneratePracticePage() {
   });
 
   return (
-    <GeneratePracticeView
-      subjects={subjects}
-      remainingQuota={remainingQuota}
-    />
+    <GeneratePracticeView subjects={subjects} remainingQuota={remainingQuota} />
   );
 }

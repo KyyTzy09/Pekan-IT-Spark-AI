@@ -25,10 +25,12 @@ const groqClients = groqKeys.map(
 );
 
 // Primary client (first key) - for backward compatibility
-const openaiHeavy = groqClients[0] ?? new OpenAI({
-  baseURL: heavyModelBaseUrl,
-  apiKey: process.env.HEAVY_MODEL_API_KEY ?? process.env.OPENAI_API_KEY,
-});
+const openaiHeavy =
+  groqClients[0] ??
+  new OpenAI({
+    baseURL: heavyModelBaseUrl,
+    apiKey: process.env.HEAVY_MODEL_API_KEY ?? process.env.OPENAI_API_KEY,
+  });
 
 // Atomic counter for key rotation — each call gets a unique key
 let groqKeyCounter = 0;
@@ -91,7 +93,9 @@ async function tryGroqCompletion(
   messages: ChatMessageParam[],
   temperature: number,
   isStream: boolean,
-): Promise<{ text: string } | AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
+): Promise<
+  { text: string } | AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>
+> {
   const totalKeys = groqClients.length;
   let lastErr: unknown;
 
@@ -99,7 +103,9 @@ async function tryGroqCompletion(
     const { client, keyIndex } = getNextGroqClient();
     const masked = maskKey(groqKeys[keyIndex]);
 
-    aiLog.info(`${EMOJI.key} Groq [key ${keyIndex + 1}/${totalKeys}] ${masked} — percobaan ke-${attempt + 1}`);
+    aiLog.info(
+      `${EMOJI.key} Groq [key ${keyIndex + 1}/${totalKeys}] ${masked} — percobaan ke-${attempt + 1}`,
+    );
 
     try {
       if (isStream) {
@@ -120,8 +126,12 @@ async function tryGroqCompletion(
 
       // Coba key berikutnya kalau masih ada
       if (attempt < totalKeys - 1) {
-        const reason = isRateLimitError(err) ? "rate limit (429)" : formatErr(err);
-        aiLog.warn(`${EMOJI.retry} Groq key[${keyIndex}] gagal: ${reason} — coba key berikutnya...`);
+        const reason = isRateLimitError(err)
+          ? "rate limit (429)"
+          : formatErr(err);
+        aiLog.warn(
+          `${EMOJI.retry} Groq key[${keyIndex}] gagal: ${reason} — coba key berikutnya...`,
+        );
         continue;
       }
     }
@@ -146,7 +156,9 @@ export async function generateText({
     ? (process.env.HEAVY_MODEL_NAME ?? "llama-3.3-70b-versatile")
     : "deepseek-v4-flash";
 
-  aiLog.info(`${EMOJI.start} generateText → ${modelName} (temp: ${temperature})`);
+  aiLog.info(
+    `${EMOJI.start} generateText → ${modelName} (temp: ${temperature})`,
+  );
 
   const messages: ChatMessageParam[] = [];
   if (system) {
@@ -159,8 +171,15 @@ export async function generateText({
   // Heavy model: try Groq with key rotation
   if (isHeavy) {
     try {
-      const result = await tryGroqCompletion(modelName, messages, temperature, false);
-      aiLog.info(`${EMOJI.ok} generateText selesai (${result.text.length} karakter)`);
+      const result = await tryGroqCompletion(
+        modelName,
+        messages,
+        temperature,
+        false,
+      );
+      aiLog.info(
+        `${EMOJI.ok} generateText selesai (${result.text.length} karakter)`,
+      );
       return result;
     } catch (err) {
       aiLog.warn(`${EMOJI.warn} Semua Groq key gagal — coba fallback...`);
@@ -169,11 +188,17 @@ export async function generateText({
       if (gemini) {
         aiLog.info(`${EMOJI.fallback} Fallback 1: Gemini gemini-2.0-flash ...`);
         try {
-          const geminiModel = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
-          const promptText = system ? `${system}\n\n${prompt || ""}` : prompt || "";
+          const geminiModel = gemini.getGenerativeModel({
+            model: "gemini-2.0-flash",
+          });
+          const promptText = system
+            ? `${system}\n\n${prompt || ""}`
+            : prompt || "";
           const result = await geminiModel.generateContent(promptText);
           const textResult = result.response.text();
-          aiLog.info(`${EMOJI.ok} Gemini berhasil (${textResult.length} karakter)`);
+          aiLog.info(
+            `${EMOJI.ok} Gemini berhasil (${textResult.length} karakter)`,
+          );
           return { text: textResult };
         } catch (geminiErr) {
           aiLog.error(`${EMOJI.error} Gemini gagal: ${formatErr(geminiErr)}`);
@@ -181,17 +206,23 @@ export async function generateText({
       }
 
       // Fallback 2: Sumopod
-      aiLog.info(`${EMOJI.fallback} Fallback 2: deepseek-v4-flash via Sumopod ...`);
+      aiLog.info(
+        `${EMOJI.fallback} Fallback 2: deepseek-v4-flash via Sumopod ...`,
+      );
       try {
         const response = await openaiDefault.chat.completions.create(
           { model: "deepseek-v4-flash", messages, temperature },
           { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
         );
         const textResult = response.choices[0]?.message?.content || "";
-        aiLog.info(`${EMOJI.ok} Sumopod berhasil (${textResult.length} karakter)`);
+        aiLog.info(
+          `${EMOJI.ok} Sumopod berhasil (${textResult.length} karakter)`,
+        );
         return { text: textResult };
       } catch (fallbackSumopodErr) {
-        aiLog.error(`${EMOJI.error} Sumopod gagal: ${formatErr(fallbackSumopodErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Sumopod gagal: ${formatErr(fallbackSumopodErr)}`,
+        );
       }
 
       // Fallback 3: glm-5 on Groq
@@ -202,10 +233,14 @@ export async function generateText({
           { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
         );
         const textResult = response.choices[0]?.message?.content || "";
-        aiLog.info(`${EMOJI.ok} glm-5 berhasil (${textResult.length} karakter)`);
+        aiLog.info(
+          `${EMOJI.ok} glm-5 berhasil (${textResult.length} karakter)`,
+        );
         return { text: textResult };
       } catch (fallbackGlmErr) {
-        aiLog.error(`${EMOJI.error} Semua fallback gagal! Terakhir: glm-5 — ${formatErr(fallbackGlmErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Semua fallback gagal! Terakhir: glm-5 — ${formatErr(fallbackGlmErr)}`,
+        );
         throw err;
       }
     }
@@ -218,10 +253,14 @@ export async function generateText({
       { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
     );
     const textResult = response.choices[0]?.message?.content || "";
-    aiLog.info(`${EMOJI.ok} generateText selesai (${textResult.length} karakter)`);
+    aiLog.info(
+      `${EMOJI.ok} generateText selesai (${textResult.length} karakter)`,
+    );
     return { text: textResult };
   } catch (err) {
-    aiLog.error(`${EMOJI.error} generateText gagal (${modelName}): ${formatErr(err)}`);
+    aiLog.error(
+      `${EMOJI.error} generateText gagal (${modelName}): ${formatErr(err)}`,
+    );
     throw err;
   }
 }
@@ -250,13 +289,26 @@ export async function streamText({
     });
   }
 
+  // Helper to create result with both text and textStream
+  const makeResult = (iterable: AsyncIterable<string>) => {
+    return {
+      text: collectStreamText(iterable),
+      textStream: iterable,
+    };
+  };
+
   if (isHeavy) {
     const heavyModelName =
       process.env.HEAVY_MODEL_NAME ?? "llama-3.3-70b-versatile";
 
     // Try Groq with key rotation
     try {
-      const stream = await tryGroqCompletion(heavyModelName, apiMessages, temperature, true);
+      const stream = await tryGroqCompletion(
+        heavyModelName,
+        apiMessages,
+        temperature,
+        true,
+      );
 
       aiLog.info(`${EMOJI.stream} Streaming dimulai (Groq ${heavyModelName})`);
 
@@ -268,10 +320,12 @@ export async function streamText({
           const content = chunk.choices[0]?.delta?.content || "";
           if (content) yield content;
         }
-        aiLog.info(`${EMOJI.ok} Streaming selesai (Groq) — ${chunkCount} chunk`);
+        aiLog.info(
+          `${EMOJI.ok} Streaming selesai (Groq) — ${chunkCount} chunk`,
+        );
       })();
 
-      return { text: collectStreamText(iterable) };
+      return makeResult(iterable);
     } catch (groqErr) {
       aiLog.warn(`${EMOJI.warn} Groq streaming gagal — coba fallback...`);
 
@@ -279,8 +333,10 @@ export async function streamText({
       if (gemini) {
         aiLog.info(`${EMOJI.fallback} Fallback 1: Gemini streaming ...`);
         try {
-          const geminiModel = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
-          const promptText = apiMessages.map(m => m.content).join("\n");
+          const geminiModel = gemini.getGenerativeModel({
+            model: "gemini-2.0-flash",
+          });
+          const promptText = apiMessages.map((m) => m.content).join("\n");
           const result = await geminiModel.generateContentStream(promptText);
 
           const iterable = (async function* () {
@@ -291,9 +347,11 @@ export async function streamText({
             aiLog.info(`${EMOJI.ok} Streaming selesai (Gemini)`);
           })();
 
-          return { text: collectStreamText(iterable) };
+          return makeResult(iterable);
         } catch (geminiErr) {
-          aiLog.error(`${EMOJI.error} Gemini streaming gagal: ${formatErr(geminiErr)}`);
+          aiLog.error(
+            `${EMOJI.error} Gemini streaming gagal: ${formatErr(geminiErr)}`,
+          );
         }
       }
 
@@ -302,7 +360,12 @@ export async function streamText({
       aiLog.info(`${EMOJI.fallback} Fallback 2: Sumopod streaming ...`);
       try {
         const stream = await openaiDefault.chat.completions.create(
-          { model: sumopodModel, messages: apiMessages, temperature, stream: true },
+          {
+            model: sumopodModel,
+            messages: apiMessages,
+            temperature,
+            stream: true,
+          },
           { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
         );
 
@@ -313,12 +376,16 @@ export async function streamText({
             const content = chunk.choices[0]?.delta?.content || "";
             if (content) yield content;
           }
-          aiLog.info(`${EMOJI.ok} Streaming selesai (Sumopod) — ${chunkCount} chunk`);
+          aiLog.info(
+            `${EMOJI.ok} Streaming selesai (Sumopod) — ${chunkCount} chunk`,
+          );
         })();
 
-        return { text: collectStreamText(iterable) };
+        return makeResult(iterable);
       } catch (sumopodErr) {
-        aiLog.error(`${EMOJI.error} Sumopod streaming gagal: ${formatErr(sumopodErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Sumopod streaming gagal: ${formatErr(sumopodErr)}`,
+        );
       }
 
       // Fallback 3: glm-5 on Groq
@@ -336,12 +403,16 @@ export async function streamText({
             const content = chunk.choices[0]?.delta?.content || "";
             if (content) yield content;
           }
-          aiLog.info(`${EMOJI.ok} Streaming selesai (glm-5) — ${chunkCount} chunk`);
+          aiLog.info(
+            `${EMOJI.ok} Streaming selesai (glm-5) — ${chunkCount} chunk`,
+          );
         })();
 
-        return { text: collectStreamText(iterable) };
+        return makeResult(iterable);
       } catch (glmErr) {
-        aiLog.error(`${EMOJI.error} Semua streaming fallback gagal! Terakhir: glm-5 — ${formatErr(glmErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Semua streaming fallback gagal! Terakhir: glm-5 — ${formatErr(glmErr)}`,
+        );
         throw groqErr;
       }
     }
@@ -367,9 +438,11 @@ export async function streamText({
         aiLog.info(`${EMOJI.ok} Streaming selesai — ${chunkCount} chunk`);
       })();
 
-      return { text: collectStreamText(iterable) };
+      return makeResult(iterable);
     } catch (err) {
-      aiLog.error(`${EMOJI.error} Non-heavy streaming gagal (${modelName}): ${formatErr(err)}`);
+      aiLog.error(
+        `${EMOJI.error} Non-heavy streaming gagal (${modelName}): ${formatErr(err)}`,
+      );
       throw err;
     }
   }
@@ -439,7 +512,9 @@ export async function embedMany({
       { timeout: AI_TIMEOUT_EMBED_MS, maxRetries: 0 },
     );
     const embeddings = response.data.map((item) => item.embedding);
-    aiLog.info(`${EMOJI.ok} Batch embedding selesai (${embeddings.length} item, ${embeddings[0]?.length ?? 0} dimensi)`);
+    aiLog.info(
+      `${EMOJI.ok} Batch embedding selesai (${embeddings.length} item, ${embeddings[0]?.length ?? 0} dimensi)`,
+    );
     return {
       embeddings,
     };

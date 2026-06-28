@@ -135,7 +135,8 @@ export function ChallengeSubjectPicker({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {availableSubjects.map((s) => {
                 const isSelected = selected.includes(s.id);
-                const isDisabled = !isSelected && selected.length >= maxSubjects;
+                const isDisabled =
+                  !isSelected && selected.length >= maxSubjects;
                 return (
                   <button
                     key={s.id}

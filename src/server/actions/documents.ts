@@ -188,7 +188,10 @@ export async function uploadDocument(
     extracted = await Promise.race([
       extractionPromise,
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Processing timeout")), PROCESSING_TIMEOUT_MS),
+        setTimeout(
+          () => reject(new Error("Processing timeout")),
+          PROCESSING_TIMEOUT_MS,
+        ),
       ),
     ]);
     console.log("[uploadDocument] extraction OK", {
@@ -385,9 +388,10 @@ export async function listDocuments(): Promise<ListDocumentsResult> {
               ? parsed.hasHomework
               : false;
           // Use summary as preview (much smaller than full content)
-          contentPreview = typeof parsed.summary === "string"
-            ? parsed.summary.slice(0, 220)
-            : "";
+          contentPreview =
+            typeof parsed.summary === "string"
+              ? parsed.summary.slice(0, 220)
+              : "";
         } catch {
           // ignore
         }
@@ -551,7 +555,10 @@ export async function generateDocumentQuizAction(
     // BUG-8 FIX: Track AI quota for document quiz generation
     const quota = await incrementAiQuota(userId, "questions", 1);
     if (!quota.allowed) {
-      return { ok: false, error: "Kuota AI harian sudah habis. Coba lagi besok ya!" };
+      return {
+        ok: false,
+        error: "Kuota AI harian sudah habis. Coba lagi besok ya!",
+      };
     }
 
     const quiz = await generateQuizFromDocument(
@@ -631,7 +638,10 @@ export async function appendQuestionsToDocumentQuizAction(
     // BUG-8 FIX: Track AI quota for appending quiz questions
     const quota = await incrementAiQuota(userId, "questions", 1);
     if (!quota.allowed) {
-      return { ok: false, error: "Kuota AI harian sudah habis. Coba lagi besok ya!" };
+      return {
+        ok: false,
+        error: "Kuota AI harian sudah habis. Coba lagi besok ya!",
+      };
     }
 
     const existingQuestions = (quizRecord.questions as any[]) || [];
@@ -719,9 +729,10 @@ export async function submitDocumentQuizAttemptAction(
         correctCount++;
       }
     }
-    const serverScore = questionsArray.length > 0
-      ? Math.round((correctCount / questionsArray.length) * 100)
-      : 0;
+    const serverScore =
+      questionsArray.length > 0
+        ? Math.round((correctCount / questionsArray.length) * 100)
+        : 0;
 
     const newAttempt = {
       answers,
@@ -913,7 +924,10 @@ export async function generateDocumentMaterialAction(
     // BUG-8 FIX: Track AI quota for document material generation
     const quota = await incrementAiQuota(userId, "materials", 1);
     if (!quota.allowed) {
-      return { ok: false, error: "Kuota AI materi harian sudah habis. Coba lagi besok ya!" };
+      return {
+        ok: false,
+        error: "Kuota AI materi harian sudah habis. Coba lagi besok ya!",
+      };
     }
 
     const studentProfile = await prisma.studentProfile.findUnique({

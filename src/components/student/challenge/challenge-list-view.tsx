@@ -82,8 +82,7 @@ interface ChallengeListViewProps {
   hasSubjects?: boolean;
 }
 
-type StatusFilter = "today" | "active" | "completed";
-type TypeFilter = "all" | "daily" | "weekly";
+type StatusFilter = "today" | "week" | "all";
 
 export function ChallengeListView({
   challenges: propChallenges,
@@ -104,8 +103,9 @@ export function ChallengeListView({
   const [dailyProgress, setDailyProgress] = React.useState(propDailyProgress);
   const [loading, setLoading] = React.useState(!!initiallyEmpty);
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("today");
-  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>("all");
-  const [allChallenges, setAllChallenges] = React.useState<ChallengeListItem[]>([]);
+  const [allChallenges, setAllChallenges] = React.useState<ChallengeListItem[]>(
+    [],
+  );
   const [loadingAll, setLoadingAll] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState<{
     variant: "daily" | "weekly";
@@ -167,7 +167,7 @@ export function ChallengeListView({
     };
   }, [initiallyEmpty, propChallenges, propProgress, propDailyProgress]);
 
-  // Fetch all challenges when switching to active/completed filter
+  // Fetch all challenges when switching to week/all filter
   React.useEffect(() => {
     if (statusFilter === "today") return;
     if (allChallenges.length > 0) return; // already fetched
@@ -182,30 +182,27 @@ export function ChallengeListView({
       .finally(() => setLoadingAll(false));
   }, [statusFilter, allChallenges.length]);
 
-  const sourceChallenges = statusFilter === "today" ? challenges : allChallenges;
+  const sourceChallenges =
+    statusFilter === "today" ? challenges : allChallenges;
 
   const filtered = React.useMemo(() => {
     let result = sourceChallenges;
 
-    // Status filter
-    const todayStr = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
     if (statusFilter === "today") {
       result = result.filter((c) => c.scheduledFor.startsWith(todayStr));
-    } else if (statusFilter === "active") {
-      result = result.filter((c) => c.status === "ACTIVE");
-    } else if (statusFilter === "completed") {
-      result = result.filter((c) => c.status === "COMPLETED");
-    }
-
-    // Type filter
-    if (typeFilter === "daily") {
-      result = result.filter((c) => c.source === "AUTO_DAILY" || c.source === "ON_DEMAND");
-    } else if (typeFilter === "weekly") {
-      result = result.filter((c) => c.source === "AUTO_WEEKLY");
+    } else if (statusFilter === "week") {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now);
+      monday.setDate(diff);
+      const mondayStr = monday.toISOString().split("T")[0];
+      result = result.filter((c) => c.scheduledFor >= mondayStr);
     }
 
     return result;
-  }, [sourceChallenges, statusFilter, typeFilter]);
+  }, [sourceChallenges, statusFilter]);
 
   const allDone =
     challenges.length > 0 && challenges.every((c) => c.status === "COMPLETED");
@@ -255,8 +252,9 @@ export function ChallengeListView({
                 Kamu belum pilih mapel
               </p>
               <p className="text-[12px] leading-relaxed text-amber-700/80 dark:text-amber-300/70">
-                Kamu belum daftarkan mapel untuk tantangan. Atur mapel harian dan mingguan
-                di Pengaturan Tantangan di bawah, atau selesaikan onboarding untuk auto-set.
+                Kamu belum daftarkan mapel untuk tantangan. Atur mapel harian
+                dan mingguan di Pengaturan Tantangan di bawah, atau selesaikan
+                onboarding untuk auto-set.
               </p>
               <Button
                 asChild
@@ -279,9 +277,15 @@ export function ChallengeListView({
         <section className="rounded-2xl border border-border/40 bg-card/80 p-4 shadow-[0_6px_18px_rgba(80,20,50,0.05)] backdrop-blur-md sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--coral)]/15 to-[var(--purple)]/15 shadow-[inset_0_0_0_1px_rgba(225,29,72,0.15)]">
-              <Settings2 size={13} className="text-[var(--coral)]" strokeWidth={2.5} />
+              <Settings2
+                size={13}
+                className="text-[var(--coral)]"
+                strokeWidth={2.5}
+              />
             </span>
-            <p className="text-[12px] font-bold text-muted-foreground">Pengaturan Tantangan</p>
+            <p className="text-[12px] font-bold text-muted-foreground">
+              Pengaturan Tantangan
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {/* Daily Subject Setting */}
@@ -301,7 +305,10 @@ export function ChallengeListView({
                     : "Belum dipilih"}
                 </p>
               </div>
-              <ChevronDown size={14} className="text-muted-foreground rotate-[-90deg] group-hover:text-[var(--coral)]" />
+              <ChevronDown
+                size={14}
+                className="text-muted-foreground rotate-[-90deg] group-hover:text-[var(--coral)]"
+              />
             </button>
 
             {/* Weekly Subject Setting */}
@@ -321,7 +328,10 @@ export function ChallengeListView({
                     : "Belum dipilih"}
                 </p>
               </div>
-              <ChevronDown size={14} className="text-muted-foreground rotate-[-90deg] group-hover:text-[var(--purple)]" />
+              <ChevronDown
+                size={14}
+                className="text-muted-foreground rotate-[-90deg] group-hover:text-[var(--purple)]"
+              />
             </button>
           </div>
         </section>
@@ -443,20 +453,25 @@ export function ChallengeListView({
         </Reveal>
       )}
 
+      {/* Single filter bar */}
       <Reveal delay={80}>
-        <div className="space-y-3">
-          {/* Type filter tabs */}
-          <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 p-1 backdrop-blur-sm w-fit">
-            {(["all", "daily", "weekly"] as TypeFilter[]).map((f) => {
-              const isActive = typeFilter === f;
-              const label = f === "all" ? "Semua" : f === "daily" ? "Harian" : "Mingguan";
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 p-1 backdrop-blur-sm">
+            {(["today", "week", "all"] as StatusFilter[]).map((f) => {
+              const isActive = statusFilter === f;
+              const label =
+                f === "today"
+                  ? "Hari ini"
+                  : f === "week"
+                    ? "Minggu ini"
+                    : "Semua";
               return (
                 <button
                   key={f}
                   type="button"
-                  onClick={() => setTypeFilter(f)}
+                  onClick={() => setStatusFilter(f)}
                   className={cn(
-                    "rounded-full px-3 py-1 text-[11.5px] font-bold transition-all",
+                    "rounded-full px-4 py-1.5 text-[12px] font-bold transition-all",
                     isActive
                       ? "bg-[var(--purple)] text-white shadow-[0_4px_10px_rgba(168,85,247,0.25)]"
                       : "text-muted-foreground hover:text-foreground",
@@ -467,40 +482,10 @@ export function ChallengeListView({
               );
             })}
           </div>
-
-          {/* Status filter + action buttons */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-card/60 p-1 backdrop-blur-sm">
-              {(["today", "active", "completed"] as StatusFilter[]).map((f) => {
-                const isActive = statusFilter === f;
-                const label =
-                  f === "today"
-                    ? "Hari ini"
-                    : f === "active"
-                      ? "Belum selesai"
-                      : "Selesai";
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setStatusFilter(f)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-[11.5px] font-bold transition-all",
-                      isActive
-                        ? "bg-[var(--coral)] text-white shadow-[0_4px_10px_rgba(225,29,72,0.25)]"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <OnDemandGenerator
-              onGenerate={handleGenerate}
-              subjectOptions={subjectOptions}
-            />
-          </div>
+          <OnDemandGenerator
+            onGenerate={handleGenerate}
+            subjectOptions={subjectOptions}
+          />
         </div>
       </Reveal>
 
@@ -533,23 +518,15 @@ export function ChallengeListView({
                   tambahan?
                 </p>
               </>
-            ) : statusFilter !== "today" || typeFilter !== "all" ? (
-              <>
-                <p className="mt-3 font-heading text-[16px] font-bold">
-                  Belum ada tantangan di filter ini
-                </p>
-                <p className="mt-1 text-[12.5px] text-muted-foreground">
-                  Coba ganti filter atau minta tantangan tambahan.
-                </p>
-              </>
             ) : (
               <>
                 <p className="mt-3 font-heading text-[16px] font-bold">
                   Belum ada tantangan
                 </p>
                 <p className="mt-1 text-[12.5px] text-muted-foreground">
-                  AI lagi nyiapin tantangan pertamamu. Coba refresh dalam
-                  beberapa detik.
+                  {statusFilter === "today"
+                    ? "AI lagi nyiapin tantangan pertamamu. Coba refresh dalam beberapa detik."
+                    : "Coba ganti filter atau minta tantangan tambahan."}
                 </p>
               </>
             )}

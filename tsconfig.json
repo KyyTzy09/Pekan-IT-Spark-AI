@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "proposal", "scripts", "scratch", "src/components/contoh-landing-page/**/*"]
+  "exclude": [
+    "node_modules",
+    "proposal",
+    "scripts",
+    "scratch",
+    "src/components/contoh-landing-page/**/*"
+  ]
 }

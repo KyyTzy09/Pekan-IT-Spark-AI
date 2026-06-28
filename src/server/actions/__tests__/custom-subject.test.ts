@@ -189,13 +189,13 @@ describe("addCustomSubject", () => {
               "Menentukan font",
             ],
             correctAnswer: "Menentukan URL tujuan",
-            explanation: "href (hypertext reference) menentukan ke mana link akan mengarah",
+            explanation:
+              "href (hypertext reference) menentukan ke mana link akan mengarah",
             hint: "href singkatan dari hypertext reference",
             difficulty: "MEDIUM",
           },
           {
-            questionText:
-              "Mengapa atribut `alt` penting pada tag `<img>`?",
+            questionText: "Mengapa atribut `alt` penting pada tag `<img>`?",
             options: [
               "Untuk mempercepat loading gambar",
               "Untuk membuat gambar lebih besar",
@@ -217,9 +217,15 @@ describe("addCustomSubject", () => {
         questions: [
           {
             questionText: "Selector apa yang menggunakan tanda titik (.)?",
-            options: ["Element selector", "Class selector", "ID selector", "Universal selector"],
+            options: [
+              "Element selector",
+              "Class selector",
+              "ID selector",
+              "Universal selector",
+            ],
             correctAnswer: "Class selector",
-            explanation: "Class selector menggunakan tanda titik (.) di depan nama class",
+            explanation:
+              "Class selector menggunakan tanda titik (.) di depan nama class",
             hint: "Perhatikan tanda yang digunakan",
             difficulty: "EASY",
           },
@@ -232,7 +238,8 @@ describe("addCustomSubject", () => {
               "Class untuk warna, ID untuk ukuran",
             ],
             correctAnswer: "Class bisa dipakai banyak elemen, ID hanya satu",
-            explanation: "ID harus unik dalam satu halaman, class bisa dipakai berulang",
+            explanation:
+              "ID harus unik dalam satu halaman, class bisa dipakai berulang",
             hint: "Ingat konsep unik vs berulang",
             difficulty: "MEDIUM",
           },
@@ -245,7 +252,8 @@ describe("addCustomSubject", () => {
               "Universal selector",
             ],
             correctAnswer: "ID selector",
-            explanation: "ID selector memiliki specificity tertinggi di antara selector dasar",
+            explanation:
+              "ID selector memiliki specificity tertinggi di antara selector dasar",
             hint: "Spesifikitas menentukan mana yang menang jika ada konflik",
             difficulty: "HARD",
           },
@@ -333,7 +341,11 @@ describe("addCustomSubject", () => {
       return mockTopicContent as any;
     });
     vi.mocked(embedMany).mockResolvedValue({
-      embeddings: [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+      embeddings: [
+        [0.1, 0.2],
+        [0.3, 0.4],
+        [0.5, 0.6],
+      ],
     } as any);
     vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => {
       const tx = {
@@ -346,9 +358,24 @@ describe("addCustomSubject", () => {
       return fn(tx);
     });
     vi.mocked(prisma.concept.findMany).mockResolvedValue([
-      { id: "concept-1", name: "Tag HTML", description: "Apa itu tag HTML", contentMd: "# Tag HTML content" },
-      { id: "concept-2", name: "Atribut HTML", description: "Fungsi atribut", contentMd: "# Atribut HTML content" },
-      { id: "concept-3", name: "Selector CSS", description: "Jenis-jenis selector", contentMd: "# Selector CSS content" },
+      {
+        id: "concept-1",
+        name: "Tag HTML",
+        description: "Apa itu tag HTML",
+        contentMd: "# Tag HTML content",
+      },
+      {
+        id: "concept-2",
+        name: "Atribut HTML",
+        description: "Fungsi atribut",
+        contentMd: "# Atribut HTML content",
+      },
+      {
+        id: "concept-3",
+        name: "Selector CSS",
+        description: "Jenis-jenis selector",
+        contentMd: "# Selector CSS content",
+      },
     ] as any);
     vi.mocked(prisma.conceptEmbedding.createMany).mockResolvedValue({
       count: 3,

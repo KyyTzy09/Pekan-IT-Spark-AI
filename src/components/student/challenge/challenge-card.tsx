@@ -41,7 +41,7 @@ const STATUS_META: Record<
   { label: string; color: string; bg: string }
 > = {
   ACTIVE: {
-    label: "Belum selesai",
+    label: "Aktif",
     color: "text-[var(--coral)]",
     bg: "bg-[var(--coral)]/10",
   },
@@ -62,12 +62,34 @@ const STATUS_META: Record<
   },
 };
 
+const SOURCE_META: Record<
+  ChallengeSource,
+  { label: string; color: string; bg: string }
+> = {
+  AUTO_DAILY: {
+    label: "Harian",
+    color: "text-[var(--teal)]",
+    bg: "bg-[var(--teal)]/10",
+  },
+  AUTO_WEEKLY: {
+    label: "Mingguan",
+    color: "text-[var(--purple)]",
+    bg: "bg-[var(--purple)]/10",
+  },
+  ON_DEMAND: {
+    label: "Custom",
+    color: "text-amber-600",
+    bg: "bg-amber-500/10",
+  },
+};
+
 export const ChallengeCard = memo(function ChallengeCard({
   challenge,
 }: {
   challenge: ChallengeListItem;
 }) {
-  const meta = STATUS_META[challenge.status];
+  const statusMeta = STATUS_META[challenge.status];
+  const sourceMeta = SOURCE_META[challenge.source];
   const mix = challenge.mixConfig;
   const progressPct =
     challenge.itemCount > 0
@@ -94,17 +116,21 @@ export const ChallengeCard = memo(function ChallengeCard({
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest",
-                meta.color,
-                meta.bg,
+                sourceMeta.color,
+                sourceMeta.bg,
               )}
             >
-              {meta.label}
+              {sourceMeta.label}
             </span>
-            {challenge.source === "ON_DEMAND" && (
-              <span className="rounded-full bg-[var(--purple)]/10 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--purple)]">
-                Custom
-              </span>
-            )}
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest",
+                statusMeta.color,
+                statusMeta.bg,
+              )}
+            >
+              {statusMeta.label}
+            </span>
           </div>
           <h3 className="mt-2 line-clamp-2 font-heading text-[15px] font-bold leading-tight sm:text-[16px]">
             {challenge.title}

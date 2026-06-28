@@ -76,11 +76,11 @@ export function PracticeLanding({ subjectSlug }: PracticeLandingProps) {
                 Spark Practice
               </span>
               <h1 className="mt-2 font-heading text-[24px] font-bold leading-tight tracking-tight sm:text-[28px]">
-                Mode{" "}
-                <span className="text-gradient-cool">Latihan</span>
+                Mode <span className="text-gradient-cool">Latihan</span>
               </h1>
               <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground sm:text-[13px]">
-                Pilih cara latihanmu. Soal adaptif, topik spesifik, atau generate custom sesuai kebutuhan.
+                Pilih cara latihanmu. Soal adaptif, topik spesifik, atau
+                generate custom sesuai kebutuhan.
               </p>
             </div>
             <div className="flex items-center gap-2">

@@ -46,7 +46,9 @@ interface SearchOptions {
 export async function retrieveContext(
   options: SearchOptions,
 ): Promise<RetrievedDocument[]> {
-  aiLog.info(`${EMOJI.start} retrieveContext — "${options.query.slice(0, 50)}..."`);
+  aiLog.info(
+    `${EMOJI.start} retrieveContext — "${options.query.slice(0, 50)}..."`,
+  );
 
   // BUG-16 FIX: Use AbortController to cancel inner work on timeout
   const controller = new AbortController();
@@ -58,7 +60,9 @@ export async function retrieveContext(
     return result;
   } catch (e: unknown) {
     clearTimeout(timeoutId);
-    aiLog.warn(`${EMOJI.warn} retrieveContext timeout/gagal, pakai keyword search`);
+    aiLog.warn(
+      `${EMOJI.warn} retrieveContext timeout/gagal, pakai keyword search`,
+    );
     return keywordSearch(options);
   }
 }
@@ -162,7 +166,9 @@ async function retrieveContextInner(
       results.push(...chunkScored);
     }
 
-    aiLog.info(`${EMOJI.ok} retrieveContext selesai — ${results.length} item konteks`);
+    aiLog.info(
+      `${EMOJI.ok} retrieveContext selesai — ${results.length} item konteks`,
+    );
   } catch (e: unknown) {
     aiLog.warn(`${EMOJI.warn} Vector search gagal, pakai keyword search`);
     return keywordSearch(options);
@@ -242,17 +248,27 @@ export async function getRelevantConcepts(query: string, subjectId?: string) {
   const timeoutId = setTimeout(() => controller.abort(), 2500);
 
   try {
-    const result = await getRelevantConceptsInner(query, subjectId, controller.signal);
+    const result = await getRelevantConceptsInner(
+      query,
+      subjectId,
+      controller.signal,
+    );
     clearTimeout(timeoutId);
     return result;
   } catch (e: unknown) {
     clearTimeout(timeoutId);
-    aiLog.warn(`${EMOJI.warn} getRelevantConcepts timeout, pakai keyword search`);
+    aiLog.warn(
+      `${EMOJI.warn} getRelevantConcepts timeout, pakai keyword search`,
+    );
     return keywordRelevantConcepts(query, subjectId);
   }
 }
 
-async function getRelevantConceptsInner(query: string, subjectId?: string, signal?: AbortSignal) {
+async function getRelevantConceptsInner(
+  query: string,
+  subjectId?: string,
+  signal?: AbortSignal,
+) {
   if (signal?.aborted) throw new Error("Aborted");
 
   const { embedding: queryEmbedding } = await embed({

@@ -65,6 +65,10 @@ export async function decrementAiQuota(
   });
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export async function incrementAiQuota(
   userId: string,
   kind: AiQuotaKind,
@@ -75,59 +79,92 @@ export async function incrementAiQuota(
   const limit = AI_QUOTA_LIMITS[kind];
   const countKey = `${kind}Count` as const;
 
-  // Use serializable transaction to prevent race conditions.
-  // Two concurrent requests will serialize — one wins, one retries.
-  return await prisma.$transaction(async (tx) => {
-    // Upsert: ensure row exists for today
-    const existing = await tx.dailyAiQuota.findUnique({ where: { userId } });
+  // Retry up to 5 times on P2034 (transaction write conflict / deadlock)
+  const maxRetries = 5;
+  let lastErr: unknown;
 
-    if (!existing || existing.date.getTime() !== today.getTime()) {
-      // New day or new user — create/reset
-      const created = await tx.dailyAiQuota.upsert({
-        where: { userId },
-        create: {
-          userId,
-          date: today,
-          questionsCount: kind === "questions" ? by : 0,
-          materialsCount: kind === "materials" ? by : 0,
-          chatCount: kind === "chat" ? by : 0,
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Use serializable transaction to prevent race conditions.
+      // Two concurrent requests will serialize — one wins, one retries.
+      return await prisma.$transaction(
+        async (tx) => {
+          // Upsert: ensure row exists for today
+          const existing = await tx.dailyAiQuota.findUnique({ where: { userId } });
+
+          if (!existing || existing.date.getTime() !== today.getTime()) {
+            // New day or new user — create/reset
+            const created = await tx.dailyAiQuota.upsert({
+              where: { userId },
+              create: {
+                userId,
+                date: today,
+                questionsCount: kind === "questions" ? by : 0,
+                materialsCount: kind === "materials" ? by : 0,
+                chatCount: kind === "chat" ? by : 0,
+              },
+              update: {
+                date: today,
+                questionsCount: kind === "questions" ? by : 0,
+                materialsCount: kind === "materials" ? by : 0,
+                chatCount: kind === "chat" ? by : 0,
+                updatedAt: new Date(),
+              },
+            });
+            const current = created[countKey] as number;
+            if (current > limit) {
+              return { allowed: false, current, limit };
+            }
+            return { allowed: true, current, limit };
+          }
+
+          // Same day — check then increment atomically within transaction
+          const current = existing[countKey] as number;
+          if (current + by > limit) {
+            return { allowed: false, current, limit };
+          }
+
+          const updated = await tx.dailyAiQuota.update({
+            where: { userId },
+            data: {
+              [countKey]: { increment: by },
+              updatedAt: new Date(),
+            },
+          });
+
+          return {
+            allowed: true,
+            current: updated[countKey] as number,
+            limit,
+          };
         },
-        update: {
-          date: today,
-          questionsCount: kind === "questions" ? by : 0,
-          materialsCount: kind === "materials" ? by : 0,
-          chatCount: kind === "chat" ? by : 0,
-          updatedAt: new Date(),
+        {
+          // Use serializable isolation to prevent concurrent over-increment
+          isolationLevel: "Serializable",
         },
-      });
-      const current = created[countKey] as number;
-      if (current > limit) {
-        return { allowed: false, current, limit };
+      );
+    } catch (err: unknown) {
+      lastErr = err;
+
+      // Only retry on P2034 (transaction write conflict / deadlock)
+      const isWriteConflict =
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code: string }).code === "P2034";
+
+      if (!isWriteConflict || attempt === maxRetries) {
+        throw err;
       }
-      return { allowed: true, current, limit };
+
+      // Exponential backoff: 50ms, 100ms, 200ms, 400ms
+      const delay = 50 * Math.pow(2, attempt - 1);
+      console.warn(
+        `[AI_QUOTA] P2034 write conflict on attempt ${attempt}/${maxRetries} for user ${userId}, retrying in ${delay}ms...`,
+      );
+      await sleep(delay);
     }
+  }
 
-    // Same day — check then increment atomically within transaction
-    const current = existing[countKey] as number;
-    if (current + by > limit) {
-      return { allowed: false, current, limit };
-    }
-
-    const updated = await tx.dailyAiQuota.update({
-      where: { userId },
-      data: {
-        [countKey]: { increment: by },
-        updatedAt: new Date(),
-      },
-    });
-
-    return {
-      allowed: true,
-      current: updated[countKey] as number,
-      limit,
-    };
-  }, {
-    // Use serializable isolation to prevent concurrent over-increment
-    isolationLevel: "Serializable",
-  });
+  throw lastErr;
 }

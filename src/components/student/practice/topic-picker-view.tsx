@@ -84,7 +84,9 @@ export function TopicPickerView({
   }, [filteredTopics]);
 
   const allTopics = React.useMemo(() => {
-    return filteredTopics.sort((a, b) => a.topicName.localeCompare(b.topicName));
+    return filteredTopics.sort((a, b) =>
+      a.topicName.localeCompare(b.topicName),
+    );
   }, [filteredTopics]);
 
   return (
@@ -106,11 +108,11 @@ export function TopicPickerView({
                 Pilih Topik
               </span>
               <h1 className="mt-2 font-heading text-[22px] font-bold leading-tight sm:text-[26px]">
-                Pilih Topik{" "}
-                <span className="text-gradient-cool">Latihan</span>
+                Pilih Topik <span className="text-gradient-cool">Latihan</span>
               </h1>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
-                Pilih topik yang mau kamu latih. Rekomendasi berdasarkan kelemahanmu.
+                Pilih topik yang mau kamu latih. Rekomendasi berdasarkan
+                kelemahanmu.
               </p>
             </div>
             <Button

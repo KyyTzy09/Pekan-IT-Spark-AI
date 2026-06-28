@@ -8,7 +8,9 @@ import {
 /** Start of today in UTC (matches challenges.ts startOfToday) */
 function startOfTodayUtc(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
 }
 
 export async function GET() {

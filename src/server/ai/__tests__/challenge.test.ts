@@ -66,4 +66,3 @@ describe("tryMapAndRecoverMixPlan", () => {
     expect(parsed.items[0].material?.content).toBe("Pendahuluan singkat.");
   });
 });
-

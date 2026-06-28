@@ -8,6 +8,11 @@ import {
   selectNextQuestionDifficulty,
 } from "@/server/actions/subjects";
 import { summarizeSession } from "@/server/learning/adaptive";
+import {
+  computeConfidence,
+  daysBetween,
+  getMasteryLabel,
+} from "@/server/learning/mastery";
 import type {
   ConceptStatus,
   Difficulty,
@@ -94,6 +99,22 @@ export async function getNextPracticeQuestion(
   const topicId = options.topicId;
 
   let topicContext: { topicId: string; topicName: string } | null = null;
+
+  // When no subjectSlug (adaptive mode), only use focused subjects
+  let subjectWhere: Record<string, unknown> = {};
+  if (subjectSlug) {
+    subjectWhere = { slug: subjectSlug as never };
+  } else {
+    // Adaptive mode: filter by user's focused subjects
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId },
+      select: { focusedSubjects: true },
+    });
+    if (profile?.focusedSubjects && profile.focusedSubjects.length > 0) {
+      subjectWhere = { id: { in: profile.focusedSubjects } };
+    }
+  }
+
   const [topic, subjects] = await Promise.all([
     topicId
       ? prisma.topic.findFirst({
@@ -105,7 +126,7 @@ export async function getNextPracticeQuestion(
         })
       : null,
     prisma.subject.findMany({
-      where: subjectSlug ? { slug: subjectSlug as never } : {},
+      where: subjectWhere,
       select: { id: true, slug: true, name: true },
     }),
   ]);
@@ -154,9 +175,9 @@ export async function getNextPracticeQuestion(
   }
 
   const [profiles, recentlyAttempted] = await Promise.all([
-    prisma.studentKnowledgeProfile.findMany({
+    prisma.studentMastery.findMany({
       where: { userId, conceptId: { in: concepts.map((c) => c.id) } },
-      select: { conceptId: true, masteryScore: true, status: true },
+      select: { conceptId: true, score: true, confidence: true, attemptCount: true },
     }),
     prisma.questionAttempt.findMany({
       where: {
@@ -186,12 +207,18 @@ export async function getNextPracticeQuestion(
   ]);
   const masteryByConcept = new Map<
     string,
-    { score: number; status: ConceptStatus }
+    { score: number; status: ConceptStatus; confidence: number }
   >();
   for (const p of profiles) {
+    const masteryLabel = getMasteryLabel(p.score);
+    const status: ConceptStatus = 
+      p.score >= 89 ? "MASTERED" :
+      p.score < 16 && p.score > 0 ? "STRUGGLING" :
+      p.score > 0 ? "LEARNING" : "NOT_STARTED";
     masteryByConcept.set(p.conceptId, {
-      score: p.masteryScore,
-      status: p.status,
+      score: p.score,
+      status,
+      confidence: p.confidence,
     });
   }
   const seenQuestionByConcept = new Map<string, Set<string>>();
@@ -452,7 +479,8 @@ export async function getQuestionHint(input: {
     where: { userId, questionId: input.questionId },
     select: { id: true },
   });
-  if (!attempt) return { ok: false, error: "Jawab soal dulu sebelum minta hint." };
+  if (!attempt)
+    return { ok: false, error: "Jawab soal dulu sebelum minta hint." };
   return { ok: true, hint: question.hint, explanation: question.explanation };
 }
 
@@ -946,11 +974,15 @@ export async function submitPracticeAnswer(input: {
   });
   if (!question) return { ok: false, error: "Soal tidak ditemukan" };
 
-  const prevProfile = await prisma.studentKnowledgeProfile.findUnique({
+  const prevProfile = await prisma.studentMastery.findUnique({
     where: { userId_conceptId: { userId, conceptId: question.conceptId } },
-    select: { status: true, masteryScore: true },
+    select: { score: true },
   });
-  const prevStatus: ConceptStatus = prevProfile?.status ?? "NOT_STARTED";
+  const prevScore = prevProfile?.score ?? 0;
+  const prevStatus: ConceptStatus = 
+    prevScore >= 89 ? "MASTERED" :
+    prevScore < 16 && prevScore > 0 ? "STRUGGLING" :
+    prevScore > 0 ? "LEARNING" : "NOT_STARTED";
 
   const isCorrect = answersMatch(
     input.answer,
@@ -1027,13 +1059,13 @@ export async function submitPracticeAnswer(input: {
           where: { id: { in: prereqIds } },
           select: { id: true, name: true },
         }),
-        prisma.studentKnowledgeProfile.findMany({
+        prisma.studentMastery.findMany({
           where: { userId, conceptId: { in: prereqIds } },
-          select: { conceptId: true, masteryScore: true },
+          select: { conceptId: true, score: true },
         }),
       ]);
       const scoreMap = new Map(
-        profiles.map((p) => [p.conceptId, p.masteryScore]),
+        profiles.map((p) => [p.conceptId, p.score]),
       );
       const sorted = prereqs
         .map((p) => ({
@@ -1111,17 +1143,19 @@ export async function getPracticeStats(): Promise<PracticeStats | null> {
   const correct = recent.filter((a) => a.isCorrect).length;
   const accuracy = Math.round((correct / recent.length) * 100);
 
-  const profiles = await prisma.studentKnowledgeProfile.findMany({
+  const profiles = await prisma.studentMastery.findMany({
     where: { userId },
-    select: { conceptId: true, status: true, masteryScore: true },
+    select: { conceptId: true, score: true, confidence: true },
   });
   const masteryByConcept = new Map(
     profiles.map((p) => [
       p.conceptId,
       {
         conceptId: p.conceptId,
-        status: p.status,
-        masteryScore: p.masteryScore,
+        status: (p.score >= 89 ? "MASTERED" :
+          p.score < 16 && p.score > 0 ? "STRUGGLING" :
+          p.score > 0 ? "LEARNING" : "NOT_STARTED") as ConceptStatus,
+        masteryScore: p.score / 100, // convert to 0-1 for old system
       },
     ]),
   );
@@ -1141,8 +1175,8 @@ export async function getPracticeStats(): Promise<PracticeStats | null> {
   return {
     accuracyPct: accuracy,
     recentTotal: recent.length,
-    masteredCount: profiles.filter((p) => p.status === "MASTERED").length,
-    strugglingCount: profiles.filter((p) => p.status === "STRUGGLING").length,
+    masteredCount: profiles.filter((p) => p.score >= 89).length,
+    strugglingCount: profiles.filter((p) => p.score < 16 && p.score > 0).length,
     currentDifficulty: summary.currentDifficulty,
     recommendedDifficulty: summary.recommendedDifficulty,
     longestStreak: summary.longestStreak,

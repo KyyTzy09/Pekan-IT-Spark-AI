@@ -68,7 +68,15 @@ export async function POST(req: Request) {
           role: "STUDENT",
           studentProfile: { create: {} },
         },
-        select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isOnboarded: true,
+          image: true,
+          sessionVersion: true,
+        },
       });
 
       // Set session agar langsung login (konsisten dengan server action)
@@ -122,7 +130,15 @@ export async function POST(req: Request) {
             role: "PARENT",
             parentProfile: { create: {} },
           },
-          select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            isOnboarded: true,
+            image: true,
+            sessionVersion: true,
+          },
         });
 
         await tx.parentStudentLink.update({

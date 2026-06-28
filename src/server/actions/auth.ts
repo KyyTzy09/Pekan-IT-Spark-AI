@@ -183,7 +183,15 @@ export async function registerAction(
         role: "STUDENT",
         studentProfile: { create: {} },
       },
-      select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isOnboarded: true,
+        image: true,
+        sessionVersion: true,
+      },
     });
     await setSession(makeSessionUser(user));
     clearRateLimit(`register:${email}`);
@@ -229,7 +237,15 @@ export async function registerAction(
           role: "PARENT",
           parentProfile: { create: {} },
         },
-        select: { id: true, email: true, name: true, role: true, isOnboarded: true, image: true, sessionVersion: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isOnboarded: true,
+          image: true,
+          sessionVersion: true,
+        },
       });
 
       await tx.parentStudentLink.update({

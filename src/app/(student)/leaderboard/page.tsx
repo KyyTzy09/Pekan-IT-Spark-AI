@@ -71,9 +71,6 @@ export default async function LeaderboardPage() {
   }));
 
   return (
-    <LeaderboardView
-      leaderboard={leaderboard}
-      currentUserId={session.id}
-    />
+    <LeaderboardView leaderboard={leaderboard} currentUserId={session.id} />
   );
 }

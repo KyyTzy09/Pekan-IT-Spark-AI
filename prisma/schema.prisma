@@ -264,6 +264,7 @@ model Concept {
   dependents        ConceptPrerequisite[]     @relation("ConceptDependents")
   questions         Question[]
   knowledgeProfiles StudentKnowledgeProfile[]
+  masteries         StudentMastery[]
   embeddings        ConceptEmbedding[]
   materials         Material[]
 
@@ -288,6 +289,7 @@ model Question {
   concept              Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
   type                 QuestionType
   difficulty           Difficulty    @default(MEDIUM)
+  difficultyScore      Float         @default(50)  // 0-100 continuous difficulty
   bloomTaxonomy        BloomTaxonomy @default(UNDERSTAND)
   questionText         String        @db.Text
   options              Json?         @db.JsonB
@@ -926,4 +928,62 @@ model GenerationLock {
   @@unique([userId, lockType])
   @@index([expiresAt])
   @@map("generation_locks")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NEW MASTERY SYSTEM — Continuous Running Score (0-100)
+// ═══════════════════════════════════════════════════════════════
+
+model StudentMastery {
+  id            String   @id @default(cuid())
+  userId        String
+  conceptId     String
+  concept       Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  // Core mastery (0-100)
+  score         Float    @default(0)
+  confidence    Float    @default(0)
+
+  // Stats
+  attemptCount  Int      @default(0)
+  correctCount  Int      @default(0)
+  totalTimeSpent Int     @default(0)  // detik
+
+  // Peak tracking
+  peakScore     Float    @default(0)
+
+  // Decay tracking
+  lastAttemptAt DateTime?
+  lastDecayAt   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, conceptId])
+  @@index([userId])
+  @@index([score])
+  @@map("student_mastery")
+}
+
+model SubjectMastery {
+  id            String   @id @default(cuid())
+  userId        String
+  subjectId     String
+
+  // Aggregated mastery (0-100)
+  score         Float    @default(0)
+  confidence    Float    @default(0)
+
+  // Stats
+  conceptsMastered Int   @default(0)
+  conceptsTotal    Int   @default(0)
+
+  // For challenge/question generation
+  recommendedDifficulty Float @default(50)
+
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, subjectId])
+  @@index([userId])
+  @@map("subject_mastery")
 }

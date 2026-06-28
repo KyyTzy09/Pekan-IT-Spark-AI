@@ -51,7 +51,9 @@ export function GeneratePracticeView({
     subjects[0]?.id ?? "",
   );
   const [selectedTopicId, setSelectedTopicId] = React.useState<string>("");
-  const [selectedConceptIds, setSelectedConceptIds] = React.useState<string[]>([]);
+  const [selectedConceptIds, setSelectedConceptIds] = React.useState<string[]>(
+    [],
+  );
   const [freeformText, setFreeformText] = React.useState<string>("");
   const [numQuestions, setNumQuestions] = React.useState<number>(5);
   const [generating, setGenerating] = React.useState(false);
@@ -183,8 +185,7 @@ export function GeneratePracticeView({
                 Generate Custom
               </span>
               <h1 className="mt-2 font-heading text-[22px] font-bold leading-tight sm:text-[26px]">
-                Generate{" "}
-                <span className="text-gradient-warm">Soal Custom</span>
+                Generate <span className="text-gradient-warm">Soal Custom</span>
               </h1>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
                 Pilih konsep atau ketik tema bebas. AI buatkan soal untukmu.

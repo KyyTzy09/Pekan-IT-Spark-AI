@@ -410,12 +410,14 @@ export function PracticePlayer({
                 </Button>
               )}
               {error && (
-                <div className={cn(
-                  "rounded-2xl border p-4 text-[12.5px] leading-relaxed",
-                  error.includes("🎉")
-                    ? "border-emerald-300/50 bg-emerald-50/80 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200"
-                    : "border-rose-300/50 bg-rose-50/80 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200"
-                )}>
+                <div
+                  className={cn(
+                    "rounded-2xl border p-4 text-[12.5px] leading-relaxed",
+                    error.includes("🎉")
+                      ? "border-emerald-300/50 bg-emerald-50/80 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200"
+                      : "border-rose-300/50 bg-rose-50/80 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200",
+                  )}
+                >
                   <p className="font-medium">{error}</p>
                   {error.includes("🎉") && (
                     <Button
@@ -561,9 +563,7 @@ export function PracticePlayer({
                 size="sm"
                 className="rounded-full"
               >
-                <Link href="/dashboard">
-                  Selesai latihan
-                </Link>
+                <Link href="/dashboard">Selesai latihan</Link>
               </Button>
             </div>
           )}
@@ -623,7 +623,10 @@ function SessionHeader({
   questionsAnswered: number;
   correctCount: number;
 }) {
-  const sessionAccuracy = questionsAnswered > 0 ? Math.round((correctCount / questionsAnswered) * 100) : 0;
+  const sessionAccuracy =
+    questionsAnswered > 0
+      ? Math.round((correctCount / questionsAnswered) * 100)
+      : 0;
   return (
     <div className="grid gap-3 sm:grid-cols-4">
       <div className="rounded-2xl border border-border/40 bg-card/70 p-4 backdrop-blur-xl">

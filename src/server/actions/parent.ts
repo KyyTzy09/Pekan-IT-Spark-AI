@@ -251,8 +251,7 @@ async function generateAndCacheTip(
     .join(", ");
   const strugglingList = struggling
     .map(
-      (s) =>
-        `'${s.concept.name}' (pelajaran ${s.concept.topic.subject.name})`,
+      (s) => `'${s.concept.name}' (pelajaran ${s.concept.topic.subject.name})`,
     )
     .join(", ");
 
@@ -510,5 +509,3 @@ export async function getParentDashboardData(activeStudentId?: string) {
     aiRecommendation,
   };
 }
-
-

@@ -346,9 +346,24 @@ export function MaterialsLibraryView({
                   <div className="grid grid-cols-3 gap-2">
                     {(
                       [
-                        { value: "EASY", label: "Mudah", emoji: "🌱", desc: "Pemula" },
-                        { value: "MEDIUM", label: "Sedang", emoji: "⚡", desc: "Menengah" },
-                        { value: "HARD", label: "Sulit", emoji: "🔥", desc: "Lanjutan" },
+                        {
+                          value: "EASY",
+                          label: "Mudah",
+                          emoji: "🌱",
+                          desc: "Pemula",
+                        },
+                        {
+                          value: "MEDIUM",
+                          label: "Sedang",
+                          emoji: "⚡",
+                          desc: "Menengah",
+                        },
+                        {
+                          value: "HARD",
+                          label: "Sulit",
+                          emoji: "🔥",
+                          desc: "Lanjutan",
+                        },
                       ] as const
                     ).map((d) => (
                       <button
@@ -374,7 +389,11 @@ export function MaterialsLibraryView({
                 <div className="rounded-xl bg-muted/50 px-4 py-3">
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
                     ℹ️ Materi akan di-generate oleh AI sesuai gaya belajarmu.
-                    Limit <span className="font-bold text-foreground">7x per hari</span>.
+                    Limit{" "}
+                    <span className="font-bold text-foreground">
+                      7x per hari
+                    </span>
+                    .
                   </p>
                 </div>
 

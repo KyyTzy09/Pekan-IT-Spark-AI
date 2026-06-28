@@ -3,7 +3,10 @@ import "server-only";
 import { z } from "zod";
 import { chatModel, generateText } from "@/lib/ai";
 import { aiLog, formatErr, EMOJI } from "@/lib/ai-logger";
-import { sanitizeNameForPrompt, sanitizeForPrompt } from "@/lib/prompt-sanitize";
+import {
+  sanitizeNameForPrompt,
+  sanitizeForPrompt,
+} from "@/lib/prompt-sanitize";
 import { retryOnZodError } from "@/server/utils/ai-retry";
 import { countWords } from "@/server/utils/word-count";
 import type { SubjectSlug } from "../../../generated/prisma/client";
@@ -236,33 +239,43 @@ Format JSON:
 }`;
 
 function sanitizeJsonString(raw: string): string {
-  const validEscapeChars = new Set(['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u']);
+  const validEscapeChars = new Set([
+    '"',
+    "\\",
+    "/",
+    "b",
+    "f",
+    "n",
+    "r",
+    "t",
+    "u",
+  ]);
   let inString = false;
   let result = "";
-  
+
   for (let i = 0; i < raw.length; i++) {
     const char = raw[i];
-    
+
     if (char === '"') {
       inString = !inString;
       result += char;
-    } else if (char === '\\' && inString && i + 1 < raw.length) {
+    } else if (char === "\\" && inString && i + 1 < raw.length) {
       // Check if next char makes a valid escape sequence
       const nextChar = raw[i + 1];
       if (validEscapeChars.has(nextChar)) {
         // Valid escape: keep both chars
         result += char;
-      } else if (nextChar === '\n' || nextChar === '\r') {
+      } else if (nextChar === "\n" || nextChar === "\r") {
         // Newline in string: replace with escaped newline
-        result += '\\n';
+        result += "\\n";
         i++; // skip the newline
       } else {
         // Invalid escape (like \p, \c, etc.): drop the backslash
         aiLog.warn(`Sanitizing invalid escape: \\${nextChar}`);
       }
-    } else if (inString && (char === '\n' || char === '\r')) {
+    } else if (inString && (char === "\n" || char === "\r")) {
       // Unescaped newline in string: escape it
-      result += '\\n';
+      result += "\\n";
     } else {
       result += char;
     }
@@ -280,7 +293,9 @@ function safeParseJson(text: string): unknown {
     try {
       return JSON.parse(sanitized);
     } catch (parseErr) {
-      aiLog.warn(`${EMOJI.warn} safeParseJson gagal parse kandidat: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+      aiLog.warn(
+        `${EMOJI.warn} safeParseJson gagal parse kandidat: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
+      );
       throw new Error(
         `JSON parsing failed: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
       );
@@ -566,7 +581,9 @@ export async function tryMapAndRecoverMixPlan(
         });
         mappedItem.material = generatedMaterial;
       } catch (genErr) {
-        aiLog.error(`${EMOJI.error} Fallback material gagal: ${formatErr(genErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Fallback material gagal: ${formatErr(genErr)}`,
+        );
         mappedItem.material = {
           title: `${conceptName} — Panduan Singkat`,
           content: `## ${conceptName}\n\nMari pelajari konsep ${conceptName} ini. Konsep ini sangat penting untuk memahami dasar subjek ${subjectName}.\n\n### Pengantar\n${rationale}\n\n💭 Coba pikirkan: Bagaimana menerapkan konsep ini dalam kehidupan sehari-hari?`,
@@ -589,7 +606,9 @@ export async function tryMapAndRecoverMixPlan(
         });
         mappedItem.reflection = generatedReflection;
       } catch (genErr) {
-        aiLog.error(`${EMOJI.error} Fallback reflection gagal: ${formatErr(genErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Fallback reflection gagal: ${formatErr(genErr)}`,
+        );
         mappedItem.reflection = {
           prompt: `Bagaimana pemahamanmu tentang konsep ${conceptName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
           context: `Refleksi tentang konsep ${conceptName}`,
@@ -668,7 +687,9 @@ export async function tryMapAndRecoverMixPlan(
         });
         fallbackItem.material = generatedMaterial;
       } catch (genErr) {
-        aiLog.error(`${EMOJI.error} Fallback material gagal: ${formatErr(genErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Fallback material gagal: ${formatErr(genErr)}`,
+        );
         fallbackItem.material = {
           title: `${conceptName} — Panduan Singkat`,
           content: `## ${conceptName}\n\nMari pelajari konsep ${conceptName} ini. Konsep ini sangat penting untuk memahami dasar subjek ${subjectName}.\n\n### Pengantar\nPenjelasan singkat materi.\n\n💭 Coba pikirkan: Bagaimana menerapkan konsep ini dalam kehidupan sehari-hari?`,
@@ -709,7 +730,9 @@ export async function tryMapAndRecoverMixPlan(
         });
         fallbackItem.reflection = generatedReflection;
       } catch (genErr) {
-        aiLog.error(`${EMOJI.error} Fallback reflection gagal: ${formatErr(genErr)}`);
+        aiLog.error(
+          `${EMOJI.error} Fallback reflection gagal: ${formatErr(genErr)}`,
+        );
         fallbackItem.reflection = {
           prompt: `Bagaimana pemahamanmu tentang konsep ${conceptName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
           context: `Refleksi tentang konsep ${conceptName}`,
@@ -855,7 +878,9 @@ Analisis jawaban siswa di atas. Tentukan sentimen (POSITIVE jika siswa semangat,
       suggestions: suggestions.slice(0, 3),
     };
   } catch (err: unknown) {
-    aiLog.warn(`${EMOJI.warn} analyzeReflection gagal, pakai recovery: ${formatErr(err)}`);
+    aiLog.warn(
+      `${EMOJI.warn} analyzeReflection gagal, pakai recovery: ${formatErr(err)}`,
+    );
     return {
       sentiment: "NEUTRAL",
       depth: "MODERATE",
@@ -912,7 +937,9 @@ Buat prompt yang:
       "Refleksi pembelajaran") as string;
     return { prompt, context };
   } catch (err: unknown) {
-    aiLog.warn(`${EMOJI.warn} generateReflectionPrompt gagal, pakai recovery: ${formatErr(err)}`);
+    aiLog.warn(
+      `${EMOJI.warn} generateReflectionPrompt gagal, pakai recovery: ${formatErr(err)}`,
+    );
     return {
       prompt: `Bagaimana pemahamanmu tentang konsep ${args.topicName || args.subjectName} setelah belajar hari ini? Jelaskan bagian yang paling menarik bagimu.`,
       context: `Refleksi tentang konsep ${args.topicName || args.subjectName}`,
@@ -975,7 +1002,7 @@ async function _generateMaterialMarkdownInner(
 🔴 [SECTION] SETIAP section ### minimal 4 kalimat. TIDAK BOLEH cuma 1-2 kalimat.
 🔴 [OUTPUT] HANYA markdown. TIDAK BOLEH ada teks meta, penjelasan, atau basa-basi.
 🔴 [GAYA] Sesuai gaya belajar siswa:
-${styleNote.replace(/^/gm, '   ')}
+${styleNote.replace(/^/gm, "   ")}
 🔴 [DIFFICULTY] ${difficulty === "EASY" ? "Bahasa sederhana, analogi sehari-hari, definisi dulu baru contoh." : difficulty === "HARD" ? "Terminologi advanced, dorong analitis." : "Definisi + contoh + insight."}`;
 
   const userPrompt = `Mapel: ${args.subjectName}
@@ -1070,7 +1097,7 @@ Kembalikan output JSON valid sesuai format schema berikut:
   const userPrompt = `Rancang tantangan mingguan untuk siswa:
 - Nama: ${sanitizeNameForPrompt(input.userName) ?? "Siswa"}
 - Kelas: ${input.grade ?? "belum diisi"}
-- Mata pelajaran fokus: ${input.focusedSubjects.map(s => sanitizeForPrompt(s)).join(", ") || "Semua Mapel"}
+- Mata pelajaran fokus: ${input.focusedSubjects.map((s) => sanitizeForPrompt(s)).join(", ") || "Semua Mapel"}
   
 Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
 
@@ -1098,7 +1125,9 @@ Buatlah judul dan deskripsi yang seru dan asyik khas Spark AI!`;
 
     return { title, description, goal };
   } catch (err) {
-    aiLog.warn(`${EMOJI.warn} generateWeeklyChallengeAI gagal, pakai fallback: ${formatErr(err)}`);
+    aiLog.warn(
+      `${EMOJI.warn} generateWeeklyChallengeAI gagal, pakai fallback: ${formatErr(err)}`,
+    );
     return {
       title: "Misi Mingguan: Konsistensi Belajar",
       description:
@@ -1184,7 +1213,7 @@ ATURAN WAJIB:
   const userPrompt = `Buat konten tantangan mingguan untuk siswa:
 - Nama: ${sanitizeNameForPrompt(input.userName) ?? "Siswa"}
 - Kelas: ${input.grade ?? "SMA"}
-- Mata pelajaran fokus: ${input.focusedSubjects.map(s => sanitizeForPrompt(s)).join(", ") || "Semua Mapel"}
+- Mata pelajaran fokus: ${input.focusedSubjects.map((s) => sanitizeForPrompt(s)).join(", ") || "Semua Mapel"}
   
 Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang merujuk pada mapel-mapel di atas. Soal harus benar-benar sulit, bukan soal mudah. Materi harus panjang dan berbobot.`;
 
@@ -1200,7 +1229,9 @@ Buatlah 8-15 soal HARD (sulit) pilihan ganda dan 1-3 materi mendalam yang meruju
     const validated = weeklyContentSchema.parse(parsedJson);
     return validated;
   } catch (err) {
-    aiLog.warn(`${EMOJI.warn} generateWeeklyChallengeContent parse utama gagal, coba alternatif: ${formatErr(err)}`);
+    aiLog.warn(
+      `${EMOJI.warn} generateWeeklyChallengeContent parse utama gagal, coba alternatif: ${formatErr(err)}`,
+    );
     try {
       const { text: retryText } = await generateText({
         model: chatModel,
@@ -1325,7 +1356,9 @@ Buat konten tantangan mingguan untuk mapel di atas. Output JSON.`;
       materials: validated.materials.slice(0, input.materialsCount),
     };
   } catch (err) {
-    aiLog.warn(`${EMOJI.warn} generateWeeklyPerSubjectAI gagal: ${formatErr(err)}`);
+    aiLog.warn(
+      `${EMOJI.warn} generateWeeklyPerSubjectAI gagal: ${formatErr(err)}`,
+    );
     return { questions: [], materials: [] };
   }
 }
@@ -1385,7 +1418,9 @@ export async function generateWeeklyDeepMaterial(input: {
   try {
     return await retryOnZodError(() => _generateWeeklyDeepMaterialInner(input));
   } catch (err) {
-    aiLog.warn(`${EMOJI.warn} generateWeeklyDeepMaterial gagal setelah retry: ${formatErr(err)}`);
+    aiLog.warn(
+      `${EMOJI.warn} generateWeeklyDeepMaterial gagal setelah retry: ${formatErr(err)}`,
+    );
     return {
       title: `${input.conceptName} — Deep Dive`,
       content: `## ${input.conceptName}\n\nMateri ini sedang disiapkan. Coba lagi nanti atau pilih mapel lain.`,

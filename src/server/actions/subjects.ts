@@ -21,6 +21,17 @@ import {
   computeMasteryUpdate,
   deriveConceptStatus,
 } from "@/server/learning/adaptive";
+import {
+  computeNewMastery,
+  computeConfidence,
+  daysBetween,
+  estimateAvgTimeForDifficulty,
+  getMasteryLabel,
+  aggregateSubjectMastery,
+} from "@/server/learning/mastery";
+import {
+  difficultyToScore,
+} from "@/server/learning/difficulty";
 import type {
   BloomTaxonomy,
   ConceptStatus,
@@ -70,7 +81,13 @@ export async function addCustomSubject(
   const userId = session.id;
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
-    select: { educationLevel: true, grade: true, focusedSubjects: true, learningStyle: true, challengeSubjectIds: true },
+    select: {
+      educationLevel: true,
+      grade: true,
+      focusedSubjects: true,
+      learningStyle: true,
+      challengeSubjectIds: true,
+    },
   });
   const educationLevel = profile?.educationLevel === "SMK" ? "SMK" : "SMA";
   const learningStyle = profile?.learningStyle ?? null;
@@ -362,18 +379,18 @@ export async function addCustomSubject(
     const currentChallengeIds = Array.isArray(profile?.challengeSubjectIds)
       ? profile.challengeSubjectIds
       : [];
-    
+
     const updateData: Record<string, any> = {};
-    
+
     if (!currentFocused.includes(subject.id)) {
       updateData.focusedSubjects = { push: subject.id };
     }
-    
+
     // Also add to challengeSubjectIds so it gets daily challenges
     if (!currentChallengeIds.includes(subject.id)) {
       updateData.challengeSubjectIds = { push: subject.id };
     }
-    
+
     if (Object.keys(updateData).length > 0) {
       await prisma.studentProfile.update({
         where: { userId },
@@ -420,7 +437,7 @@ export async function recordQuestionAttempt(
 
   const question = await prisma.question.findUnique({
     where: { id: questionId },
-    select: { id: true, conceptId: true, difficulty: true },
+    select: { id: true, conceptId: true, difficulty: true, difficultyScore: true },
   });
   if (!question) return { ok: false, error: "Soal tidak ditemukan" };
 
@@ -434,7 +451,12 @@ export async function recordQuestionAttempt(
     },
   });
 
-  const profile = await prisma.studentKnowledgeProfile.findUnique({
+  // ═══════════════════════════════════════════════════════════════
+  // NEW MASTERY SYSTEM — Running Score (0-100)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Get existing mastery from new table
+  const existingMastery = await prisma.studentMastery.findUnique({
     where: {
       userId_conceptId: {
         userId,
@@ -442,16 +464,75 @@ export async function recordQuestionAttempt(
       },
     },
   });
-  const prevScore = profile?.masteryScore ?? 0;
-  const attempt: AttemptRecord = {
+
+  const prevScore = existingMastery?.score ?? 0;
+  const attemptCount = existingMastery?.attemptCount ?? 0;
+  const lastAttemptAt = existingMastery?.lastAttemptAt;
+
+  // Calculate days since last attempt
+  const now = new Date();
+  const daysSinceLastAttempt = lastAttemptAt
+    ? daysBetween(lastAttemptAt, now)
+    : 0;
+
+  // Get difficulty score (use new field, fallback to conversion)
+  const difficultyScore = question.difficultyScore ?? difficultyToScore(question.difficulty);
+
+  // Calculate new mastery using new system
+  const masteryResult = computeNewMastery({
+    currentMastery: prevScore,
+    attemptCount,
     isCorrect,
-    difficulty: question.difficulty,
-    conceptId: question.conceptId,
-    timeSpent: timeSpent ?? null,
-    createdAt: new Date(),
-  };
-  const newMastery = computeMasteryUpdate(prevScore, attempt);
-  const newStatus = deriveConceptStatus(newMastery);
+    difficultyScore,
+    timeSpentSeconds: timeSpent ?? 0,
+    avgTimeForDifficulty: estimateAvgTimeForDifficulty(difficultyScore),
+    daysSinceLastAttempt,
+  });
+
+  // Calculate confidence
+  const newConfidence = computeConfidence({
+    attemptCount: attemptCount + 1,
+    daysSinceLastAttempt: 0, // just attempted
+  });
+
+  // Update new mastery table
+  await prisma.studentMastery.upsert({
+    where: {
+      userId_conceptId: {
+        userId,
+        conceptId: question.conceptId,
+      },
+    },
+    create: {
+      userId,
+      conceptId: question.conceptId,
+      score: masteryResult.newMastery,
+      confidence: newConfidence,
+      attemptCount: 1,
+      correctCount: isCorrect ? 1 : 0,
+      totalTimeSpent: timeSpent ?? 0,
+      peakScore: masteryResult.newMastery,
+      lastAttemptAt: now,
+    },
+    update: {
+      score: masteryResult.newMastery,
+      confidence: newConfidence,
+      attemptCount: { increment: 1 },
+      correctCount: isCorrect ? { increment: 1 } : undefined,
+      totalTimeSpent: { increment: timeSpent ?? 0 },
+      peakScore: { set: Math.max(existingMastery?.peakScore ?? 0, masteryResult.newMastery) },
+      lastAttemptAt: now,
+    },
+  });
+
+  // Update subject mastery (aggregation)
+  await updateSubjectMastery(userId, question.conceptId);
+
+  // ═══════════════════════════════════════════════════════════════
+  // BACKWARD COMPATIBILITY — Update old table too
+  // ═══════════════════════════════════════════════════════════════
+
+  const oldStatus = deriveConceptStatus(masteryResult.newMastery / 100);
 
   await prisma.studentKnowledgeProfile.upsert({
     where: {
@@ -463,18 +544,19 @@ export async function recordQuestionAttempt(
     create: {
       userId,
       conceptId: question.conceptId,
-      masteryScore: newMastery,
-      status: newStatus,
+      masteryScore: masteryResult.newMastery / 100, // old scale 0-1
+      status: oldStatus,
       attemptCount: 1,
     },
     update: {
-      masteryScore: newMastery,
-      status: newStatus,
+      masteryScore: masteryResult.newMastery / 100, // old scale 0-1
+      status: oldStatus,
       attemptCount: { increment: 1 },
-      lastAttemptAt: new Date(),
+      lastAttemptAt: now,
     },
   });
 
+  // XP rewards
   if (isCorrect) {
     await addXp(userId, XP_REWARDS.ANSWER_CORRECT, "ANSWER_CORRECT", {
       questionId,
@@ -483,7 +565,8 @@ export async function recordQuestionAttempt(
     });
   }
 
-  if (newStatus === "MASTERED" && prevScore < 0.8) {
+  const masteryLabel = getMasteryLabel(masteryResult.newMastery);
+  if (masteryLabel.label === "Menguasai" && prevScore < 89) {
     await addXp(userId, XP_REWARDS.CONCEPT_MASTERED, "CONCEPT_MASTERED", {
       conceptId: question.conceptId,
     });
@@ -494,7 +577,71 @@ export async function recordQuestionAttempt(
   revalidatePath("/dashboard");
   revalidatePath("/subjects");
 
-  return { ok: true, newMastery, unlockedBadges };
+  return { ok: true, newMastery: masteryResult.newMastery, unlockedBadges };
+}
+
+/**
+ * Update subject mastery aggregation after concept mastery changes.
+ */
+async function updateSubjectMastery(userId: string, conceptId: string): Promise<void> {
+  // Find which subject this concept belongs to
+  const concept = await prisma.concept.findUnique({
+    where: { id: conceptId },
+    select: { topic: { select: { subjectId: true } } },
+  });
+  if (!concept) return;
+
+  const subjectId = concept.topic.subjectId;
+
+  // Get all concept IDs for this subject
+  const concepts = await prisma.concept.findMany({
+    where: { topic: { subjectId } },
+    select: { id: true },
+  });
+  const conceptIds = concepts.map(c => c.id);
+
+  // Get all concept masteries for this subject
+  const conceptMasteries = await prisma.studentMastery.findMany({
+    where: {
+      userId,
+      conceptId: { in: conceptIds },
+    },
+    select: {
+      score: true,
+      confidence: true,
+      attemptCount: true,
+      lastAttemptAt: true,
+    },
+  });
+
+  // Aggregate
+  const aggregated = aggregateSubjectMastery({ conceptMasteries });
+
+  // Update subject mastery table
+  await prisma.subjectMastery.upsert({
+    where: {
+      userId_subjectId: {
+        userId,
+        subjectId,
+      },
+    },
+    create: {
+      userId,
+      subjectId,
+      score: aggregated.score,
+      confidence: aggregated.confidence,
+      conceptsMastered: aggregated.conceptsMastered,
+      conceptsTotal: aggregated.conceptsTotal,
+      recommendedDifficulty: aggregated.recommendedDifficulty,
+    },
+    update: {
+      score: aggregated.score,
+      confidence: aggregated.confidence,
+      conceptsMastered: aggregated.conceptsMastered,
+      conceptsTotal: aggregated.conceptsTotal,
+      recommendedDifficulty: aggregated.recommendedDifficulty,
+    },
+  });
 }
 
 export async function selectNextQuestionDifficulty(
@@ -789,7 +936,8 @@ export async function generateMaterialsForSubject(
   if (existingMaterialCount > 0) {
     return {
       ok: false,
-      error: "Materi sudah ada. Hapus materi lama dulu jika ingin generate ulang.",
+      error:
+        "Materi sudah ada. Hapus materi lama dulu jika ingin generate ulang.",
     };
   }
 
@@ -925,7 +1073,10 @@ export async function generateMaterialsForSubject(
 
     // Bulk insert materials
     if (materialsData.length > 0) {
-      await prisma.material.createMany({ data: materialsData, skipDuplicates: true });
+      await prisma.material.createMany({
+        data: materialsData,
+        skipDuplicates: true,
+      });
       console.log(
         `[SUBJECTS] Created ${materialsData.length} material records`,
       );

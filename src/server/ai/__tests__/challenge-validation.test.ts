@@ -10,10 +10,7 @@ import { countWords } from "@/server/utils/word-count";
 // Mirrors materialSchema & materialContentSchema di src/server/ai/challenge.ts.
 const materialSchema = z.object({
   title: z.string().max(120),
-  content: z
-    .string()
-    .min(1)
-    .describe("Konten materi dalam format Markdown."),
+  content: z.string().min(1).describe("Konten materi dalam format Markdown."),
   keyPoints: z.array(z.string()).min(2).max(8),
   estimatedMinutes: z.number().int().min(10).max(45),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),

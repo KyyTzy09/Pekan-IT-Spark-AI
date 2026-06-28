@@ -40,7 +40,8 @@ export async function evaluateAnswer(
     VISUAL: "Berikan feedback dengan analogi visual atau contoh konkret.",
     TEXTUAL: "Berikan feedback dengan penjelasan teori yang terstruktur.",
     EXAMPLE_HEAVY: "Berikan feedback dengan contoh serupa untuk pemahaman.",
-    SOCRATIC: "Berikan feedback dalam bentuk pertanyaan pemantik untuk refleksi.",
+    SOCRATIC:
+      "Berikan feedback dalam bentuk pertanyaan pemantik untuk refleksi.",
   };
 
   const styleLine = learningStyle
@@ -89,7 +90,8 @@ Jawab dalam format JSON.`;
     const obj = result as Record<string, unknown>;
     return {
       isCorrect: Boolean(obj.isCorrect),
-      feedback: typeof obj.feedback === "string" ? obj.feedback : "Evaluasi selesai.",
+      feedback:
+        typeof obj.feedback === "string" ? obj.feedback : "Evaluasi selesai.",
       explanation: typeof obj.explanation === "string" ? obj.explanation : "",
       mastered: Boolean(obj.mastered),
     };
@@ -98,8 +100,10 @@ Jawab dalam format JSON.`;
     // Don't mark as incorrect — the answer might actually be correct.
     return {
       isCorrect: false,
-      feedback: "Maaf, terjadi kesalahan saat mengevaluasi jawaban. Coba lagi ya!",
-      explanation: "Sistem evaluasi sedang bermasalah. Jawabanmu belum dinilai.",
+      feedback:
+        "Maaf, terjadi kesalahan saat mengevaluasi jawaban. Coba lagi ya!",
+      explanation:
+        "Sistem evaluasi sedang bermasalah. Jawabanmu belum dinilai.",
       mastered: false,
       aiFailed: true,
     };

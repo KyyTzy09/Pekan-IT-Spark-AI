@@ -113,7 +113,13 @@ export function PretestStep({
                       key={`${q.id}-${letter}`}
                       type="button"
                       onClick={() => {
-                        console.log("[ONBOARDING_CLIENT] pretestAnswer", { questionId: q.id, subjectName: q.subjectName, conceptName: q.conceptName, letter, wasAnswer: answers[q.id] });
+                        console.log("[ONBOARDING_CLIENT] pretestAnswer", {
+                          questionId: q.id,
+                          subjectName: q.subjectName,
+                          conceptName: q.conceptName,
+                          letter,
+                          wasAnswer: answers[q.id],
+                        });
                         onAnswer(q.id, letter);
                       }}
                       className={cn(

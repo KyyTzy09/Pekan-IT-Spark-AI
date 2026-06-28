@@ -90,7 +90,10 @@ export function StyleReminderStep({
                 key={s.value}
                 type="button"
                 onClick={() => {
-                  console.log("[ONBOARDING_CLIENT] learningStyleSelected", { style: s.value, wasStyle: learningStyle });
+                  console.log("[ONBOARDING_CLIENT] learningStyleSelected", {
+                    style: s.value,
+                    wasStyle: learningStyle,
+                  });
                   setLearningStyle(s.value);
                 }}
                 className={cn(
@@ -212,7 +215,10 @@ export function StyleReminderStep({
               aria-checked={reminderEnabled}
               onClick={() => {
                 const next = !reminderEnabled;
-                console.log("[ONBOARDING_CLIENT] reminderToggle", { wasEnabled: reminderEnabled, nowEnabled: next });
+                console.log("[ONBOARDING_CLIENT] reminderToggle", {
+                  wasEnabled: reminderEnabled,
+                  nowEnabled: next,
+                });
                 setReminderEnabled(next);
               }}
               className={cn(
@@ -239,7 +245,10 @@ export function StyleReminderStep({
                     key={p.value}
                     type="button"
                     onClick={() => {
-                      console.log("[ONBOARDING_CLIENT] reminderTimeSelected", { time: p.value, label: p.label });
+                      console.log("[ONBOARDING_CLIENT] reminderTimeSelected", {
+                        time: p.value,
+                        label: p.label,
+                      });
                       setReminderTime(p.value);
                     }}
                     className={cn(

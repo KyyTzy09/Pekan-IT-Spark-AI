@@ -202,11 +202,14 @@ export async function completeOnboarding(
 
   await refreshSession();
 
-  console.log("[ONBOARDING_SERVICE] completeOnboarding redirecting to /dashboard", {
-    userId,
-    focusedSubjects: data.focusedSubjects,
-    pretestCount: data.pretestAnswers.length,
-  });
+  console.log(
+    "[ONBOARDING_SERVICE] completeOnboarding redirecting to /dashboard",
+    {
+      userId,
+      focusedSubjects: data.focusedSubjects,
+      pretestCount: data.pretestAnswers.length,
+    },
+  );
 
   // Use server-side redirect to avoid race condition with proxy.ts
   redirect("/dashboard");

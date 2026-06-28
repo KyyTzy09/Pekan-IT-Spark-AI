@@ -16,7 +16,11 @@ import {
 import { AuthStreakTeaser } from "@/components/auth/auth-streak-teaser";
 import { AuthTrustBadges } from "@/components/auth/auth-trust-badges";
 import { Button } from "@/components/ui/button";
-import { type AuthActionState, loginAction, getIsGoogleEnabled } from "@/server/actions/auth";
+import {
+  type AuthActionState,
+  loginAction,
+  getIsGoogleEnabled,
+} from "@/server/actions/auth";
 
 const loginSchema = z.object({
   email: z

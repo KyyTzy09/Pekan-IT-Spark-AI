@@ -17,7 +17,8 @@ export default function VerifyEmailPage() {
           Akun siap digunakan! 🎉
         </h1>
         <p className="max-w-[340px] text-[13.5px] leading-relaxed text-muted-foreground">
-          Kamu bisa langsung masuk dan mulai belajar bareng Spark. Verifikasi email akan tersedia di update mendatang.
+          Kamu bisa langsung masuk dan mulai belajar bareng Spark. Verifikasi
+          email akan tersedia di update mendatang.
         </p>
       </div>
       <Link

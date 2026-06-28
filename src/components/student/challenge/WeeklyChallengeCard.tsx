@@ -36,9 +36,10 @@ export function WeeklyChallengeCard({
   const [claiming, setClaiming] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const progressPct = weeklyChallenge.goal > 0
-    ? Math.round((weeklyChallenge.progress / weeklyChallenge.goal) * 100)
-    : 0;
+  const progressPct =
+    weeklyChallenge.goal > 0
+      ? Math.round((weeklyChallenge.progress / weeklyChallenge.goal) * 100)
+      : 0;
 
   const handleClaim = async () => {
     setClaiming(true);

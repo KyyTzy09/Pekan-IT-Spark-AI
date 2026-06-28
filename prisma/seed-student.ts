@@ -119,18 +119,20 @@ async function main() {
   });
 
   const knowledgeSeed: KnowledgeSeed[] = [
-    { concept: concepts[0], mastery: 0.88, status: "MASTERED", attempts: 8 },
-    { concept: concepts[1], mastery: 0.75, status: "MASTERED", attempts: 6 },
-    { concept: concepts[2], mastery: 0.55, status: "LEARNING", attempts: 5 },
-    { concept: concepts[3], mastery: 0.42, status: "LEARNING", attempts: 4 },
-    { concept: concepts[4], mastery: 0.2, status: "STRUGGLING", attempts: 3 },
-    { concept: concepts[5], mastery: 0.65, status: "LEARNING", attempts: 5 },
+    { concept: concepts[0], mastery: 88, status: "MASTERED", attempts: 8 },
+    { concept: concepts[1], mastery: 75, status: "MASTERED", attempts: 6 },
+    { concept: concepts[2], mastery: 55, status: "LEARNING", attempts: 5 },
+    { concept: concepts[3], mastery: 42, status: "LEARNING", attempts: 4 },
+    { concept: concepts[4], mastery: 20, status: "STRUGGLING", attempts: 3 },
+    { concept: concepts[5], mastery: 65, status: "LEARNING", attempts: 5 },
   ];
 
   for (const seed of knowledgeSeed) {
     if (!seed.concept) continue;
-    const data = {
-      masteryScore: seed.mastery,
+    
+    // Old table (backward compat)
+    const oldData = {
+      masteryScore: seed.mastery / 100, // convert to 0-1
       status: seed.status,
       attemptCount: seed.attempts,
       lastAttemptAt: new Date(),
@@ -139,9 +141,70 @@ async function main() {
       where: {
         userId_conceptId: { userId: user.id, conceptId: seed.concept.id },
       },
-      update: data,
-      create: { userId: user.id, conceptId: seed.concept.id, ...data },
+      update: oldData,
+      create: { userId: user.id, conceptId: seed.concept.id, ...oldData },
     });
+
+    // New mastery table
+    const confidence = Math.min(Math.round((seed.attempts / 30) * 100), 100);
+    const newData = {
+      score: seed.mastery, // already 0-100
+      confidence,
+      attemptCount: seed.attempts,
+      correctCount: Math.round(seed.attempts * 0.7), // assume 70% correct
+      totalTimeSpent: seed.attempts * 35, // avg 35 sec per attempt
+      peakScore: seed.mastery,
+      lastAttemptAt: new Date(),
+    };
+    await prisma.studentMastery.upsert({
+      where: {
+        userId_conceptId: { userId: user.id, conceptId: seed.concept.id },
+      },
+      update: newData,
+      create: { userId: user.id, conceptId: seed.concept.id, ...newData },
+    });
+  }
+
+  // Seed SubjectMastery (aggregated)
+  for (const subjectId of focusedSubjectIds) {
+    const subjectConcepts = await prisma.concept.findMany({
+      where: { topic: { subjectId } },
+      select: { id: true },
+    });
+    const conceptIds = subjectConcepts.map(c => c.id);
+    
+    const masteries = await prisma.studentMastery.findMany({
+      where: { userId: user.id, conceptId: { in: conceptIds } },
+      select: { score: true, confidence: true },
+    });
+
+    if (masteries.length > 0) {
+      const avgScore = masteries.reduce((sum, m) => sum + m.score, 0) / masteries.length;
+      const avgConfidence = masteries.reduce((sum, m) => sum + m.confidence, 0) / masteries.length;
+      const conceptsMastered = masteries.filter(m => m.score >= 89).length;
+
+      await prisma.subjectMastery.upsert({
+        where: {
+          userId_subjectId: { userId: user.id, subjectId },
+        },
+        update: {
+          score: Math.round(avgScore * 100) / 100,
+          confidence: Math.round(avgConfidence),
+          conceptsMastered,
+          conceptsTotal: masteries.length,
+          recommendedDifficulty: Math.min(Math.round(avgScore * 1.1), 100),
+        },
+        create: {
+          userId: user.id,
+          subjectId,
+          score: Math.round(avgScore * 100) / 100,
+          confidence: Math.round(avgConfidence),
+          conceptsMastered,
+          conceptsTotal: masteries.length,
+          recommendedDifficulty: Math.min(Math.round(avgScore * 1.1), 100),
+        },
+      });
+    }
   }
 
   const questions = await prisma.question.findMany({

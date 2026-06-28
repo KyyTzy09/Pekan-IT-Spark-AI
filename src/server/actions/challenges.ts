@@ -34,6 +34,14 @@ import {
   distributeChallengeSubjects,
   pickChallengeSubjectIds,
 } from "@/server/learning/strength";
+import {
+  aggregateSubjectMastery,
+  getMasteryLabel,
+} from "@/server/learning/mastery";
+import {
+  difficultyToScore,
+  selectChallengeDifficulty,
+} from "@/server/learning/difficulty";
 import type {
   ChallengeItemKind,
   ChallengeItemStatus,
@@ -55,11 +63,15 @@ async function requireStudent() {
 // BUG-15 FIX: Use UTC to match ai-quota.ts startOfUtcDay
 function startOfToday(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
 }
 
 function toDateOnly(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  );
 }
 
 export interface ChallengeListItem {
@@ -252,85 +264,94 @@ export async function generateAndStoreDailyChallenges(
     },
   });
   if (existingCount > 0) {
-    console.log(`[DAILY] ⏭️  Udah ada ${existingCount} challenge hari ini, skip generate`);
+    console.log(
+      `[DAILY] ⏭️  Udah ada ${existingCount} challenge hari ini, skip generate`,
+    );
     return;
   }
 
   // Lock: cegah generation dobel dari polling simultan
   if (!(await acquireDbLock(userId, "DAILY"))) {
-    console.log("[DAILY] 🔒 Ada proses generate lain yang lagi jalan, skip duplikat");
+    console.log(
+      "[DAILY] 🔒 Ada proses generate lain yang lagi jalan, skip duplikat",
+    );
     return;
   }
 
   try {
     const profile = await prisma.studentProfile.findUnique({
-    where: { userId },
-    select: {
-      grade: true,
-      school: true,
-      learningStyle: true,
-      challengeSubjectIds: true,
-      user: { select: { name: true } },
-    },
-  });
+      where: { userId },
+      select: {
+        grade: true,
+        school: true,
+        learningStyle: true,
+        challengeSubjectIds: true,
+        user: { select: { name: true } },
+      },
+    });
 
-  if (!profile) {
-    console.log("[DAILY] ❌ Profil ga ketemu, batal generate");
-    return;
-  }
-
-  console.log("[DAILY] 👤 Profil loaded", {
-    nama: profile.user?.name ?? "(unknown)",
-    kelas: profile.grade,
-    gayaBelajar: profile.learningStyle ?? "VISUAL",
-    jumlahSubjectDipilih: profile.challengeSubjectIds.length,
-  });
-
-  const subjectIds = pickChallengeSubjectIds(
-    {
-      challengeSubjectIds: profile?.challengeSubjectIds ?? [],
-      focusedSubjects: [],
-    },
-    [],
-  );
-
-  if (subjectIds.length === 0) {
-    console.log("[DAILY] ⚠️  Belum pilih mapel, skip generate");
-    return;
-  }
-
-  // Ambil nama subject untuk logging
-  const subjects = await prisma.subject.findMany({
-    where: { id: { in: subjectIds } },
-    select: { id: true, name: true },
-  });
-  const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
-
-  const distributedSubjects = distributeChallengeSubjects(
-    subjectIds,
-    DAILY_CHALLENGE_SUBJECTS,
-  );
-
-  console.log("[DAILY] 📚 Mapel yang dipilih:", distributedSubjects.map(id => subjectMap.get(id) ?? id).join(", "));
-
-  const now = new Date();
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const subjectId of distributedSubjects) {
-    const subjectName = subjectMap.get(subjectId) ?? subjectId;
-    try {
-      console.log(`[DAILY] ⏳ Generating untuk ${subjectName}...`);
-      await generateOneDailyChallenge(userId, date, subjectId, profile, now);
-      successCount++;
-      console.log(`[DAILY] ✅ Berhasil generate untuk ${subjectName}`);
-    } catch (err) {
-      failCount++;
-      console.error(`[DAILY] ❌ Gagal generate untuk ${subjectName}:`, err);
+    if (!profile) {
+      console.log("[DAILY] ❌ Profil ga ketemu, batal generate");
+      return;
     }
-  }
 
-  console.log(`[DAILY] 🎉 Selesai! ${successCount} berhasil, ${failCount} gagal dari ${distributedSubjects.length} mapel`);
+    console.log("[DAILY] 👤 Profil loaded", {
+      nama: profile.user?.name ?? "(unknown)",
+      kelas: profile.grade,
+      gayaBelajar: profile.learningStyle ?? "VISUAL",
+      jumlahSubjectDipilih: profile.challengeSubjectIds.length,
+    });
+
+    const subjectIds = pickChallengeSubjectIds(
+      {
+        challengeSubjectIds: profile?.challengeSubjectIds ?? [],
+        focusedSubjects: [],
+      },
+      [],
+    );
+
+    if (subjectIds.length === 0) {
+      console.log("[DAILY] ⚠️  Belum pilih mapel, skip generate");
+      return;
+    }
+
+    // Ambil nama subject untuk logging
+    const subjects = await prisma.subject.findMany({
+      where: { id: { in: subjectIds } },
+      select: { id: true, name: true },
+    });
+    const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+
+    const distributedSubjects = distributeChallengeSubjects(
+      subjectIds,
+      DAILY_CHALLENGE_SUBJECTS,
+    );
+
+    console.log(
+      "[DAILY] 📚 Mapel yang dipilih:",
+      distributedSubjects.map((id) => subjectMap.get(id) ?? id).join(", "),
+    );
+
+    const now = new Date();
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const subjectId of distributedSubjects) {
+      const subjectName = subjectMap.get(subjectId) ?? subjectId;
+      try {
+        console.log(`[DAILY] ⏳ Generating untuk ${subjectName}...`);
+        await generateOneDailyChallenge(userId, date, subjectId, profile, now);
+        successCount++;
+        console.log(`[DAILY] ✅ Berhasil generate untuk ${subjectName}`);
+      } catch (err) {
+        failCount++;
+        console.error(`[DAILY] ❌ Gagal generate untuk ${subjectName}:`, err);
+      }
+    }
+
+    console.log(
+      `[DAILY] 🎉 Selesai! ${successCount} berhasil, ${failCount} gagal dari ${distributedSubjects.length} mapel`,
+    );
   } finally {
     releaseDbLock(userId, "DAILY");
   }
@@ -402,13 +423,13 @@ async function generateOneDailyChallenge(
   });
 
   const [weakConcepts, strongConcepts] = await Promise.all([
-    prisma.studentKnowledgeProfile.findMany({
+    prisma.studentMastery.findMany({
       where: {
         userId,
-        masteryScore: { lt: 0.7 },
+        score: { lt: 70 },
         concept: { topic: { subjectId: subject.id } },
       },
-      orderBy: { masteryScore: "asc" },
+      orderBy: { score: "asc" },
       take: 5,
       include: {
         concept: {
@@ -420,13 +441,13 @@ async function generateOneDailyChallenge(
         },
       },
     }),
-    prisma.studentKnowledgeProfile.findMany({
+    prisma.studentMastery.findMany({
       where: {
         userId,
-        masteryScore: { gte: 0.7 },
+        score: { gte: 70 },
         concept: { topic: { subjectId: subject.id } },
       },
-      orderBy: { masteryScore: "desc" },
+      orderBy: { score: "desc" },
       take: 5,
       include: {
         concept: {
@@ -453,13 +474,13 @@ async function generateOneDailyChallenge(
     weakConcepts: weakConcepts.map((w) => ({
       id: w.concept.id,
       name: w.concept.name,
-      masteryScore: w.masteryScore,
+      masteryScore: w.score / 100, // convert to 0-1 for AI prompt
       subjectName: w.concept.topic.subject.name,
     })),
     strongConcepts: strongConcepts.map((s) => ({
       id: s.concept.id,
       name: s.concept.name,
-      masteryScore: s.masteryScore,
+      masteryScore: s.score / 100, // convert to 0-1 for AI prompt
       subjectName: s.concept.topic.subject.name,
     })),
     recentChallenges: recentChallenges.map((c) => ({
@@ -671,7 +692,11 @@ async function resolveQuestionOutsideTransaction(
     (q) => q.difficulty === item.difficultyHint,
   );
   const shuffled = [...exactDifficulty].sort(() => Math.random() - 0.5);
-  const picked = shuffled[0] ?? sameSubjectQuestions[Math.floor(Math.random() * sameSubjectQuestions.length)];
+  const picked =
+    shuffled[0] ??
+    sameSubjectQuestions[
+      Math.floor(Math.random() * sameSubjectQuestions.length)
+    ];
   if (picked) {
     return { questionId: picked.id };
   }
@@ -1002,9 +1027,12 @@ export async function completeChallengeItem(input: {
       newMastery = attemptResult.newMastery;
     }
 
-    const newStatus = newMastery !== undefined
-      ? newMastery >= 0.7 ? "LULUS" : "BELUM_LULUS"
-      : undefined;
+    const newStatus =
+      newMastery !== undefined
+        ? newMastery >= 0.7
+          ? "LULUS"
+          : "BELUM_LULUS"
+        : undefined;
 
     if (isCorrect) {
       await addXp(userId, XP_REWARDS.ANSWER_CORRECT, "ANSWER_CORRECT", {
@@ -1123,7 +1151,11 @@ export async function submitReflection(input: {
   // Only create reflection record if we successfully claim the item.
   const claimed = await prisma.challengeItem.updateMany({
     where: { id: reflectionItem.id, status: "PENDING" },
-    data: { status: "COMPLETED", completedAt: new Date(), answer: parsed.data.response },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      answer: parsed.data.response,
+    },
   });
   if (claimed.count === 0) {
     return { ok: false, error: "Refleksi sudah diselesaikan sebelumnya." };
@@ -1273,7 +1305,10 @@ export async function generateOnDemand(input: {
 
   // 🔴 Lock: cegah double generate on-demand (DB-backed for Vercel)
   if (!(await acquireDbLock(userId, "ON_DEMAND"))) {
-    return { ok: false, error: "Masih ada tantangan yang sedang di-generate. Tunggu sebentar ya!" };
+    return {
+      ok: false,
+      error: "Masih ada tantangan yang sedang di-generate. Tunggu sebentar ya!",
+    };
   }
 
   try {
@@ -1282,7 +1317,10 @@ export async function generateOnDemand(input: {
       where: {
         userId,
         source: "ON_DEMAND",
-        scheduledFor: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
+        scheduledFor: {
+          gte: today,
+          lt: new Date(today.getTime() + 86_400_000),
+        },
       },
     });
     if (todayCount >= 7) {
@@ -1341,37 +1379,44 @@ export async function generateOnDemand(input: {
       };
     } else if (focusedSubjectIds.length > 0) {
       availableQuestionsFilter.concept = {
-      topic: {
-        subjectId: { in: focusedSubjectIds },
-      },
-    };
-  }
+        topic: {
+          subjectId: { in: focusedSubjectIds },
+        },
+      };
+    }
 
-  const availableQuestions = await prisma.question.findMany({
-    where: availableQuestionsFilter,
-    take: 30,
-    select: {
-      id: true,
-      conceptId: true,
-      difficulty: true,
-      concept: {
-        select: {
-          name: true,
-          topic: {
-            select: { name: true, subjectId: true, subject: { select: { slug: true } } },
+    const availableQuestions = await prisma.question.findMany({
+      where: availableQuestionsFilter,
+      take: 30,
+      select: {
+        id: true,
+        conceptId: true,
+        difficulty: true,
+        concept: {
+          select: {
+            name: true,
+            topic: {
+              select: {
+                name: true,
+                subjectId: true,
+                subject: { select: { slug: true } },
+              },
+            },
           },
         },
       },
-    },
-  });
+    });
 
-  // BUG-2 FIX: Track AI quota for on-demand challenge generation
-  const aiQuota = await incrementAiQuota(userId, "questions", 1);
-  if (!aiQuota.allowed) {
-    return { ok: false, error: "Kuota AI harian sudah habis. Coba lagi besok ya!" };
-  }
+    // BUG-2 FIX: Track AI quota for on-demand challenge generation
+    const aiQuota = await incrementAiQuota(userId, "questions", 1);
+    if (!aiQuota.allowed) {
+      return {
+        ok: false,
+        error: "Kuota AI harian sudah habis. Coba lagi besok ya!",
+      };
+    }
 
-  const plan = await generateOnDemandChallenge({
+    const plan = await generateOnDemandChallenge({
       userId,
       kind: parsed.data.kind,
       subjectSlug: parsed.data.subjectSlug,
@@ -1437,7 +1482,9 @@ export async function generateOnDemand(input: {
       scheduledFor: toDateOnly(today),
     };
 
-    const challenge = await prisma.challenge.create({ data: { ...baseData, mixConfig: {} } });
+    const challenge = await prisma.challenge.create({
+      data: { ...baseData, mixConfig: {} },
+    });
 
     let createdQuestions = 0;
     let createdMaterials = 0;
@@ -1450,7 +1497,11 @@ export async function generateOnDemand(input: {
         const candidates = availableQuestions.filter((q) => {
           const qSlug = (q.concept.topic.subject as { slug: SubjectSlug }).slug;
           if (qSlug === item.subjectSlug) return true;
-          if (challengeSubject && (q.concept.topic.subject.slug === challengeSubject.slug || q.concept.topic.subjectId === challengeSubject.id))
+          if (
+            challengeSubject &&
+            (q.concept.topic.subject.slug === challengeSubject.slug ||
+              q.concept.topic.subjectId === challengeSubject.id)
+          )
             return true;
           return false;
         });
@@ -2447,7 +2498,9 @@ function startOfWeek(d: Date): Date {
   const date = new Date(d);
   const day = date.getUTCDay();
   const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), diff));
+  const monday = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), diff),
+  );
   monday.setUTCHours(0, 0, 0, 0);
   return monday;
 }
@@ -2474,8 +2527,18 @@ export async function getOrCreateWeeklyChallenge(): Promise<any> {
   if (existing) {
     const sunday = new Date(monday.getTime() + 7 * 86_400_000);
     const allWeeklyChallenges = await prisma.challenge.findMany({
-      where: { userId, type: "WEEKLY", scheduledFor: { gte: monday, lt: sunday } },
-      select: { id: true, title: true, description: true, status: true, items: { select: { id: true, kind: true, status: true } } },
+      where: {
+        userId,
+        type: "WEEKLY",
+        scheduledFor: { gte: monday, lt: sunday },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        items: { select: { id: true, kind: true, status: true } },
+      },
     });
 
     const allItems = allWeeklyChallenges.flatMap((c) => c.items);
