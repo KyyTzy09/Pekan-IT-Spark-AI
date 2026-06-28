@@ -312,7 +312,9 @@ function AnimatedCanopy({
   });
 
   const leaves = useMemo(() => {
-    const canopyRadius = 1.2 + stage * 0.6;
+    if (leafCount <= 0) return [];
+    // Scale canopy radius with trunk height so it looks proportional
+    const canopyRadius = Math.max(0.6, 0.4 + trunkHeight * 0.25);
     const canopyY = trunkHeight + canopyRadius * 0.25;
     const rng = mulberry32(stage * 1000 + leafCount);
 
@@ -320,7 +322,7 @@ function AnimatedCanopy({
       const theta = rng() * Math.PI * 2;
       const phi = Math.acos(2 * rng() - 1);
       const r = canopyRadius * (0.4 + rng() * 0.6);
-      const size = 0.18 + rng() * 0.3;
+      const size = 0.1 + rng() * 0.2; // smaller leaves for seedling
       // Vary green tones for organic look
       const colorShift = rng() * 0.15;
       const leafColor = leafColors[Math.floor(rng() * leafColors.length)];
@@ -359,14 +361,14 @@ function AnimatedCanopy({
 
 function GroundPlane({ stage, progressFactor }: { stage: number; progressFactor: number }) {
   const grassCount = Math.round((10 + stage * 15) * progressFactor);
-  const groundScale = 3 + progressFactor * 5; // 3 (kecil) → 8 (besar)
+  const groundRadius = 6 + progressFactor * 4; // 6 → 10
 
   const grasses = useMemo(() => {
     const rng = mulberry32(42);
     return Array.from({ length: grassCount }, (_, idx) => {
       const angle = rng() * Math.PI * 2;
-      const dist = 2.5 + rng() * 4;
-      const height = 0.15 + rng() * 0.25;
+      const dist = 1.5 + rng() * 4;
+      const height = 0.12 + rng() * 0.2;
       return {
         id: `grass-${idx}`,
         position: [
@@ -409,21 +411,38 @@ function GroundPlane({ stage, progressFactor }: { stage: number; progressFactor:
 
   return (
     <group>
-      {/* Main ground circle — scales with progress */}
+      {/* Outer ground — wide soft terrain */}
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.08}>
+        <circleGeometry args={[groundRadius, 48]} />
+        <meshStandardMaterial color="#3d8b4f" roughness={0.95} />
+      </mesh>
+      {/* Middle ground layer */}
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.04}>
+        <circleGeometry args={[groundRadius * 0.7, 48]} />
+        <meshStandardMaterial color="#4a9e5c" roughness={0.92} />
+      </mesh>
+      {/* Inner fertile soil ring */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-        <circleGeometry args={[groundScale, 32]} />
-        <meshStandardMaterial color="#4a9e5c" roughness={0.95} />
+        <circleGeometry args={[1.8 + progressFactor * 1.5, 48]} />
+        <meshStandardMaterial color="#5cb870" roughness={0.88} />
       </mesh>
-      {/* Inner grass ring */}
-      <mesh rotation-x={-Math.PI / 2} position-y={0}>
-        <ringGeometry args={[0, 1.5 + progressFactor * 2, 32]} />
-        <meshStandardMaterial
-          color="#5cb870"
-          roughness={0.9}
-          transparent
-          opacity={0.7}
-        />
+      {/* Dirt patch around trunk */}
+      <mesh rotation-x={-Math.PI / 2} position-y={0.005}>
+        <ringGeometry args={[0, 0.6 + progressFactor * 0.4, 24]} />
+        <meshStandardMaterial color="#8B6914" roughness={0.95} />
       </mesh>
+      {/* Terrain bumps (small hills) */}
+      {[
+        { pos: [2.5, 0.06, 1.5] as [number, number, number], scale: [1.8, 0.15, 1.5] as [number, number, number], color: '#4a9e5c' },
+        { pos: [-2, 0.04, -2] as [number, number, number], scale: [1.5, 0.1, 1.2] as [number, number, number], color: '#3d8b4f' },
+        { pos: [1, 0.03, -2.8] as [number, number, number], scale: [2, 0.08, 1.5] as [number, number, number], color: '#4a9e5c' },
+        { pos: [-3, 0.05, 1] as [number, number, number], scale: [1.2, 0.12, 1] as [number, number, number], color: '#3d8b4f' },
+      ].map((hill, i) => (
+        <mesh key={`hill-${i}`} position={hill.pos} scale={hill.scale}>
+          <sphereGeometry args={[1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color={hill.color} roughness={0.9} />
+        </mesh>
+      ))}
       {/* Small grass blades */}
       {grasses.map((g) => (
         <mesh
@@ -453,8 +472,7 @@ function GroundPlane({ stage, progressFactor }: { stage: number; progressFactor:
 
 function Flowers({ stage }: { stage: number }) {
   const flowers = useMemo(() => {
-    if (stage < 2) return [];
-    const count = Math.min(8, (stage - 1) * 3);
+    const count = Math.max(2, Math.min(8, stage * 2)); // min 2 flowers even at stage 1
     const rng = mulberry32(777);
     const colors = ["#f472b6", "#fb923c", "#a78bfa", "#fbbf24", "#f87171"];
     return Array.from({ length: count }, () => {
@@ -506,10 +524,13 @@ function TreeScene({
   const theme = BUDDY_THEMES[buddyType] ?? BUDDY_THEMES.bunga;
   // Scale tree size based on actual progress — new users get a tiny seedling
   const progressFactor = Math.min(1, (totalXp + totalMastered * 50) / 500); // 0 = baru daftar, 1 = cukup aktif
-  const trunkHeight = 0.3 + progressFactor * 7.7; // 0.3 (bibit) → 8 (pohon besar)
-  const trunkRadius = 0.04 + progressFactor * 0.31; // 0.04 (tipis) → 0.35 (tebal)
-  const branchCount = totalMastered > 0 ? Math.min(totalMastered, 14) : 0;
-  const leafCount = totalMastered > 0 ? Math.round(5 + (avgMasteryPct / 100) * 95) : 0; // 0 leaves if no mastery
+  const trunkHeight = 0.4 + progressFactor * 7.6; // 0.4 (bibit) → 8 (pohon besar)
+  const trunkRadius = 0.05 + progressFactor * 0.3; // 0.05 (tipis) → 0.35 (tebal)
+  const branchCount = totalMastered > 0 ? Math.min(totalMastered, 14) : stage >= 2 ? 1 : 0;
+  // Minimum leaves per stage — kecambah HARUS punya daun
+  const minLeavesByStage = [3, 10, 25, 50]; // stage 1=3, stage 2=10, stage 3=25, stage 4=50
+  const baseLeafCount = totalMastered > 0 ? Math.round(10 + (avgMasteryPct / 100) * 90) : 0;
+  const leafCount = Math.max(baseLeafCount, minLeavesByStage[stage - 1] ?? 3);
 
   return (
     <>
@@ -657,7 +678,7 @@ export function Tree3DView({
   return (
     <div className="relative h-[calc(100vh-6rem)] md:h-[calc(100vh-4rem)] w-auto -mx-4 sm:-mx-6 md:-mx-8 -mt-4 sm:-mt-6 md:-mt-8 -mb-24 md:-mb-8 overflow-hidden bg-gradient-to-b from-background via-muted/10 to-background rounded-none border-none">
       {/* 3D Canvas */}
-      <Canvas camera={{ position: [0, 5, 12], fov: 42 }} dpr={[1, 1.5]}>
+      <Canvas camera={{ position: [0, 6, 14], fov: 40 }} dpr={[1, 1.5]}>
         <Suspense fallback={null}>
           <TreeScene
             totalXp={totalXp}
