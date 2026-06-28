@@ -104,6 +104,14 @@ export async function POST(
 
   const stream = new ReadableStream({
     async start(controller) {
+      const abortHandler = () => {
+        if (!fullResponse) {
+          // Client disconnected before any response — restore quota
+          decrementAiQuota(userId, "chat", 1).catch(() => {});
+        }
+      };
+      request.signal.addEventListener("abort", abortHandler);
+
       try {
         const result = await generateTutorStream({
           userId,
@@ -116,10 +124,19 @@ export async function POST(
           hasDocumentContext: !!documentContext,
         });
 
-        // Stream chunks to client
         for await (const chunk of result.textStream) {
+          if (request.signal.aborted) break;
           fullResponse += chunk;
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+        }
+
+        // If aborted, restore quota and bail without saving
+        if (request.signal.aborted) {
+          if (fullResponse) {
+            // Partial response but client left — restore quota, don't save
+            await decrementAiQuota(userId, "chat", 1).catch(() => {});
+          }
+          return;
         }
 
         // Save full response to database
@@ -146,6 +163,8 @@ export async function POST(
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
         controller.close();
+      } finally {
+        request.signal.removeEventListener("abort", abortHandler);
       }
     },
   });

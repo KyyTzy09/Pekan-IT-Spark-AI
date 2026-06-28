@@ -171,6 +171,7 @@ async function keywordSearch(
     include: {
       topic: { select: { name: true, subject: { select: { name: true } } } },
     },
+    take: 100,
   });
 
   for (const c of concepts) {

@@ -57,9 +57,12 @@ export function sanitizeForPrompt(input: string | undefined | null): string {
 
   let sanitized = input;
 
-  // Remove null bytes and control characters (except newlines/tabs)
+  // Remove null bytes, control characters (except newlines/tabs), and carriage returns
   // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional for security sanitization
-  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0D\x0E-\x1F\x7F]/g, "");
+
+  // Strip Unicode zero-width and invisible characters (homoglyph injection vector)
+  sanitized = sanitized.replace(/[\u200B-\u200F\u2028-\u202F\uFEFF\u00AD]/g, "");
 
   // Apply injection pattern removal
   for (const pattern of INJECTION_PATTERNS) {

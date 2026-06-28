@@ -151,6 +151,6 @@ export async function generateOnDemandMaterial(input: {
     console.error("[MATERIAL] ❌ Gagal generate:", err);
     return { ok: false, error: "Gagal generate materi. Coba lagi." };
   } finally {
-    releaseDbLock(userId, "ON_DEMAND");
+    await releaseDbLock(userId, "ON_DEMAND");
   }
 }

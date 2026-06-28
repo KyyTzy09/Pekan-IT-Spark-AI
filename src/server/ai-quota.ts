@@ -98,15 +98,7 @@ export async function incrementAiQuota(
     },
   });
 
-  // Check limit — if over, roll back the increment
   const newCount = updated[countKey] as number;
-  if (newCount > limit) {
-    await prisma.dailyAiQuota.update({
-      where: { userId },
-      data: { [countKey]: { decrement: by }, updatedAt: new Date() },
-    });
-    return { allowed: false, current: newCount - by, limit };
-  }
 
   // Day boundary: if date is stale, reset all counters then re-increment
   if (updated.date.getTime() !== today.getTime()) {
@@ -118,6 +110,15 @@ export async function incrementAiQuota(
       data: resetData,
     });
     return { allowed: by <= limit, current: by, limit };
+  }
+
+  // Check limit — if over, roll back the increment
+  if (newCount > limit) {
+    await prisma.dailyAiQuota.update({
+      where: { userId },
+      data: { [countKey]: { decrement: by }, updatedAt: new Date() },
+    });
+    return { allowed: false, current: newCount - by, limit };
   }
 
   return { allowed: true, current: newCount, limit };

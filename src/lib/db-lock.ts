@@ -15,8 +15,8 @@ export async function acquireDbLock(
   const expiresAt = new Date(now.getTime() + LOCK_DURATION_MS);
 
   try {
-    // Clean up expired locks first (fire-and-forget)
-    prisma.generationLock
+    // Clean up expired locks first
+    await prisma.generationLock
       .deleteMany({
         where: { expiresAt: { lt: now } },
       })

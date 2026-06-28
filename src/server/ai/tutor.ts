@@ -302,10 +302,28 @@ export async function generateTutorStream(input: {
     input.userName,
   );
 
+  // Window messages to fit within model context: keep system prompt + last N conversation turns
+  const MAX_TURNS = 10; // 10 user-assistant pairs = 20 messages
+  const systemMessages = input.messages.filter((m) => m.role === "system");
+  const conversationMessages = input.messages.filter((m) => m.role !== "system");
+
+  let windowedMessages: typeof input.messages;
+  if (conversationMessages.length > MAX_TURNS * 2) {
+    const keep = conversationMessages.slice(-(MAX_TURNS * 2));
+    // Always keep the first user message (it often contains the core question)
+    const firstUserIdx = conversationMessages.findIndex((m) => m.role === "user");
+    if (firstUserIdx > 0 && !keep.includes(conversationMessages[firstUserIdx])) {
+      keep[0] = conversationMessages[firstUserIdx];
+    }
+    windowedMessages = [...systemMessages, ...keep];
+  } else {
+    windowedMessages = input.messages;
+  }
+
   return streamText({
     model: chatModel,
     system: systemPrompt,
-    messages: input.messages,
+    messages: windowedMessages,
     temperature: 0.7,
   });
 }

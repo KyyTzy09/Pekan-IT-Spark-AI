@@ -353,7 +353,7 @@ export async function generateAndStoreDailyChallenges(
       `[DAILY] 🎉 Selesai! ${successCount} berhasil, ${failCount} gagal dari ${distributedSubjects.length} mapel`,
     );
   } finally {
-    releaseDbLock(userId, "DAILY");
+    await releaseDbLock(userId, "DAILY");
   }
 }
 
@@ -1577,7 +1577,7 @@ export async function generateOnDemand(input: {
     console.error("generateOnDemand failed:", err);
     return { ok: false, error: "Gagal generate tantangan" };
   } finally {
-    releaseDbLock(userId, "ON_DEMAND");
+    await releaseDbLock(userId, "ON_DEMAND");
   }
 }
 

@@ -333,11 +333,22 @@ export async function streamText({
       if (gemini) {
         aiLog.info(`${EMOJI.fallback} Fallback 1: Gemini streaming ...`);
         try {
+          const systemMsg = apiMessages.find((m) => m.role === "system");
+          const chatMessages = apiMessages.filter((m) => m.role !== "system");
+
+          const contents = chatMessages.map((m) => ({
+            role: (m.role === "assistant" ? "model" : "user") as "user" | "model",
+            parts: [{ text: m.content }],
+          }));
+
           const geminiModel = gemini.getGenerativeModel({
             model: "gemini-2.0-flash",
+            ...(systemMsg ? { systemInstruction: systemMsg.content } : {}),
           });
-          const promptText = apiMessages.map((m) => m.content).join("\n");
-          const result = await geminiModel.generateContentStream(promptText);
+
+          const result = await geminiModel.generateContentStream({
+            contents,
+          });
 
           const iterable = (async function* () {
             for await (const chunk of result.stream) {

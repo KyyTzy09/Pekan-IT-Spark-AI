@@ -83,7 +83,19 @@ export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const cookie = cookieStore.get(COOKIE_NAME);
   if (!cookie?.value) return null;
-  return verifyToken(cookie.value);
+  const session = await verifyToken(cookie.value);
+  if (!session) return null;
+
+  // Validate sessionVersion against DB to catch invalidated sessions (e.g. password change)
+  const user = await prisma.user.findUnique({
+    where: { id: session.id },
+    select: { sessionVersion: true },
+  });
+  if (!user || user.sessionVersion !== (session.sessionVersion ?? 0)) {
+    return null;
+  }
+
+  return session;
 }
 
 export async function clearSession(): Promise<void> {

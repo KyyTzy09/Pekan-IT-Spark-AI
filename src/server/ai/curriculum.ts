@@ -141,6 +141,8 @@ export function computeDifficultyDistribution(
   masteryScore: number,
   totalCount: number,
 ): { easy: number; medium: number; hard: number } {
+  if (totalCount <= 0) return { easy: 0, medium: 0, hard: 0 };
+
   let easyRatio: number;
   let mediumRatio: number;
   let hardRatio: number;
@@ -159,12 +161,26 @@ export function computeDifficultyDistribution(
     hardRatio = 0.6;
   }
 
-  const easy = Math.max(1, Math.ceil(totalCount * easyRatio));
-  const medium = Math.max(1, Math.ceil(totalCount * mediumRatio));
-  const hard = totalCount - easy - medium;
+  // Guarantee at least 1 per tier, distribute remainder proportionally
+  if (totalCount <= 3) {
+    const arr = [0, 0, 0];
+    for (let i = 0; i < totalCount; i++) arr[i] = 1;
+    return { easy: arr[0], medium: arr[1], hard: arr[2] };
+  }
 
+  const remaining = totalCount - 3; // 1 each already accounted for
+  let easy = 1 + Math.round(remaining * easyRatio);
+  let medium = 1 + Math.round(remaining * mediumRatio);
+  let hard = totalCount - easy - medium;
+
+  // Safety: if rounding pushes hard to 0, nudge from the largest bin
   if (hard < 1) {
-    return { easy: easy - 1, medium, hard: 1 };
+    hard = 1;
+    if (easy > medium) {
+      easy -= 1;
+    } else {
+      medium -= 1;
+    }
   }
 
   return { easy, medium, hard };

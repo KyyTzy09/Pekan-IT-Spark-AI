@@ -547,6 +547,6 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
     );
     return { ok: true, weeklyChallengeId: weeklyId ?? undefined };
   } finally {
-    releaseDbLock(userId, "WEEKLY");
+    await releaseDbLock(userId, "WEEKLY");
   }
 }
