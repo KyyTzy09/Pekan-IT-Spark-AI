@@ -96,14 +96,14 @@ describe("BUG #2 — learningStyle dioper dari profile, bukan hardcoded", () => 
 // BUG #3: strongConcepts selalu []
 // ============================================================
 describe("BUG #3 — strongConcepts di-fetch dari DB", () => {
-  it("generateOneDailyChallenge nge-fetch strongConcepts (masteryScore >= 0.7)", () => {
+  it("generateOneDailyChallenge nge-fetch strongConcepts (score >= 70)", () => {
     const source = readFileSync(
       join(process.cwd(), "src/server/actions/challenges.ts"),
       "utf-8",
     );
 
-    // Cari: harus ada query untuk strongConcepts (masteryScore: { gte: 0.7 })
-    const hasStrongQuery = source.includes("masteryScore: { gte: 0.7 }");
+    // Cari: harus ada query untuk strongConcepts (score: { gte: 70 })
+    const hasStrongQuery = source.includes("score: { gte: 70 }");
     expect(hasStrongQuery).toBe(true);
 
     // Cari: strongConcepts dioper ke generateDailyMix
