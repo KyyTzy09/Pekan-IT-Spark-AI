@@ -16,12 +16,33 @@ export default async function ChatSessionPage({
   }
 
   const { sessionId } = await params;
-  const chatSession = await getChatSession(sessionId);
+
+  let chatSession: Awaited<ReturnType<typeof getChatSession>>;
+  let messages: Awaited<ReturnType<typeof getChatMessages>>;
+
+  try {
+    chatSession = await getChatSession(sessionId);
+  } catch (err) {
+    console.error("[chat-page] failed to load session", {
+      sessionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    notFound();
+  }
+
   if (!chatSession || chatSession.userId !== session.id) {
     notFound();
   }
 
-  const messages = await getChatMessages(sessionId);
+  try {
+    messages = await getChatMessages(sessionId);
+  } catch (err) {
+    console.error("[chat-page] failed to load messages", {
+      sessionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    messages = [];
+  }
 
   const subject = chatSession.subject
     ? {

@@ -364,29 +364,24 @@ export type StreamResult = {
 export async function sendMessage(input: {
   sessionId: string;
   content: string;
-}): Promise<StreamResult> {
+}): Promise<{ sessionId: string }> {
   const userId = await requireStudent();
   if (!input.content.trim()) {
     throw new Error("Pesan kosong");
   }
 
-  // BUG-1 FIX: Check chat quota before AI call
-  const quota = await incrementAiQuota(userId, "chat", 1);
-  if (!quota.allowed) {
-    throw new Error("Kuota AI chat harian sudah habis. Coba lagi besok ya!");
-  }
-
   const session = await prisma.chatSession.findFirst({
     where: { id: input.sessionId, userId },
-    include: {
-      messages: { orderBy: { createdAt: "asc" }, take: 20 },
-      documents: { select: { id: true, originalName: true }, take: 1 },
-    },
+    select: { id: true },
   });
   if (!session) {
-    await decrementAiQuota(userId, "chat", 1);
     throw new Error("Chat session not found");
   }
+
+  console.log("[chat] sendMessage: saving user message", {
+    sessionId: session.id,
+    contentLength: input.content.length,
+  });
 
   await prisma.chatMessage.create({
     data: {
@@ -396,112 +391,10 @@ export async function sendMessage(input: {
     },
   });
 
-  const subjectSlug = session.subjectId
-    ? (
-        await prisma.subject.findUnique({
-          where: { id: session.subjectId },
-          select: { slug: true },
-        })
-      )?.slug
-    : undefined;
+  revalidatePath("/chat");
+  revalidatePath(`/chat/${session.id}`);
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true },
-  });
-
-  const linkedDoc = session.documents[0];
-  let documentContext: string | null = null;
-  let documentName: string | null = null;
-  if (linkedDoc) {
-    documentName = linkedDoc.originalName;
-    try {
-      const { context, hasContext } = await buildDocumentChatContext(
-        linkedDoc.id,
-        input.content,
-        4,
-      );
-      if (hasContext) {
-        documentContext = `DOKUMEN YANG DIBICARAKAN: "${linkedDoc.originalName}"\n\n${context}\n\nATURAN: 
-- Jawab pertanyaan berdasarkan cuplikan di atas. Kalau ga ada jawabannya di cuplikan, bilang "Aku ga nemu jawabannya di dokumenmu" — jangan ngarang dari luar.
-- Gunakan metode Socratic: jangan kasih jawaban final langsung untuk soal/ujian. Bimbing dengan pertanyaan probing.
-- Selalu akhiri dengan pertanyaan terbuka untuk lanjutin dialog.`;
-        await logDocumentEvent({
-          documentId: linkedDoc.id,
-          userId,
-          action: "RAG_QUERY",
-          metadata: {
-            chatSessionId: session.id,
-            queryLength: input.content.length,
-            hasContext,
-          },
-        });
-      }
-    } catch (e) {
-      console.warn("buildDocumentChatContext failed:", e);
-    }
-  }
-
-  const messages = [
-    ...(documentContext
-      ? [
-          {
-            role: "system" as const,
-            content: documentContext,
-          },
-        ]
-      : []),
-    ...session.messages.map((m) => ({
-      role: m.role.toLowerCase() as "user" | "assistant" | "system",
-      content: m.content,
-    })),
-    { role: "user" as const, content: input.content },
-  ];
-
-  try {
-    const result = await generateTutorStream({
-      userId,
-      userName: user?.name ?? undefined,
-      messages,
-      subjectSlug: subjectSlug ?? undefined,
-      topicId: session.topicId ?? undefined,
-      lastUserMessage: input.content,
-    });
-
-    const fullText = await result.text;
-
-    await prisma.$transaction([
-      prisma.chatMessage.create({
-        data: {
-          sessionId: session.id,
-          role: "ASSISTANT",
-          content: fullText,
-        },
-      }),
-      prisma.chatSession.update({
-        where: { id: session.id },
-        data: { updatedAt: new Date() },
-      }),
-    ]);
-
-    revalidatePath("/chat");
-    revalidatePath(`/chat/${session.id}`);
-    revalidatePath("/dashboard");
-
-    async function* iterator() {
-      yield fullText;
-    }
-
-    return {
-      sessionId: session.id,
-      text: iterator(),
-      ...(documentName ? { documentName } : {}),
-    } as StreamResult;
-  } catch (err) {
-    // BUG-1 FIX: Restore quota on AI failure
-    await decrementAiQuota(userId, "chat", 1).catch(() => {});
-    throw err;
-  }
+  return { sessionId: session.id };
 }
 
 export async function sendMessageAndNavigate(input: {

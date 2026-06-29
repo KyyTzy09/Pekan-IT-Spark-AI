@@ -1,5 +1,7 @@
 "use client";
 
+import type { UIMessage } from "@tanstack/ai-client";
+import { fetchServerSentEvents, useChat } from "@tanstack/ai-react";
 import {
   ArrowLeft,
   Loader2,
@@ -10,11 +12,12 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { QuotaExhaustedModal } from "@/components/student/quota-exhausted-modal";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
-import { deleteChatSession, sendMessage } from "@/server/actions/chat";
+import { deleteChatSession } from "@/server/actions/chat";
 
-type Message = {
+type ServerMessage = {
   id: string;
   role: "USER" | "ASSISTANT" | "SYSTEM";
   content: string;
@@ -24,6 +27,24 @@ type Message = {
 type Subject = { id: string; name: string; slug: string } | null;
 type Topic = { id: string; name: string } | null;
 
+function toUIMessages(messages: ServerMessage[]): UIMessage[] {
+  return messages
+    .filter((m) => m.role === "USER" || m.role === "ASSISTANT")
+    .map((m) => ({
+      id: m.id,
+      role: m.role.toLowerCase() as "user" | "assistant",
+      parts: [{ type: "text" as const, content: m.content }],
+      createdAt: new Date(m.createdAt),
+    }));
+}
+
+function getTextContent(message: UIMessage): string {
+  return message.parts
+    .filter((p): p is { type: "text"; content: string } => p.type === "text")
+    .map((p) => p.content)
+    .join("");
+}
+
 export function ChatConversationView({
   sessionId,
   initialMessages,
@@ -32,168 +53,68 @@ export function ChatConversationView({
   title,
 }: {
   sessionId: string;
-  initialMessages: Message[];
+  initialMessages: ServerMessage[];
   subject: Subject;
   topic: Topic;
   title: string;
 }) {
   const router = useRouter();
-  const [messages, setMessages] = React.useState<Message[]>(initialMessages);
-  const [input, setInput] = React.useState("");
-  const [pending, setPending] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [quotaModalOpen, setQuotaModalOpen] = React.useState(false);
+  const [input, setInput] = React.useState("");
 
-  const processedMsgId = React.useRef<string | null>(null);
-  const isMounted = React.useRef(true);
+  const { messages, sendMessage, isLoading, error } = useChat({
+    connection: fetchServerSentEvents(`/api/chat/${sessionId}/stream`),
+    initialMessages: toUIMessages(initialMessages),
+    onError: (err) => {
+      console.error("[chat] useChat onError:", err.message);
+      const msg = err.message || "";
+      if (
+        msg.includes("kuota") ||
+        msg.includes("Kuota") ||
+        msg.includes("429")
+      ) {
+        setQuotaModalOpen(true);
+      }
+    },
+    onFinish: (message) => {
+      console.log("[chat] useChat onFinish:", {
+        id: message.id,
+        role: message.role,
+        parts: message.parts.length,
+        textLen: getTextContent(message).length,
+      });
+      router.refresh();
+    },
+    onChunk: (chunk) => {
+      console.log("[chat] useChat onChunk:", chunk.type);
+    },
+  });
 
-  React.useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  console.log("[chat] render:", {
+    messageCount: messages.length,
+    isLoading,
+    hasError: !!error,
+    roles: messages.map((m) => m.role),
+  });
 
-  React.useEffect(() => {
-    setMessages(initialMessages);
-  }, [initialMessages]);
-
-  // Streaming state
-  const [streamingContent, setStreamingContent] = React.useState("");
-  const abortControllerRef = React.useRef<AbortController | null>(null);
-
-  // Trigger assistant response if the last message is from user and we are not pending
-  React.useEffect(() => {
-    const lastMsg = messages[messages.length - 1];
-    if (
-      lastMsg &&
-      lastMsg.role === "USER" &&
-      !pending &&
-      processedMsgId.current !== lastMsg.id
-    ) {
-      let active = true;
-      setPending(true);
-      setError(null);
-      setStreamingContent("");
-
-      // Use streaming API
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      const startStreaming = async () => {
-        try {
-          const response = await fetch(`/api/chat/${sessionId}/stream`, {
-            method: "POST",
-            signal: abortController.signal,
-          });
-
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || "Gagal memuat jawaban.");
-          }
-
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error("No reader");
-
-          const decoder = new TextDecoder();
-          let buffer = "";
-          let fullText = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-
-                  if (data.error) {
-                    throw new Error(data.error);
-                  }
-
-                  if (data.chunk) {
-                    fullText += data.chunk;
-                    if (active) {
-                      setStreamingContent(fullText);
-                    }
-                  }
-
-                  if (data.done) {
-                    if (active) {
-                      processedMsgId.current = lastMsg.id;
-                      router.refresh();
-                    }
-                  }
-                } catch {
-                  // Malformated SSE data — log for debugging, continue reading stream
-                  console.warn("[chat] skipping malformed SSE chunk:", line);
-                }
-              }
-            }
-          }
-        } catch (err) {
-          if (active && !abortController.signal.aborted) {
-            setError(
-              err instanceof Error ? err.message : "Gagal memuat jawaban.",
-            );
-          }
-        } finally {
-          if (isMounted.current) {
-            setPending(false);
-            setStreamingContent("");
-          }
-        }
-      };
-
-      startStreaming();
-
-      return () => {
-        active = false;
-        abortController.abort();
-      };
-    }
-  }, [messages, sessionId, pending, router]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll runs on length/pending transitions, not on a stable ref read
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message count change
   React.useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length, pending, streamingContent]);
+  }, [messages.length]);
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || pending) return;
+    if (!trimmed || isLoading) return;
     setInput("");
-    setError(null);
-    const userMsg: Message = {
-      id: `temp-${Date.now()}`,
-      role: "USER",
-      content: trimmed,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setPending(true);
-    try {
-      await sendMessage({
-        sessionId,
-        content: trimmed,
-      });
-      processedMsgId.current = userMsg.id;
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal kirim pesan.");
-      setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
-      setInput(trimmed);
-    } finally {
-      setPending(false);
-    }
+    console.log("[chat] sending message", {
+      sessionId,
+      length: trimmed.length,
+    });
+    await sendMessage(trimmed);
   };
 
   const onDelete = async () => {
@@ -205,7 +126,6 @@ export function ChatConversationView({
       router.push("/chat");
     } catch {
       // deleteChatSession calls redirect() internally, which throws NEXT_REDIRECT
-      // If we get here, the redirect happened
     }
   };
 
@@ -227,30 +147,21 @@ export function ChatConversationView({
           <EmptyChat />
         ) : (
           <div className="mx-auto flex max-w-2xl flex-col gap-3.5">
-            {messages.map((m) => (
-              <MessageBubble key={m.id} message={m} />
-            ))}
-            {streamingContent && (
-              <MessageBubble
-                key="streaming"
-                message={{
-                  id: "streaming",
-                  role: "ASSISTANT",
-                  content: streamingContent,
-                  createdAt: new Date().toISOString(),
-                }}
-              />
-            )}
-            {pending && !streamingContent && <TypingIndicator />}
+            {messages
+              .filter((m) => !(m.role === "assistant" && !getTextContent(m)))
+              .map((m) => (
+                <MessageBubble key={m.id} message={m} />
+              ))}
+            {isLoading && <TypingIndicator />}
           </div>
         )}
       </div>
 
-      {error && (
+      {error && !quotaModalOpen && (
         <div role="alert" className="mx-auto max-w-2xl px-4 pb-3">
           <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-[12.5px] font-medium text-destructive">
             <span className="shrink-0">⚠️</span>
-            <span>{error}</span>
+            <span>{error.message}</span>
           </div>
         </div>
       )}
@@ -273,17 +184,17 @@ export function ChatConversationView({
               rows={1}
               placeholder="Tulis pertanyaan atau pemikiran kamu..."
               className="max-h-32 min-h-[40px] w-full resize-none rounded-2xl bg-transparent px-3.5 py-2.5 text-[14px] leading-relaxed outline-none placeholder:text-muted-foreground/70"
-              disabled={pending}
+              disabled={isLoading}
             />
           </div>
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || pending}
+            disabled={!input.trim() || isLoading}
             className="size-11 shrink-0 rounded-2xl bg-[var(--coral)] text-white shadow-[0_6px_18px_rgba(225,29,72,0.35)] hover:bg-[var(--coral)]/90"
             aria-label="Kirim"
           >
-            {pending ? (
+            {isLoading ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <Send size={16} />
@@ -295,6 +206,12 @@ export function ChatConversationView({
           Spark bisa salah — selalu konfirmasi ke guru untuk hal penting
         </p>
       </form>
+
+      <QuotaExhaustedModal
+        open={quotaModalOpen}
+        onClose={() => setQuotaModalOpen(false)}
+        quotaType="chat"
+      />
     </div>
   );
 }
@@ -360,12 +277,15 @@ function ChatHeader({
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
-  if (message.role === "USER") {
+function MessageBubble({ message }: { message: UIMessage }) {
+  const content = getTextContent(message);
+  if (!content) return null;
+
+  if (message.role === "user") {
     return (
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl rounded-br-md border border-border/30 bg-foreground/5 px-4 py-2.5 text-[13.5px] leading-relaxed text-foreground">
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="whitespace-pre-wrap break-words">{content}</p>
         </div>
       </div>
     );
@@ -376,7 +296,7 @@ function MessageBubble({ message }: { message: Message }) {
         <Sparkles size={13} strokeWidth={2.5} />
       </div>
       <div className="relative max-w-[80%] overflow-hidden rounded-2xl rounded-tl-md border border-[var(--coral)]/20 bg-gradient-to-br from-[var(--coral)]/8 to-[var(--orange)]/5 px-4 py-2.5 text-[13.5px] leading-relaxed text-foreground shadow-[0_2px_10px_rgba(225,29,72,0.06)]">
-        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        <p className="whitespace-pre-wrap break-words">{content}</p>
       </div>
     </div>
   );
