@@ -47,20 +47,18 @@ export async function decrementAiQuota(
   by = 1,
 ): Promise<void> {
   const today = startOfUtcDay(new Date());
+  const countKey = `${kind}Count` as const;
 
-  const existing = await prisma.dailyAiQuota.findUnique({
-    where: { userId },
-  });
-
-  if (!existing || existing.date.getTime() !== today.getTime()) return;
-
-  const current = existing[`${kind}Count` as const] as number;
-  if (current <= 0) return;
-
-  await prisma.dailyAiQuota.update({
-    where: { userId },
+  // Atomic decrement — single query, no TOCTOU.
+  // `where` guards: record exists for today AND count > 0.
+  await prisma.dailyAiQuota.updateMany({
+    where: {
+      userId,
+      date: today,
+      [countKey]: { gt: 0 },
+    },
     data: {
-      [`${kind}Count` as const]: Math.max(0, current - by),
+      [countKey]: { decrement: by },
       updatedAt: new Date(),
     },
   });
@@ -100,16 +98,22 @@ export async function incrementAiQuota(
 
   const newCount = updated[countKey] as number;
 
-  // Day boundary: if date is stale, reset all counters then re-increment
+  // Day boundary: if date is stale, atomically reset counters.
+  // `updateMany` with `date < today` guard ensures only ONE request
+  // wins the reset — concurrent losers fall through to plain increment.
   if (updated.date.getTime() !== today.getTime()) {
     const resetData: Record<string, unknown> = { date: today, updatedAt: new Date() };
     for (const key of otherKeys) resetData[key] = 0;
     resetData[countKey] = by;
-    await prisma.dailyAiQuota.update({
-      where: { userId },
+    const resetResult = await prisma.dailyAiQuota.updateMany({
+      where: { userId, date: { lt: today } },
       data: resetData,
     });
-    return { allowed: by <= limit, current: by, limit };
+    if (resetResult.count > 0) {
+      // We won the reset — counters are fresh
+      return { allowed: by <= limit, current: by, limit };
+    }
+    // Another request already reset — fall through to increment below
   }
 
   // Check limit — if over, roll back the increment

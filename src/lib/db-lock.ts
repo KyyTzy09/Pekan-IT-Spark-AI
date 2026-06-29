@@ -49,9 +49,9 @@ export async function acquireDbLock(
       }
       return false; // Lock is still valid
     }
-    // Other errors - log and allow generation (fail-open)
+    // Other errors - fail closed: deny lock to prevent duplicate generation
     console.error("[DB_LOCK] Unexpected error:", err);
-    return true;
+    return false;
   }
 }
 
