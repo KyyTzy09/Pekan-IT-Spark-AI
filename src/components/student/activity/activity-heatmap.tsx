@@ -70,8 +70,12 @@ export function ActivityHeatmap({ data, entries, className }: Props) {
   const last = data[data.length - 1];
   if (!first || !last) return null;
 
-  const firstDate = new Date(first.date);
-  const lastDate = new Date(last.date);
+  const parseLocal = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+  const firstDate = parseLocal(first.date);
+  const lastDate = parseLocal(last.date);
 
   // Pad the start so the first column is Sunday-aligned
   const firstDow = firstDate.getDay(); // 0 = Sun
@@ -90,7 +94,10 @@ export function ActivityHeatmap({ data, entries, className }: Props) {
 
   const cursor = new Date(paddedStart);
   while (cursor <= lastDate || cursor.getDay() !== 0) {
-    const ymd = cursor.toISOString().split("T")[0] ?? "";
+    const y = cursor.getFullYear();
+    const m = String(cursor.getMonth() + 1).padStart(2, "0");
+    const day = String(cursor.getDate()).padStart(2, "0");
+    const ymd = `${y}-${m}-${day}`;
     const entry = lookup.get(ymd);
     if (entry && cursor >= firstDate) {
       cells.push({
@@ -116,7 +123,7 @@ export function ActivityHeatmap({ data, entries, className }: Props) {
   weeks.forEach((week, colIdx) => {
     const firstCell = week.find((c) => c !== null);
     if (firstCell) {
-      const d = new Date(firstCell.date);
+      const d = parseLocal(firstCell.date);
       if (d.getMonth() !== lastMonth) {
         monthStarts.push({ col: colIdx, monthIdx: d.getMonth() });
         lastMonth = d.getMonth();
@@ -143,7 +150,7 @@ export function ActivityHeatmap({ data, entries, className }: Props) {
   const dayCounts = [0, 0, 0, 0, 0, 0, 0]; // Sun to Sat
   for (const d of data) {
     if (d.count > 0) {
-      const date = new Date(d.date);
+      const date = parseLocal(d.date);
       const dayIdx = date.getDay();
       dayCounts[dayIdx] += d.count;
     }

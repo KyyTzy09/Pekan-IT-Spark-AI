@@ -46,6 +46,7 @@ interface SubjectOption {
 interface MaterialsLibraryViewProps {
   initialResult: { items: MaterialLibraryItem[]; total: number };
   subjectOptions: SubjectOption[];
+  materialQuota?: { used: number; limit: number };
 }
 
 const SOURCE_FILTER: Array<MaterialSource | "ALL"> = [
@@ -67,6 +68,7 @@ const SOURCE_LABEL: Record<MaterialSource | "ALL", string> = {
 export function MaterialsLibraryView({
   initialResult,
   subjectOptions,
+  materialQuota,
 }: MaterialsLibraryViewProps) {
   const [result, setResult] = React.useState(initialResult);
   const [subjectId, setSubjectId] = React.useState<string>("");
@@ -395,9 +397,9 @@ export function MaterialsLibraryView({
                 <div className="rounded-xl bg-muted/50 px-4 py-3">
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
                     ℹ️ Materi akan di-generate oleh AI sesuai gaya belajarmu.
-                    Limit{" "}
+                    {" "}Sisa kuota hari ini:{" "}
                     <span className="font-bold text-foreground">
-                      7x per hari
+                      {materialQuota ? `${Math.max(0, materialQuota.limit - materialQuota.used)}x` : "—"}
                     </span>
                     .
                   </p>

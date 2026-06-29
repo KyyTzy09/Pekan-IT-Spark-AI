@@ -607,8 +607,59 @@ function parseCleanedJson(str: string): unknown {
 
     try {
       return JSON.parse(cleaned);
-    } catch (_e) {
-      throw err;
+    } catch {
+      // Escape literal control characters (newlines, tabs) inside JSON string values.
+      // LLMs frequently return raw newlines in markdown content within JSON strings.
+      cleaned = escapeJsonStringControls(cleaned);
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        throw err;
+      }
     }
   }
+}
+
+/**
+ * Escape literal control characters (\n, \r, \t) inside JSON string values.
+ * LLMs frequently return markdown content with raw newlines inside JSON strings.
+ */
+function escapeJsonStringControls(json: string): string {
+  let result = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i];
+
+    if (escaped) {
+      result += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === "\\" && inString) {
+      result += ch;
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+      continue;
+    }
+
+    if (inString) {
+      const code = ch.charCodeAt(0);
+      if (code === 0x0a) { result += "\\n"; continue; }
+      if (code === 0x0d) { result += "\\r"; continue; }
+      if (code === 0x09) { result += "\\t"; continue; }
+      if (code < 0x20) { result += "\\u" + code.toString(16).padStart(4, "0"); continue; }
+    }
+
+    result += ch;
+  }
+
+  return result;
 }

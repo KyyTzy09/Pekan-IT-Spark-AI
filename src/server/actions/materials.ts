@@ -7,24 +7,12 @@ import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
 import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
 
-const DAILY_MATERIAL_LIMIT = 7;
 
 const generateMaterialSchema = z.object({
   subjectId: z.string().min(1),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("MEDIUM"),
 });
 
-function startOfToday(): Date {
-  const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-}
-
-function startOfNextDay(): Date {
-  const today = startOfToday();
-  return new Date(today.getTime() + 86_400_000);
-}
 
 export async function generateOnDemandMaterial(input: {
   subjectId: string;
@@ -45,8 +33,6 @@ export async function generateOnDemandMaterial(input: {
 
   const userId = session.id;
   const { subjectId, difficulty } = parsed.data;
-  const today = startOfToday();
-  const tomorrow = startOfNextDay();
 
   // 🔴 Lock: cegah double generate dari request simultan
   if (!(await acquireDbLock(userId, "ON_DEMAND"))) {
@@ -66,20 +52,6 @@ export async function generateOnDemandMaterial(input: {
       };
     }
 
-    // Daily limit check (source-specific)
-    const todayCount = await prisma.material.count({
-      where: {
-        userId,
-        source: "ON_DEMAND",
-        createdAt: { gte: today, lt: tomorrow },
-      },
-    });
-    if (todayCount >= DAILY_MATERIAL_LIMIT) {
-      return {
-        ok: false,
-        error: `Batas generate materi hari ini sudah tercapai (${DAILY_MATERIAL_LIMIT}x). Coba lagi besok ya!`,
-      };
-    }
 
     // Validate subject
     const subject = await prisma.subject.findFirst({

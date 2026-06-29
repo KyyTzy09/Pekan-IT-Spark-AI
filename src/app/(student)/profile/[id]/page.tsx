@@ -128,10 +128,17 @@ export default async function UserProfileDetailPage({ params }: PageProps) {
     .catch(() => []);
   const ownedBadgeIds = new Set(profileUser.userBadges.map((ub) => ub.badgeId));
 
+function ymdLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
   // Group transactions by date YYYY-MM-DD
   const dailyXp: Record<string, number> = {};
   for (const tx of profileUser.xpTransactions) {
-    const dateStr = tx.createdAt.toISOString().split("T")[0];
+    const dateStr = ymdLocal(tx.createdAt);
     dailyXp[dateStr] = (dailyXp[dateStr] || 0) + tx.amount;
   }
 
@@ -211,7 +218,7 @@ export default async function UserProfileDetailPage({ params }: PageProps) {
   for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = ymdLocal(d);
     const dayLabel = d.toLocaleDateString("id-ID", { weekday: "short" });
     chartData.push({
       date: dateStr,
@@ -444,7 +451,7 @@ export default async function UserProfileDetailPage({ params }: PageProps) {
                               className="flex flex-col gap-[3px] shrink-0"
                             >
                               {week.map((day) => {
-                                const dateStr = day.toISOString().split("T")[0];
+                                const dateStr = ymdLocal(day);
                                 const xp = dailyXp[dateStr] || 0;
                                 let colorClass =
                                   "bg-muted/25 dark:bg-slate-800/40";

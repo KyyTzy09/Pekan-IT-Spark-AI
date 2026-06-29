@@ -69,7 +69,10 @@ function startOfDay(d: Date): Date {
 }
 
 function ymd(d: Date): string {
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /**
@@ -296,7 +299,7 @@ export async function getStudentActivity(
 
   // Increment from entries (one per activity)
   for (const e of entries) {
-    const day = e.timestamp.split("T")[0];
+    const day = ymd(new Date(e.timestamp));
     if (dayBuckets.has(day)) {
       dayBuckets.set(day, (dayBuckets.get(day) ?? 0) + 1);
     }
@@ -323,7 +326,8 @@ export async function getStudentActivity(
     seriesBuckets.set(ymd(d), { count: 0, xp: 0 });
   }
   for (const e of entries) {
-    const day = e.timestamp.split("T")[0];
+    const tsDate = new Date(e.timestamp);
+    const day = ymd(tsDate);
     const b = seriesBuckets.get(day);
     if (b) {
       b.count += 1;
