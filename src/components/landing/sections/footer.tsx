@@ -8,18 +8,6 @@ const links = {
     { label: "Cara Kerja", href: "#cara-kerja" },
     { label: "Progress", href: "#progress" },
   ],
-  perusahaan: [
-    { label: "Tentang Kami", href: "/about" },
-    { label: "Karir", href: "/careers" },
-    { label: "Blog", href: "/blog" },
-    { label: "Kontak", href: "/contact" },
-  ],
-  bantuan: [
-    { label: "Pusat Bantuan", href: "/help" },
-    { label: "FAQ", href: "/faq" },
-    { label: "Komunitas", href: "/community" },
-    { label: "Status", href: "/status" },
-  ],
 };
 
 export function Footer() {
@@ -75,26 +63,6 @@ export function Footer() {
             <Heart size={12} className="text-[var(--coral)]" /> buat pendidikan
             Indonesia.
           </p>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/privacy"
-              className="hover:text-foreground transition-colors"
-            >
-              Privasi
-            </Link>
-            <Link
-              href="/terms"
-              className="hover:text-foreground transition-colors"
-            >
-              Syarat & Ketentuan
-            </Link>
-            <Link
-              href="/pdp"
-              className="hover:text-foreground transition-colors"
-            >
-              UU PDP
-            </Link>
-          </div>
         </div>
       </div>
     </footer>
