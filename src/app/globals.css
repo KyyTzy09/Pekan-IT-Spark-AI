@@ -740,3 +740,10 @@
     background-position: -200% 0;
   }
 }
+
+/* Respect reduced-motion preference — disable all decorative animations */
+@media (prefers-reduced-motion: reduce) {
+  [aria-hidden] {
+    animation: none !important;
+  }
+}

@@ -40,33 +40,33 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden">
       {/* ── Background particles ── */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden md:block">
         <div
-          className="absolute left-[5%] top-[10%] size-2.5 rounded-full bg-[var(--coral)] opacity-70"
+          className="absolute left-[5%] top-[10%] size-2.5 rounded-full bg-[var(--coral)] opacity-70 will-change-[transform]"
           style={{
             animation: pause ? undefined : "float 6s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute right-[8%] top-[18%] size-1.5 rounded-full bg-[var(--yellow)] opacity-80"
+          className="absolute right-[8%] top-[18%] size-1.5 rounded-full bg-[var(--yellow)] opacity-80 will-change-[transform]"
           style={{
             animation: pause ? undefined : "float 8s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute bottom-[25%] left-[12%] size-2 rounded-full bg-[var(--teal)] opacity-60"
+          className="absolute bottom-[25%] left-[12%] size-2 rounded-full bg-[var(--teal)] opacity-60 will-change-[transform]"
           style={{
             animation: pause ? undefined : "float 7s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute right-[15%] bottom-[12%] size-2.5 rounded-full bg-[var(--purple)] opacity-60"
+          className="absolute right-[15%] bottom-[12%] size-2.5 rounded-full bg-[var(--purple)] opacity-60 will-change-[transform]"
           style={{
             animation: pause ? undefined : "float 9s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute left-1/4 top-1/2 size-1.5 rounded-full bg-[var(--pink)] opacity-60"
+          className="absolute left-1/4 top-1/2 size-1.5 rounded-full bg-[var(--pink)] opacity-60 will-change-[transform]"
           style={{
             animation: pause ? undefined : "float 7.5s ease-in-out infinite",
           }}
@@ -248,13 +248,13 @@ function ChatPreview({ pause }: { pause: boolean }) {
 
   return (
     <div ref={ref} className="relative">
-      {/* Floating math decorations */}
+      {/* Floating math decorations — hidden on mobile (decorative) */}
       {!pause &&
         MATH_DECORATIONS.map((d) => (
           <span
             key={d.symbol}
             aria-hidden
-            className="pointer-events-none absolute z-0 select-none font-heading text-xl font-bold text-foreground/10"
+            className="pointer-events-none absolute z-0 hidden select-none font-heading text-xl font-bold text-foreground/10 md:block"
             style={{
               top: d.top,
               left: d.left,
@@ -265,10 +265,10 @@ function ChatPreview({ pause }: { pause: boolean }) {
           </span>
         ))}
 
-      {/* Glow behind the chat window */}
+      {/* Glow behind the chat window — reduced blur on mobile */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] opacity-40 blur-3xl"
+        className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] opacity-40 blur-xl will-change-[transform] lg:blur-3xl"
         style={{
           background:
             "radial-gradient(circle at 30% 40%, rgba(139,92,246,0.3), transparent 60%), radial-gradient(circle at 70% 60%, rgba(225,29,72,0.2), transparent 60%)",
@@ -276,10 +276,10 @@ function ChatPreview({ pause }: { pause: boolean }) {
         }}
       />
 
-      {/* Morphing blob accent */}
+      {/* Morphing blob accent — reduced blur on mobile */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-8 -top-8 size-32 opacity-20 blur-2xl"
+        className="pointer-events-none absolute -right-8 -top-8 size-32 opacity-20 blur-lg will-change-[transform] lg:blur-2xl"
         style={{
           background: "linear-gradient(135deg, var(--coral), var(--purple))",
           animation: pause ? undefined : "morph-blob 8s ease-in-out infinite",
@@ -292,7 +292,7 @@ function ChatPreview({ pause }: { pause: boolean }) {
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="relative z-10 overflow-hidden rounded-3xl border border-border/50 bg-card/90 shadow-[0_20px_60px_rgba(80,20,50,0.15)] backdrop-blur-xl"
+        className="relative z-10 overflow-hidden rounded-3xl border border-border/50 bg-card/90 shadow-[0_20px_60px_rgba(80,20,50,0.15)] backdrop-blur-md lg:backdrop-blur-xl"
       >
         {/* Chat header */}
         <div className="flex items-center gap-3 border-b border-border/30 px-5 py-3.5">
@@ -368,7 +368,7 @@ function ChatPreview({ pause }: { pause: boolean }) {
                 {[0, 1, 2].map((dot) => (
                   <span
                     key={dot}
-                    className="size-1.5 rounded-full bg-muted-foreground/60"
+                    className="size-1.5 rounded-full bg-muted-foreground/60 will-change-[transform]"
                     style={{
                       animation: `float 1.2s ease-in-out ${dot * 0.15}s infinite`,
                     }}
@@ -392,12 +392,12 @@ function ChatPreview({ pause }: { pause: boolean }) {
         </div>
       </motion.div>
 
-      {/* Floating badges around chat */}
+      {/* Floating badges — hidden on mobile (decorative) */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={isInView ? { opacity: 1, x: 0 } : {}}
         transition={{ delay: 1, duration: 0.5 }}
-        className="absolute -right-3 top-[20%] z-20 flex items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(80,20,50,0.12)] backdrop-blur-md dark:border-border/40 dark:bg-card/90"
+        className="absolute -right-3 top-[20%] z-20 hidden items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(80,20,50,0.12)] backdrop-blur-md will-change-[transform] dark:border-border/40 dark:bg-card/90 md:flex"
         style={{
           animation: pause ? undefined : "float 5s ease-in-out infinite",
         }}
@@ -410,7 +410,7 @@ function ChatPreview({ pause }: { pause: boolean }) {
         initial={{ opacity: 0, x: -20 }}
         animate={isInView ? { opacity: 1, x: 0 } : {}}
         transition={{ delay: 1.5, duration: 0.5 }}
-        className="absolute -left-3 bottom-[25%] z-20 flex items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(80,20,50,0.12)] backdrop-blur-md dark:border-border/40 dark:bg-card/90"
+        className="absolute -left-3 bottom-[25%] z-20 hidden items-center gap-2 rounded-2xl border border-white/60 bg-white/90 p-2.5 shadow-[0_10px_24px_rgba(80,20,50,0.12)] backdrop-blur-md will-change-[transform] dark:border-border/40 dark:bg-card/90 md:flex"
         style={{
           animation: pause ? undefined : "float 6s ease-in-out 1.5s infinite",
         }}
@@ -433,14 +433,14 @@ function TrustedByMarquee() {
   ];
 
   return (
-    <div className="border-y border-dashed border-border/40 bg-card/30 py-4 backdrop-blur-sm">
+    <div className="border-y border-dashed border-border/40 bg-card/30 py-4 backdrop-blur-sm will-change-[transform]">
       <div className="container-px flex items-center gap-6 overflow-hidden">
         <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Selaras dengan
         </span>
         <div className="relative flex-1 overflow-hidden">
           <div
-            className="flex gap-8 whitespace-nowrap"
+            className="flex gap-8 whitespace-nowrap will-change-[transform]"
             style={{ animation: "scroll-x 30s linear infinite" }}
           >
             {[...items, ...items].map((item, i) => (

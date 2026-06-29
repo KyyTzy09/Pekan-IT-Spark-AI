@@ -107,22 +107,26 @@ const EMOJIS: EmojiConfig[] = [
 ];
 
 export function FloatingEmojis() {
-  const { scrollY } = useScroll();
   const [enabled, setEnabled] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    // Disable animations if user prefers reduced motion
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setEnabled(!mq.matches);
+    const isMobile = window.innerWidth < 1024; // lg breakpoint
+    setEnabled(!mq.matches && !isMobile);
   }, []);
 
   if (!enabled) return null;
+  return <FloatingEmojisInner />;
+}
+
+function FloatingEmojisInner() {
+  const { scrollY } = useScroll();
 
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-10 hidden overflow-hidden lg:block"
+      className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
     >
       {EMOJIS.map((item, idx) => {
         return (
@@ -165,12 +169,13 @@ function FloatingEmojiItem({
       style={{
         ...positionStyles,
         y,
+        willChange: "transform",
       }}
-      className="gpu absolute flex items-center justify-center"
+      className="absolute flex items-center justify-center"
     >
-      {/* Soft back glow */}
+      {/* Soft back glow — reduced blur for mobile perf */}
       <div
-        className="absolute -z-10 size-24 rounded-full opacity-20 blur-xl transition-all duration-500 hover:opacity-45"
+        className="absolute -z-10 size-24 rounded-full opacity-20 blur-lg transition-all duration-500 hover:opacity-45"
         style={{
           background: `radial-gradient(circle, ${item.glowColor} 0%, transparent 70%)`,
         }}
@@ -179,7 +184,7 @@ function FloatingEmojiItem({
       <span
         role="img"
         aria-label={item.label}
-        className={`select-none ${item.scale} transition-all duration-300 hover:scale-125`}
+        className={`select-none ${item.scale} will-change-[transform] transition-all duration-300 hover:scale-125`}
         style={{
           display: "inline-block",
           filter:
