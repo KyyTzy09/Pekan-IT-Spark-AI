@@ -31,7 +31,7 @@ export function Footer() {
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/30 bg-card/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
                 <GraduationCap size={13} />
-                spark-ai.vercel.app
+                spark-ai.web.id
               </span>
             </div>
           </div>
