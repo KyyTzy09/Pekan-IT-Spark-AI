@@ -54,7 +54,7 @@ export async function generateTopic(input: {
   // Validate subject
   const subject = await prisma.subject.findFirst({
     where: { id: subjectId, isActive: true },
-    select: { id: true, name: true, slug: true },
+    select: { id: true, name: true, slug: true, description: true },
   });
   if (!subject) {
     await decrementAiQuota(userId, "topicGen", 1);
@@ -74,10 +74,12 @@ export async function generateTopic(input: {
       prompt: `Kamu adalah expert pendidikan untuk siswa SMA/SMK Indonesia.
 
 Buatkan 1 topik baru untuk mata pelajaran ${subject.name} yang BELUM ADA di daftar berikut:
-${existingNames.length > 0 ? existingNames.map((n) => `- ${n}`).join("\n") : "- (belum ada topik)"}
+${existingNames.length > 0 ? existingNames.map((n) => `\u002D ${n}`).join("\n") : "\u002D (belum ada topik)"}
+
+Deskripsi mapel: ${subject.description || "(tidak ada deskripsi khusus)"}
 
 Topik harus:
-1. Relevan dengan kurikulum SMA/SMK Indonesia
+1. Relevan dengan deskripsi mapel di atas
 2. Berbeda dari topik yang sudah ada
 3. Bisa dibagi menjadi 3-5 konsep
 4. Berguna untuk siswa
@@ -97,7 +99,6 @@ Output HANYA JSON valid (tanpa code block):
 
     let json: unknown;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         json = JSON.parse(jsonMatch[0]);

@@ -43,6 +43,8 @@ export type WeeklySubjectInput = {
   avgMastery: number;
   growthTrend: number;
   hasAttempts: boolean;
+  weakConcepts?: Array<{ name: string; masteryScore: number }>;
+  strongConcepts?: Array<{ name: string; masteryScore: number }>;
 };
 
 function classifyStrength(avgMastery: number): "weak" | "balanced" | "strong" {
@@ -62,7 +64,7 @@ async function buildWeeklySubjectInput(
   });
   if (!subject || !subject.isActive) return null;
 
-  const [recentProfiles, prevProfiles] = await Promise.all([
+  const [recentProfiles, prevProfiles, weakMastery, strongMastery] = await Promise.all([
     prisma.studentKnowledgeProfile.findMany({
       where: {
         userId,
@@ -82,6 +84,26 @@ async function buildWeeklySubjectInput(
       },
       select: { masteryScore: true },
     }),
+    prisma.studentMastery.findMany({
+      where: {
+        userId,
+        score: { lt: 70 },
+        concept: { topic: { subjectId } },
+      },
+      orderBy: { score: "asc" },
+      take: 5,
+      include: { concept: { select: { name: true } } },
+    }),
+    prisma.studentMastery.findMany({
+      where: {
+        userId,
+        score: { gte: 70 },
+        concept: { topic: { subjectId } },
+      },
+      orderBy: { score: "desc" },
+      take: 5,
+      include: { concept: { select: { name: true } } },
+    }),
   ]);
 
   const recent = recentProfiles.map((p) => p.masteryScore);
@@ -95,6 +117,14 @@ async function buildWeeklySubjectInput(
     avgMastery: computeMasteryAverage(all),
     growthTrend: computeGrowthTrend(recent, prev),
     hasAttempts: all.length > 0,
+    weakConcepts: weakMastery.map((w) => ({
+      name: w.concept.name,
+      masteryScore: w.score / 100,
+    })),
+    strongConcepts: strongMastery.map((s) => ({
+      name: s.concept.name,
+      masteryScore: s.score / 100,
+    })),
   };
 }
 
@@ -278,6 +308,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
         strength,
         questionsCount: counts.questions,
         materialsCount: counts.materials,
+        weakConcepts: input.weakConcepts,
+        strongConcepts: input.strongConcepts,
       }).catch((err) => {
         console.error("generateWeeklyPerSubjectAI failed:", err);
         decrementAiQuota(userId, "questions", counts.questions).catch(() => {});
@@ -321,6 +353,8 @@ export async function regenerateWeeklyChallenge(userId: string): Promise<{
           strength,
           questionsCount: 1,
           materialsCount: 0,
+          weakConcepts: input.weakConcepts,
+          strongConcepts: input.strongConcepts,
         }).catch(() => ({
           questions: [] as RawWeeklyQuestion[],
           materials: [] as Array<{

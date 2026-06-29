@@ -1292,9 +1292,19 @@ export async function generateWeeklyPerSubjectAI(input: {
   strength: "weak" | "balanced" | "strong";
   questionsCount: number;
   materialsCount: number;
+  weakConcepts?: Array<{ name: string; masteryScore: number }>;
+  strongConcepts?: Array<{ name: string; masteryScore: number }>;
 }): Promise<WeeklyPerSubjectContent> {
   const styleHint = learningStyleHint(input.learningStyle);
   const strengthHint = strengthHintText(input.strength);
+  const weakList = (input.weakConcepts ?? [])
+    .slice(0, 5)
+    .map((c) => `- ${c.name} (mastery ${(c.masteryScore * 100).toFixed(0)}%)`)
+    .join("\n");
+  const strongList = (input.strongConcepts ?? [])
+    .slice(0, 5)
+    .map((c) => `- ${c.name} (mastery ${(c.masteryScore * 100).toFixed(0)}%)`)
+    .join("\n");
 
   const systemPrompt = `Kamu adalah Spark — tutor AI yang sabar dan suportif untuk siswa SMA/SMK Indonesia.
 
@@ -1313,6 +1323,12 @@ ATURAN WAJIB:
 ${styleHint}
 
 ${strengthHint}
+
+KONSEP LEMAH (perlu penguatan):
+${weakList || "(tidak ada data, gunakan kurikulum umum)"}
+
+KONSEP KUAT (untuk variasi):
+${strongList || "(tidak ada data)"}
 
 Format output:
 {
@@ -1338,6 +1354,8 @@ Format output:
   const userPrompt = `Mapel: ${input.subjectName}
 Jumlah soal: ${input.questionsCount}
 Jumlah materi: ${input.materialsCount}
+
+Pastikan semua soal dan materi relevan dengan konsep yang sudah dipelajari siswa di mapel ${input.subjectName}, terutama konsep lemah yang perlu penguatan.
 
 Buat konten tantangan mingguan untuk mapel di atas. Output JSON.`;
 

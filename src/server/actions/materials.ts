@@ -109,14 +109,52 @@ export async function generateOnDemandMaterial(input: {
     const learningStyle = profile?.learningStyle ?? "VISUAL";
     const masteryScore = knowledgeProfile?.masteryScore ?? 0.3;
 
-    console.log("[MATERIAL] 🚀 Generating materi untuk " + subject.name);
-    console.log("[MATERIAL] 📊 Detail:", {
-      mapel: subject.name,
-      kesulitan: difficulty,
-      gayaBelajar: learningStyle,
-      mastery: Math.round(masteryScore * 100) + "%",
+    // Fetch concept context for custom subjects
+    const [concept, ...extraConcepts] = await prisma.concept.findMany({
+      where: { topic: { subjectId } },
+      select: { name: true, description: true },
+      take: 6,
+      orderBy: { order: "asc" },
     });
 
+    if (concept) {
+      const contextDesc = extraConcepts.length > 0
+        ? `${concept.name}; ${extraConcepts.slice(0, 4).map((c) => c.name).join(", ")}${extraConcepts.length > 5 ? ", ..." : ""}`
+        : concept.description || concept.name;
+      console.log("[MATERIAL] 📚 Konteks konsep:", contextDesc);
+
+      const material = await generateAdaptiveMaterial({
+        conceptName: concept.name,
+        conceptDescription: contextDesc,
+        difficulty,
+        learningStyle,
+        masteryScore,
+      });
+
+      const created = await prisma.material.create({
+        data: {
+          title: material.title,
+          content: material.contentMd,
+          keyPoints: material.keyPoints,
+          difficulty,
+          estimatedMinutes: material.estimatedMinutes,
+          source: "ON_DEMAND",
+          subjectId,
+          userId,
+        },
+      });
+
+      console.log("[MATERIAL] ✅ Berhasil generate!", {
+        id: created.id,
+        judul: created.title,
+        estimasi: created.estimatedMinutes + " menit",
+      });
+
+      return { ok: true, materialId: created.id };
+    }
+
+    // No concepts found — fallback with just subject name
+    console.log("[MATERIAL] ⚠️ Tidak ada konsep, fallback ke nama mapel");
     const material = await generateAdaptiveMaterial({
       conceptName: subject.name,
       conceptDescription: `Materi belajar untuk mata pelajaran ${subject.name}`,
@@ -124,7 +162,6 @@ export async function generateOnDemandMaterial(input: {
       learningStyle,
       masteryScore,
     });
-
     const created = await prisma.material.create({
       data: {
         title: material.title,

@@ -684,21 +684,14 @@ async function resolveQuestionOutsideTransaction(
   userName?: string,
 ): Promise<{ questionId?: string; materialId?: string }> {
   // 1. Cari match dari existing questions — prefer yang match difficulty
-  const sameSubjectQuestions = availableQuestions.filter(
+  // For custom subjects, try slug match first, then name match (AI outputs name, not slug)
+  let sameSubjectQuestions = availableQuestions.filter(
     (q) => q.concept.topic.subject.slug === item.subjectSlug,
   );
-  // Prefer exact difficulty match, then fall back to any difficulty
-  const exactDifficulty = sameSubjectQuestions.filter(
-    (q) => q.difficulty === item.difficultyHint,
-  );
-  const shuffled = [...exactDifficulty].sort(() => Math.random() - 0.5);
-  const picked =
-    shuffled[0] ??
-    sameSubjectQuestions[
-      Math.floor(Math.random() * sameSubjectQuestions.length)
-    ];
-  if (picked) {
-    return { questionId: picked.id };
+  if (sameSubjectQuestions.length === 0 && subject.isCustom) {
+    sameSubjectQuestions = availableQuestions.filter(
+      (q) => q.concept.topic.subject.slug === subject.slug,
+    );
   }
 
   // 2. Coba AI generate question
@@ -753,11 +746,19 @@ async function resolveQuestionOutsideTransaction(
   const matQuota = await incrementAiQuota(userId, "materials", 1);
   if (matQuota.allowed) {
     try {
+      // Use conceptHint if available; otherwise fetch first concept from DB
+      const conceptName = item.conceptHint
+        ?? await prisma.concept.findFirst({
+          where: { topic: { subjectId: subject.id } },
+          select: { name: true },
+          orderBy: { order: "asc" },
+        }).then((c) => c?.name)
+        ?? subject.name;
       const material = await generateMaterialMarkdown({
         userName,
         subjectName: subject.name,
-        topicName: item.conceptHint ?? subject.name,
-        conceptName: item.conceptHint ?? subject.name,
+        topicName: conceptName,
+        conceptName,
         masteryScore: mix.questionDifficulty === "HARD" ? 0.8 : 0.3,
         learningStyle,
       });
