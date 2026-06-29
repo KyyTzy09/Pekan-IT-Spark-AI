@@ -12,10 +12,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { SparkCharacter } from "@/components/student/spark-character";
 import { Button } from "@/components/ui/button";
-import {
-  deleteChatSession,
-  sendMessage,
-} from "@/server/actions/chat";
+import { deleteChatSession, sendMessage } from "@/server/actions/chat";
 
 type Message = {
   id: string;
@@ -114,7 +111,7 @@ export function ChatConversationView({
               if (line.startsWith("data: ")) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  
+
                   if (data.error) {
                     throw new Error(data.error);
                   }
@@ -127,10 +124,8 @@ export function ChatConversationView({
                   }
 
                   if (data.done) {
-                    // Stream complete
                     if (active) {
                       processedMsgId.current = lastMsg.id;
-                      setStreamingContent("");
                       router.refresh();
                     }
                   }

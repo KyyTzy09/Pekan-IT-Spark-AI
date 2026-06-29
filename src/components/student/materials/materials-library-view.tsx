@@ -6,6 +6,13 @@ import * as React from "react";
 import { Reveal } from "@/components/shared/reveal";
 import { MaterialCard } from "@/components/student/materials/material-card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "ADVANCED";
@@ -206,19 +213,23 @@ export function MaterialsLibraryView({
             ))}
           </div>
           {subjectOptions.length > 0 && (
-            <select
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
-              className="h-9 rounded-full border border-border/40 bg-card/60 px-3 text-[11.5px] font-bold text-foreground outline-none backdrop-blur-sm"
+            <Select
+              value={subjectId || "__all__"}
+              onValueChange={(val) => setSubjectId(val === "__all__" ? "" : val)}
             >
-              <option value="">Semua mapel</option>
-              {subjectOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.icon ? `${s.icon} ` : ""}
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-full border-border/40 bg-card/60 px-3 text-[11.5px] font-bold">
+                <SelectValue placeholder="Semua mapel" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Semua mapel</SelectItem>
+                {subjectOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.icon ? `${s.icon} ` : ""}
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
       </Reveal>
@@ -318,24 +329,19 @@ export function MaterialsLibraryView({
                   >
                     📚 Pilih Mapel
                   </label>
-                  <div className="relative">
-                    <select
-                      id="gen-subject"
-                      value={genSubject}
-                      onChange={(e) => setGenSubject(e.target.value)}
-                      className="h-11 w-full appearance-none rounded-xl border border-border/60 bg-background px-4 pr-10 text-[13px] font-medium outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal)]/20"
-                    >
+                  <Select value={genSubject} onValueChange={setGenSubject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih mapel..." />
+                    </SelectTrigger>
+                    <SelectContent>
                       {subjectOptions.map((s) => (
-                        <option key={s.id} value={s.id}>
+                        <SelectItem key={s.id} value={s.id}>
                           {s.icon ? `${s.icon} ` : ""}
                           {s.name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      ▾
-                    </div>
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Difficulty Select */}

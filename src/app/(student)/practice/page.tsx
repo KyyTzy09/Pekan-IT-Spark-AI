@@ -42,6 +42,23 @@ export default async function PracticePage({
     return <PracticeLanding subjectSlug={subjectSlug} />;
   }
 
+  // Look up subjectId for auto-generation in empty state
+  let subjectIdForEmpty: string | undefined;
+  if (topicId) {
+    const topic = await prisma.topic.findUnique({
+      where: { id: topicId },
+      select: { subjectId: true },
+    });
+    subjectIdForEmpty = topic?.subjectId;
+  } else if (!subjectSlug) {
+    // Adaptive mode: use first focused subject for auto-generation
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: session.id },
+      select: { focusedSubjects: true },
+    });
+    subjectIdForEmpty = profile?.focusedSubjects?.[0];
+  }
+
   // Otherwise, get the next practice question
   const [nextResult, stats] = await Promise.all([
     getNextPracticeQuestion({ topicId, subjectSlug }),
@@ -52,7 +69,11 @@ export default async function PracticePage({
     <div className="space-y-5 sm:space-y-7">
       {!nextResult.ok ? (
         <Reveal>
-          <PracticeEmptyState error={nextResult.error} subjects={[]} />
+          <PracticeEmptyState
+            error={nextResult.error}
+            subjects={[]}
+            subjectId={subjectIdForEmpty}
+          />
         </Reveal>
       ) : (
         <Reveal>

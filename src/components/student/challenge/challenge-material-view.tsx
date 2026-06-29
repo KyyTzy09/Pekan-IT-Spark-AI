@@ -65,16 +65,19 @@ export function ChallengeMaterialView({
   const [error, setError] = React.useState<string | null>(null);
   const [readSeconds, _setReadSeconds] = React.useState(0);
   const startRef = React.useRef<number | null>(null);
+  const markedDoneRef = React.useRef(false);
+  const onMarkReadRef = React.useRef(onMarkRead);
+  onMarkReadRef.current = onMarkRead;
 
   React.useEffect(() => {
     startRef.current = Date.now();
     return () => {
-      if (startRef.current && onMarkRead) {
+      if (startRef.current && !markedDoneRef.current && onMarkReadRef.current) {
         const elapsed = Math.round((Date.now() - startRef.current) / 1000);
-        onMarkRead(material.id, elapsed, false);
+        onMarkReadRef.current(material.id, elapsed, false);
       }
     };
-  }, [material.id, onMarkRead]);
+  }, [material.id]);
 
   const meta = DIFFICULTY_META[material.difficulty];
   const isDone = status === "COMPLETED";
@@ -86,6 +89,7 @@ export function ChallengeMaterialView({
       ? Math.round((Date.now() - startRef.current) / 1000)
       : readSeconds;
     if (onMarkRead) await onMarkRead(material.id, elapsed, true);
+    markedDoneRef.current = true;
     const res = await onComplete(itemId);
     setSubmitting(false);
     if (!res.ok) setError(res.error ?? "Gagal");

@@ -12,6 +12,13 @@ import {
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Kind = "QUESTION" | "MATERIAL" | "REFLECTION" | "MIX";
 
@@ -184,7 +191,7 @@ export function OnDemandGenerator({
                           >
                             <Icon size={13} strokeWidth={2.5} />
                           </span>
-                          {meta.label}
+                          <span className="truncate">{meta.label}</span>
                         </button>
                       );
                     })}
@@ -196,19 +203,23 @@ export function OnDemandGenerator({
                     <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">
                       Mapel (opsional)
                     </p>
-                    <select
-                      value={subjectSlug}
-                      onChange={(e) => setSubjectSlug(e.target.value)}
+                    <Select
+                      value={subjectSlug || "__auto__"}
+                      onValueChange={(val) => setSubjectSlug(val === "__auto__" ? "" : val)}
                       disabled={submitting}
-                      className="h-10 w-full rounded-2xl border border-border/40 bg-background/70 px-3 text-[13px] outline-none backdrop-blur-sm"
                     >
-                      <option value="">Otomatis (pilih dari fokus kamu)</option>
-                      {subjectOptions.map((s) => (
-                        <option key={s.slug} value={s.slug}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-10 w-full rounded-2xl border-border/40 bg-background/70 text-[13px]">
+                        <SelectValue placeholder="Otomatis (pilih dari fokus kamu)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__auto__">Otomatis (pilih dari fokus kamu)</SelectItem>
+                        {subjectOptions.map((s) => (
+                          <SelectItem key={s.slug} value={s.slug}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 

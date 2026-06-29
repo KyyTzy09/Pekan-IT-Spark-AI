@@ -94,7 +94,6 @@ export async function generatePracticeQuestionsForSubject(
 
     const quota = await incrementAiQuota(session.id, "questions", 1);
     if (!quota.allowed) {
-      await decrementAiQuota(session.id, "questions", 1);
       break;
     }
 

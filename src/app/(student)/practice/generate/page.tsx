@@ -31,9 +31,19 @@ export default async function GeneratePracticePage() {
     ),
   };
 
-  // Fetch subjects with topics and concepts
+  // Fetch user's focused subjects
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { focusedSubjects: true },
+  });
+
+  // Fetch only focused subjects with topics and concepts
+  const focusedIds = profile?.focusedSubjects ?? [];
   const subjects = await prisma.subject.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(focusedIds.length > 0 ? { id: { in: focusedIds } } : {}),
+    },
     orderBy: { order: "asc" },
     select: {
       id: true,

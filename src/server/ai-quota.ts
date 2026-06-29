@@ -46,15 +46,16 @@ export async function decrementAiQuota(
   kind: AiQuotaKind,
   by = 1,
 ): Promise<void> {
-  const today = startOfUtcDay(new Date());
+  if (by < 1) return;
   const countKey = `${kind}Count` as const;
 
   // Atomic decrement — single query, no TOCTOU.
-  // `where` guards: record exists for today AND count > 0.
+  // No date guard: userId is @unique, so exactly one row per user.
+  // This ensures decrement works even if the row's date is stale
+  // (e.g., after a day-boundary race).
   await prisma.dailyAiQuota.updateMany({
     where: {
       userId,
-      date: today,
       [countKey]: { gt: 0 },
     },
     data: {
@@ -69,6 +70,8 @@ export async function incrementAiQuota(
   kind: AiQuotaKind,
   by = 1,
 ): Promise<{ allowed: boolean; current: number; limit: number }> {
+  if (by < 1) return { allowed: true, current: 0, limit: AI_QUOTA_LIMITS[kind] };
+
   const today = startOfUtcDay(new Date());
   const limit = AI_QUOTA_LIMITS[kind];
   const countKey = `${kind}Count` as const;
@@ -78,7 +81,7 @@ export async function incrementAiQuota(
     .filter((k) => k !== kind)
     .map((k) => `${k}Count` as const);
 
-  // Atomic upsert + increment — no Serializable isolation, no P2034, no retry loop
+  // Atomic upsert + increment
   const updated = await prisma.dailyAiQuota.upsert({
     where: { userId },
     create: {
@@ -96,11 +99,7 @@ export async function incrementAiQuota(
     },
   });
 
-  const newCount = updated[countKey] as number;
-
   // Day boundary: if date is stale, atomically reset counters.
-  // `updateMany` with `date < today` guard ensures only ONE request
-  // wins the reset — concurrent losers fall through to plain increment.
   if (updated.date.getTime() !== today.getTime()) {
     const resetData: Record<string, unknown> = { date: today, updatedAt: new Date() };
     for (const key of otherKeys) resetData[key] = 0;
@@ -113,10 +112,24 @@ export async function incrementAiQuota(
       // We won the reset — counters are fresh
       return { allowed: by <= limit, current: by, limit };
     }
-    // Another request already reset — fall through to increment below
+    // Another request already reset — re-read actual state
+    // to avoid using stale upsert return value
+    const fresh = await prisma.dailyAiQuota.findUnique({
+      where: { userId },
+    });
+    const actualCount = fresh ? (fresh[countKey] as number) : by;
+    if (actualCount > limit) {
+      await prisma.dailyAiQuota.update({
+        where: { userId },
+        data: { [countKey]: { decrement: by }, updatedAt: new Date() },
+      });
+      return { allowed: false, current: actualCount - by, limit };
+    }
+    return { allowed: true, current: actualCount, limit };
   }
 
-  // Check limit — if over, roll back the increment
+  // Normal path: check limit — if over, roll back the increment
+  const newCount = updated[countKey] as number;
   if (newCount > limit) {
     await prisma.dailyAiQuota.update({
       where: { userId },

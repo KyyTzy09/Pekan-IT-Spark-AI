@@ -19,9 +19,19 @@ export default async function TopicPickerPage({
   const sp = await searchParams;
   const subjectSlug = sp.subject;
 
-  // Fetch subjects with topics
+  // Fetch user's focused subjects
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { focusedSubjects: true },
+  });
+  const focusedIds = profile?.focusedSubjects ?? [];
+
+  // Fetch only focused subjects
   const subjects = await prisma.subject.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(focusedIds.length > 0 ? { id: { in: focusedIds } } : {}),
+    },
     orderBy: { order: "asc" },
     select: {
       id: true,
@@ -32,11 +42,15 @@ export default async function TopicPickerPage({
     },
   });
 
-  // Fetch topics with mastery data
+  // Fetch topics with mastery data — only from focused subjects
+  const subjectFilter = {
+    isActive: true,
+    ...(focusedIds.length > 0 ? { id: { in: focusedIds } } : {}),
+  };
   const topics = await prisma.topic.findMany({
     where: {
-      subject: { isActive: true },
-      ...(subjectSlug ? { subject: { slug: subjectSlug } } : {}),
+      subject: subjectFilter,
+      ...(subjectSlug ? { subject: { ...subjectFilter, slug: subjectSlug } } : {}),
     },
     include: {
       subject: {

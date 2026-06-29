@@ -201,6 +201,9 @@ export async function completeOnboardingCustom(
           topicIdByIndex.set(i, topicsData[i].id);
         }
 
+        // Track questionId by index for creating QuestionAttempt records
+        const questionIdByIndex = new Map<number, string>();
+
         for (const pa of data.pretestAnswers) {
           const topicId = topicIdByIndex.get(pa.questionIndex);
           if (!topicId) continue;
@@ -208,8 +211,11 @@ export async function completeOnboardingCustom(
           const firstConcept = conceptsData.find((c) => c.topicId === topicId);
           if (!firstConcept) continue;
 
+          const qId = randomUUID();
+          questionIdByIndex.set(pa.questionIndex, qId);
+
           questionsData.push({
-            id: randomUUID(),
+            id: qId,
             conceptId: firstConcept.id,
             type: "MULTIPLE_CHOICE" as QuestionType,
             difficulty: pa.difficulty as Difficulty,
@@ -225,6 +231,68 @@ export async function completeOnboardingCustom(
 
         if (questionsData.length > 0) {
           await tx.question.createMany({ data: questionsData });
+        }
+
+        // Create QuestionAttempt records so pretest is counted as completed
+        const attemptsData: Array<{
+          userId: string;
+          questionId: string;
+          answer: string;
+          isCorrect: boolean;
+        }> = [];
+
+        // Track mastery per concept from pretest answers
+        const conceptCorrectMap = new Map<string, { correct: number; total: number }>();
+
+        for (const pa of data.pretestAnswers) {
+          const qId = questionIdByIndex.get(pa.questionIndex);
+          if (!qId) continue;
+
+          attemptsData.push({
+            userId,
+            questionId: qId,
+            answer: pa.answer,
+            isCorrect: pa.isCorrect,
+          });
+
+          // Find which concept this question belongs to
+          const topicId = topicIdByIndex.get(pa.questionIndex);
+          if (!topicId) continue;
+          const firstConcept = conceptsData.find((c) => c.topicId === topicId);
+          if (!firstConcept) continue;
+
+          const bucket = conceptCorrectMap.get(firstConcept.id) ?? { correct: 0, total: 0 };
+          bucket.total += 1;
+          if (pa.isCorrect) bucket.correct += 1;
+          conceptCorrectMap.set(firstConcept.id, bucket);
+        }
+
+        if (attemptsData.length > 0) {
+          await tx.questionAttempt.createMany({ data: attemptsData });
+        }
+
+        // Create StudentKnowledgeProfile entries with mastery scores from pretest
+        for (const [conceptId, { correct, total }] of conceptCorrectMap) {
+          const ratio = total > 0 ? correct / total : 0;
+          const masteryScore = Math.round(ratio * 100) / 100;
+
+          await tx.studentKnowledgeProfile.upsert({
+            where: { userId_conceptId: { userId, conceptId } },
+            create: {
+              userId,
+              conceptId,
+              masteryScore,
+              status: ratio > 0.7 ? "LEARNING" as const : ratio > 0 ? "STRUGGLING" as const : "NOT_STARTED" as const,
+              attemptCount: total,
+              lastAttemptAt: new Date(),
+            },
+            update: {
+              masteryScore,
+              status: ratio > 0.7 ? "LEARNING" as const : ratio > 0 ? "STRUGGLING" as const : "NOT_STARTED" as const,
+              attemptCount: { increment: total },
+              lastAttemptAt: new Date(),
+            },
+          });
         }
       }
 
