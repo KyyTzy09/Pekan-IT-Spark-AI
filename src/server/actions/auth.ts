@@ -179,7 +179,7 @@ export async function registerAction(
         email,
         name: data.name,
         passwordHash,
-        image: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`,
+        image: `https://api.dicebear.com/9.x/pixel-art/png?seed=${(data.name?.charAt(0) || email.charAt(0)).toLowerCase()}`,
         role: "STUDENT",
         studentProfile: { create: {} },
       },

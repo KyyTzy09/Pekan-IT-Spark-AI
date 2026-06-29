@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     const email = googleUser.email.toLowerCase();
-    const defaultAvatar = `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(email)}`;
+    const defaultAvatar = `https://api.dicebear.com/9.x/pixel-art/png?seed=${(googleUser.name?.charAt(0) || email.charAt(0)).toLowerCase()}`;
 
     // 3. Upsert user in DB
     const existing = await prisma.user.findUnique({
