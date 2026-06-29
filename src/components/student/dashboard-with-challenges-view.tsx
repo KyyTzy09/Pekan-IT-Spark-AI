@@ -51,6 +51,7 @@ export function DashboardWithChallengesView({
   const [challenges, setChallenges] =
     useState<ChallengeListItem[]>(initialChallenges);
   const [loading, setLoading] = useState(initialChallenges.length === 0);
+  const [pollError, setPollError] = useState(false);
   const pollCount = useRef(0);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -80,12 +81,14 @@ export function DashboardWithChallengesView({
             pollCount.current++;
             pollTimerRef.current = setTimeout(poll, POLL_INTERVAL);
           } else {
+            setPollError(true);
             setLoading(false);
           }
         })
         .catch((err) => {
           console.warn("Failed to fetch today's challenges client-side:", err);
           if (active) {
+            setPollError(true);
             setLoading(false);
           }
         });
@@ -100,7 +103,7 @@ export function DashboardWithChallengesView({
     };
   }, [initialChallenges]);
 
-  const showChallenges = challenges.length > 0 || loading;
+  const showChallenges = challenges.length > 0 || loading || pollError;
 
   return (
     <div className="space-y-5 sm:space-y-7">
@@ -120,6 +123,15 @@ export function DashboardWithChallengesView({
                 <p className="mt-1 text-xs text-muted-foreground max-w-sm leading-relaxed">
                   Spark sedang merancang tantangan belajar khusus untuk hari ini
                   berdasarkan materi belajarmu. Mohon tunggu sebentar ya.
+                </p>
+              </div>
+            ) : pollError ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <h4 className="font-heading text-sm font-bold text-foreground">
+                  Gagal memuat tantangan
+                </h4>
+                <p className="mt-1 text-xs text-muted-foreground max-w-sm leading-relaxed">
+                  Terjadi kesalahan saat memuat tantangan harian. Coba muat ulang halaman.
                 </p>
               </div>
             ) : (

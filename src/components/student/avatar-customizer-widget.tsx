@@ -71,18 +71,20 @@ export function AvatarCustomizerWidget({ totalXp }: { totalXp: number }) {
   }, [dialogOpen]);
 
   React.useEffect(() => {
-    getAvatarCustomizationAction().then((res) => {
-      if (res.ok && res.avatar) {
-        const val = {
-          color: res.avatar.color,
-          accessory: res.avatar.accessory || "none",
-          background: res.avatar.background || "default",
-        };
-        setCurrent(val);
-        setPreview(val);
-      }
-      setLoading(false);
-    });
+    getAvatarCustomizationAction()
+      .then((res) => {
+        if (res.ok && res.avatar) {
+          const val = {
+            color: res.avatar.color,
+            accessory: res.avatar.accessory || "none",
+            background: res.avatar.background || "default",
+          };
+          setCurrent(val);
+          setPreview(val);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [dialogOpen]);
 
   const handleSave = async () => {

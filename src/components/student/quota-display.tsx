@@ -33,14 +33,17 @@ function formatResetTime(resetAt: string): string {
 export function QuotaDisplay({ className }: { className?: string }) {
   const [quotas, setQuotas] = useState<QuotaStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     getMyQuota()
       .then(setQuotas)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || quotas.length === 0) return null;
+  if (loading) return null;
+  if (error || quotas.length === 0) return null;
 
   return (
     <section

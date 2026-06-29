@@ -134,8 +134,9 @@ export function ChatConversationView({
                       router.refresh();
                     }
                   }
-                } catch (e) {
-                  // Skip invalid JSON
+                } catch {
+                  // Malformated SSE data — log for debugging, continue reading stream
+                  console.warn("[chat] skipping malformed SSE chunk:", line);
                 }
               }
             }

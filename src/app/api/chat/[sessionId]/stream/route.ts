@@ -107,7 +107,7 @@ export async function POST(
       const abortHandler = () => {
         if (!fullResponse) {
           // Client disconnected before any response — restore quota
-          decrementAiQuota(userId, "chat", 1).catch(() => {});
+          decrementAiQuota(userId, "chat", 1).catch((err) => console.error("[chat] quota restore failed on abort:", err));
         }
       };
       request.signal.addEventListener("abort", abortHandler);
@@ -134,7 +134,7 @@ export async function POST(
         if (request.signal.aborted) {
           if (fullResponse) {
             // Partial response but client left — restore quota, don't save
-            await decrementAiQuota(userId, "chat", 1).catch(() => {});
+            await decrementAiQuota(userId, "chat", 1).catch((err) => console.error("[chat] quota restore failed on partial abort:", err));
           }
           return;
         }
@@ -159,7 +159,7 @@ export async function POST(
         controller.close();
       } catch (err) {
         // Restore quota on error
-        await decrementAiQuota(userId, "chat", 1).catch(() => {});
+        await decrementAiQuota(userId, "chat", 1).catch((err) => console.error("[chat] quota restore failed on error:", err));
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
         controller.close();

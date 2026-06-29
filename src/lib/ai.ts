@@ -559,7 +559,7 @@ export function safeParseJson(text: string): unknown {
   for (const block of jsonBlocks) {
     try {
       return parseCleanedJson(block);
-    } catch (_e) {}
+    } catch { /* try next block */ }
   }
 
   // 2. If no code blocks parsed successfully, look for braces/brackets in the whole text
@@ -572,7 +572,7 @@ export function safeParseJson(text: string): unknown {
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
         return parseCleanedJson(text.slice(firstBrace, lastBrace + 1));
-      } catch (_e) {}
+      } catch {}
     }
 
     // Try to find the first '[' and last ']'
@@ -585,7 +585,7 @@ export function safeParseJson(text: string): unknown {
     ) {
       try {
         return parseCleanedJson(text.slice(firstBracket, lastBracket + 1));
-      } catch (_e) {}
+      } catch {}
     }
 
     throw err;
