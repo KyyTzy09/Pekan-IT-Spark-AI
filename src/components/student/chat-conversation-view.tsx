@@ -63,7 +63,8 @@ export function ChatConversationView({
   const [quotaModalOpen, setQuotaModalOpen] = React.useState(false);
   const [input, setInput] = React.useState("");
 
-  const { messages, sendMessage, isLoading, error } = useChat({
+  const { messages, sendMessage, reload, isLoading, error } = useChat({
+    id: sessionId,
     connection: fetchServerSentEvents(`/api/chat/${sessionId}/stream`),
     initialMessages: toUIMessages(initialMessages),
     onError: (err) => {
@@ -92,6 +93,7 @@ export function ChatConversationView({
   });
 
   console.log("[chat] render:", {
+    sessionId,
     messageCount: messages.length,
     isLoading,
     hasError: !!error,
@@ -108,18 +110,25 @@ export function ChatConversationView({
   // Auto-trigger AI response for the first user message.
   // useChat with initialMessages does NOT auto-send to the stream endpoint,
   // so we need to manually send when there's only a user message (no assistant reply yet).
-  const hasAutoSentRef = React.useRef(false);
   React.useEffect(() => {
-    if (hasAutoSentRef.current) return;
+    const hasAssistant = messages.some((m) => m.role === "assistant");
+    console.log("[chat] auto-trigger effect checked:", {
+      sessionId,
+      hasAssistant,
+      isLoading,
+      messageCount: messages.length,
+      firstRole: messages[0]?.role,
+    });
+    if (hasAssistant) return;
     if (isLoading) return;
     if (messages.length !== 1) return;
     const first = messages[0];
     if (first.role !== "user") return;
     const text = getTextContent(first);
     if (!text) return;
-    hasAutoSentRef.current = true;
-    sendMessage(text);
-  }, [messages, isLoading, sendMessage]);
+    console.log("[chat] auto-triggering reload() for", sessionId);
+    reload();
+  }, [messages, isLoading, reload, sessionId]);
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -289,11 +289,56 @@ export async function streamText({
     });
   }
 
-  // Helper to create result with both text and textStream
+  // Helper to create result with both text and textStream without double consumption
   const makeResult = (iterable: AsyncIterable<string>) => {
+    let accumulated = "";
+    let isDone = false;
+    let error: unknown = null;
+    let streamPromise: Promise<string> | null = null;
+    const deferredResolvers: Array<(value: string) => void> = [];
+    const deferredRejecters: Array<(reason: unknown) => void> = [];
+
+    const textPromise = new Promise<string>((resolve, reject) => {
+      deferredResolvers.push(resolve);
+      deferredRejecters.push(reject);
+    });
+
+    const textStream = (async function* () {
+      try {
+        for await (const chunk of iterable) {
+          accumulated += chunk;
+          yield chunk;
+        }
+        isDone = true;
+        for (const resolve of deferredResolvers) {
+          resolve(accumulated);
+        }
+      } catch (err) {
+        error = err;
+        for (const reject of deferredRejecters) {
+          reject(err);
+        }
+        throw err;
+      }
+    })();
+
+    const textGetter = async (): Promise<string> => {
+      if (isDone) return accumulated;
+      if (error) throw error;
+      if (!streamPromise) {
+        streamPromise = (async () => {
+          for await (const _ of textStream) {
+            // consume stream to end
+          }
+          return accumulated;
+        })();
+      }
+      return streamPromise;
+    };
+
     return {
-      text: collectStreamText(iterable),
-      textStream: iterable,
+      text: textGetter(),
+      textStream,
     };
   };
 
