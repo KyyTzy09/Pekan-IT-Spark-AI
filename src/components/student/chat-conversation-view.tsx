@@ -105,6 +105,22 @@ export function ChatConversationView({
     }
   }, [messages.length]);
 
+  // Auto-trigger AI response for the first user message.
+  // useChat with initialMessages does NOT auto-send to the stream endpoint,
+  // so we need to manually send when there's only a user message (no assistant reply yet).
+  const hasAutoSentRef = React.useRef(false);
+  React.useEffect(() => {
+    if (hasAutoSentRef.current) return;
+    if (isLoading) return;
+    if (messages.length !== 1) return;
+    const first = messages[0];
+    if (first.role !== "user") return;
+    const text = getTextContent(first);
+    if (!text) return;
+    hasAutoSentRef.current = true;
+    sendMessage(text);
+  }, [messages, isLoading, sendMessage]);
+
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();

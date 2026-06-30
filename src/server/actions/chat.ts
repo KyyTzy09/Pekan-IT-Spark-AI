@@ -190,17 +190,11 @@ export async function startNewChat(input: {
     ? `Diskusi: ${document.originalName}`
     : parsed.data.firstMessage;
 
-  let title: string;
-  try {
-    title = await generateChatTitle(baseTitle);
-  } catch {
-    title = baseTitle.slice(0, 80);
-  }
-
+  // Use first message as initial title, generate better title in background
   const created = await prisma.chatSession.create({
     data: {
       userId,
-      title,
+      title: baseTitle.slice(0, 80),
       subjectId: subject?.id ?? null,
       topicId: topic?.id ?? null,
       messages: {
@@ -212,6 +206,18 @@ export async function startNewChat(input: {
     },
     select: { id: true },
   });
+
+  // Generate AI title in background (fire-and-forget)
+  generateChatTitle(baseTitle)
+    .then((title) =>
+      prisma.chatSession.update({
+        where: { id: created.id },
+        data: { title },
+      }),
+    )
+    .catch((err) =>
+      console.warn("[chat] background title generation failed:", err),
+    );
 
   if (document) {
     await prisma.document.update({
