@@ -15,7 +15,7 @@ import { Reveal } from "@/components/shared/reveal";
 import { StudentProfileChart } from "@/components/student/student-profile-chart";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -128,12 +128,12 @@ export default async function UserProfileDetailPage({ params }: PageProps) {
     .catch(() => []);
   const ownedBadgeIds = new Set(profileUser.userBadges.map((ub) => ub.badgeId));
 
-function ymdLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+  function ymdLocal(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
 
   // Group transactions by date YYYY-MM-DD
   const dailyXp: Record<string, number> = {};
@@ -227,22 +227,8 @@ function ymdLocal(d: Date): string {
     });
   }
 
-  // Avatar initials / fallback
-  const initial = profileUser.name
-    ? profileUser.name.trim().charAt(0).toUpperCase()
-    : "?";
-  const charCodeSum = profileUser.name
-    ? Array.from(profileUser.name).reduce((acc, c) => acc + c.charCodeAt(0), 0)
-    : 0;
-  const gradients = [
-    "from-indigo-500 via-purple-500 to-pink-500",
-    "from-cyan-500 via-teal-500 to-emerald-500",
-    "from-amber-500 via-orange-500 to-rose-500",
-    "from-pink-500 via-rose-500 to-red-500",
-    "from-emerald-500 via-teal-500 to-cyan-500",
-    "from-violet-500 via-purple-500 to-indigo-500",
-  ];
-  const gradientClass = gradients[charCodeSum % gradients.length];
+  // Avatar with DiceBear fallback
+  const avatarSrc = getAvatarUrl(profileUser.image, profileUser.name);
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
@@ -271,23 +257,12 @@ function ymdLocal(d: Date): string {
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               {/* Profile Avatar */}
-              {profileUser.image ? (
-                // biome-ignore lint/performance/noImgElement: Using external image URLs
-                <img
-                  src={profileUser.image}
-                  alt={profileUser.name || "Foto Profil"}
-                  className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl object-cover border border-border/20 shadow-md shrink-0"
-                />
-              ) : (
-                <div
-                  className={cn(
-                    "flex h-24 w-24 sm:h-28 sm:w-28 items-center justify-center font-extrabold text-white text-4xl shadow-lg bg-gradient-to-br border border-white/10 shrink-0 rounded-3xl",
-                    gradientClass,
-                  )}
-                >
-                  {initial}
-                </div>
-              )}
+              {/* biome-ignore lint/performance/noImgElement: Using external image URLs */}
+              <img
+                src={avatarSrc}
+                alt={profileUser.name || "Foto Profil"}
+                className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl object-cover border border-border/20 shadow-md shrink-0"
+              />
 
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200/50 bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">

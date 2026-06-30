@@ -1,9 +1,8 @@
 "use client";
 
-import { Loader2, Upload, User } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 import {
   getCloudinarySignature,
   updateAvatarAction,
@@ -23,7 +22,7 @@ export function AvatarUpload({
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const displayImage = preview ?? currentImage;
+  const displayImage = preview ?? getAvatarUrl(currentImage, userName);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,17 +95,12 @@ export function AvatarUpload({
             uploading && "opacity-60",
           )}
         >
-          {displayImage ? (
-            <img
-              src={displayImage}
-              alt={userName}
-              className="size-full object-cover"
-            />
-          ) : (
-            <div className="grid size-full place-items-center">
-              <User size={32} className="text-muted-foreground/40" />
-            </div>
-          )}
+          {/* biome-ignore lint/performance/noImgElement: Using external image URLs */}
+          <img
+            src={displayImage}
+            alt={userName}
+            className="size-full object-cover"
+          />
         </div>
         <div className="absolute inset-0 grid place-items-center rounded-2xl bg-black/0 transition-all group-hover:bg-black/40">
           {!uploading && (

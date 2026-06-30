@@ -3,7 +3,7 @@
 import { ChevronRight, Flame, Search, Trophy } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 
 type LeaderboardUser = {
   id: string;
@@ -51,47 +51,21 @@ function UserAvatar({
     lg: "size-16 text-lg rounded-[20px]",
   };
 
-  const initial = name ? name.trim().charAt(0).toUpperCase() : "?";
-  const charCodeSum = name
-    ? Array.from(name).reduce((acc, c) => acc + c.charCodeAt(0), 0)
-    : 0;
-  const gradients = [
-    "from-indigo-500 via-purple-500 to-pink-500",
-    "from-cyan-500 via-teal-500 to-emerald-500",
-    "from-amber-500 via-orange-500 to-rose-500",
-    "from-pink-500 via-rose-500 to-red-500",
-    "from-emerald-500 via-teal-500 to-cyan-500",
-    "from-violet-500 via-purple-500 to-indigo-500",
-  ];
-  const gradient = gradients[charCodeSum % gradients.length];
-
-  if (image) {
-    return (
-      <div
-        className={cn(
-          "relative shrink-0 overflow-hidden border border-border/20 shadow-sm",
-          sizeClasses[size],
-        )}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt={name || "Avatar"}
-          className="h-full w-full object-cover"
-        />
-      </div>
-    );
-  }
+  const avatarSrc = getAvatarUrl(image, name);
 
   return (
     <div
       className={cn(
-        "flex items-center justify-center font-extrabold text-white shadow-md bg-gradient-to-br border border-white/10 shrink-0",
-        gradient,
+        "relative shrink-0 overflow-hidden border border-border/20 shadow-sm",
         sizeClasses[size],
       )}
     >
-      {initial}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={avatarSrc}
+        alt={name || "Avatar"}
+        className="h-full w-full object-cover"
+      />
     </div>
   );
 }

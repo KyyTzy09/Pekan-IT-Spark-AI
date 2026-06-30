@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
         where: { id: existing.id },
         data: {
           name: googleUser.name ?? existing.name,
-          image: googleUser.picture ?? existing.image,
+          image: googleUser.picture ?? existing.image ?? defaultAvatar,
         },
         select: {
           id: true,
