@@ -103,4 +103,20 @@ describe("safeParseJson", () => {
     const result = safeParseJson(input) as Record<string, unknown>;
     expect(result.path).toBe("File di \\Users\\Colorful\\Documents");
   });
+
+  it("handles backslash followed by literal newline in string", () => {
+    // AI sometimes outputs: \"text\\\nmore\" where \n is a literal newline
+    const input = '{"content": "line1\\\\\nline2"}';
+    const result = safeParseJson(input) as Record<string, unknown>;
+    expect(result.content).toBe("line1\\\nline2");
+  });
+
+  it("handles multiple literal newlines in long markdown content", () => {
+    const input =
+      '{"title":"Test","contentMd":"# Heading\n\nParagraph 1\n\nParagraph 2\n\n- Item 1\n- Item 2"}';
+    const result = safeParseJson(input) as Record<string, unknown>;
+    expect(result.contentMd).toBe(
+      "# Heading\n\nParagraph 1\n\nParagraph 2\n\n- Item 1\n- Item 2",
+    );
+  });
 });

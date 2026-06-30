@@ -614,16 +614,27 @@ function parseCleanedJson(str: string): unknown {
     } catch {
       // Escape literal control characters (newlines, tabs) inside JSON string values.
       // LLMs frequently return raw newlines in markdown content within JSON strings.
-      cleaned = escapeJsonStringControls(cleaned);
+      const escaped = escapeJsonStringControls(cleaned);
       try {
-        return JSON.parse(cleaned);
-      } catch {
+        return JSON.parse(escaped);
+      } catch (escapedErr) {
         // Fix invalid escape sequences (e.g. \p, \s, \1) from LLM output.
         // JSON only allows: \" \\ \/ \b \f \n \r \t \uXXXX
-        cleaned = fixInvalidJsonEscapes(cleaned);
+        const fixedEscapes = fixInvalidJsonEscapes(escaped);
         try {
-          return JSON.parse(cleaned);
-        } catch {
+          return JSON.parse(fixedEscapes);
+        } catch (fixedErr) {
+          // Log diagnostic info to help debug persistent parse failures
+          const errMsg =
+            fixedErr instanceof Error ? fixedErr.message : String(fixedErr);
+          const charAtPos = errMsg.match(/position (\d+)/);
+          if (charAtPos) {
+            const pos = Number.parseInt(charAtPos[1], 10);
+            const char = fixedEscapes.charCodeAt(pos);
+            console.warn(
+              `[safeParseJson] Parse failed at pos ${pos}: charCode=${char} (0x${char.toString(16)}) context="${fixedEscapes.slice(Math.max(0, pos - 20), pos + 20)}"`,
+            );
+          }
           throw err;
         }
       }
@@ -642,9 +653,25 @@ function escapeJsonStringControls(json: string): string {
 
   for (let i = 0; i < json.length; i++) {
     const ch = json[i];
+    const code = ch.charCodeAt(0);
 
     if (escaped) {
-      result += ch;
+      // Previous char was backslash inside a string.
+      // If this is a control character (e.g. literal newline after \),
+      // we need to escape the control char, not leave it raw.
+      if (code < 0x20) {
+        if (code === 0x0a) {
+          result += "\\n";
+        } else if (code === 0x0d) {
+          result += "\\r";
+        } else if (code === 0x09) {
+          result += "\\t";
+        } else {
+          result += "\\u" + code.toString(16).padStart(4, "0");
+        }
+      } else {
+        result += ch;
+      }
       escaped = false;
       continue;
     }
@@ -661,8 +688,7 @@ function escapeJsonStringControls(json: string): string {
       continue;
     }
 
-    if (inString) {
-      const code = ch.charCodeAt(0);
+    if (inString && code < 0x20) {
       if (code === 0x0a) {
         result += "\\n";
         continue;
@@ -675,10 +701,8 @@ function escapeJsonStringControls(json: string): string {
         result += "\\t";
         continue;
       }
-      if (code < 0x20) {
-        result += "\\u" + code.toString(16).padStart(4, "0");
-        continue;
-      }
+      result += "\\u" + code.toString(16).padStart(4, "0");
+      continue;
     }
 
     result += ch;
