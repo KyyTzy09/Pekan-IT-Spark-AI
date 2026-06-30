@@ -337,7 +337,9 @@ export async function streamText({
           const chatMessages = apiMessages.filter((m) => m.role !== "system");
 
           const contents = chatMessages.map((m) => ({
-            role: (m.role === "assistant" ? "model" : "user") as "user" | "model",
+            role: (m.role === "assistant" ? "model" : "user") as
+              | "user"
+              | "model",
             parts: [{ text: m.content }],
           }));
 
@@ -559,7 +561,9 @@ export function safeParseJson(text: string): unknown {
   for (const block of jsonBlocks) {
     try {
       return parseCleanedJson(block);
-    } catch { /* try next block */ }
+    } catch {
+      /* try next block */
+    }
   }
 
   // 2. If no code blocks parsed successfully, look for braces/brackets in the whole text
@@ -614,7 +618,14 @@ function parseCleanedJson(str: string): unknown {
       try {
         return JSON.parse(cleaned);
       } catch {
-        throw err;
+        // Fix invalid escape sequences (e.g. \p, \s, \1) from LLM output.
+        // JSON only allows: \" \\ \/ \b \f \n \r \t \uXXXX
+        cleaned = fixInvalidJsonEscapes(cleaned);
+        try {
+          return JSON.parse(cleaned);
+        } catch {
+          throw err;
+        }
       }
     }
   }
@@ -652,10 +663,75 @@ function escapeJsonStringControls(json: string): string {
 
     if (inString) {
       const code = ch.charCodeAt(0);
-      if (code === 0x0a) { result += "\\n"; continue; }
-      if (code === 0x0d) { result += "\\r"; continue; }
-      if (code === 0x09) { result += "\\t"; continue; }
-      if (code < 0x20) { result += "\\u" + code.toString(16).padStart(4, "0"); continue; }
+      if (code === 0x0a) {
+        result += "\\n";
+        continue;
+      }
+      if (code === 0x0d) {
+        result += "\\r";
+        continue;
+      }
+      if (code === 0x09) {
+        result += "\\t";
+        continue;
+      }
+      if (code < 0x20) {
+        result += "\\u" + code.toString(16).padStart(4, "0");
+        continue;
+      }
+    }
+
+    result += ch;
+  }
+
+  return result;
+}
+
+/**
+ * Fix invalid escape sequences in JSON strings.
+ * LLMs sometimes produce \p, \s, \1, etc. which are invalid JSON.
+ * Doubles the backslash so it becomes a literal backslash in the parsed string.
+ */
+function fixInvalidJsonEscapes(json: string): string {
+  const validEscapeChars = new Set([
+    '"',
+    "\\",
+    "/",
+    "b",
+    "f",
+    "n",
+    "r",
+    "t",
+    "u",
+  ]);
+  let result = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i];
+
+    if (escaped) {
+      escaped = false;
+      result += ch;
+      continue;
+    }
+
+    if (ch === "\\" && inString) {
+      const next = json[i + 1];
+      if (next !== undefined && !validEscapeChars.has(next)) {
+        result += "\\\\"; // double the backslash
+        continue;
+      }
+      result += ch;
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+      continue;
     }
 
     result += ch;
