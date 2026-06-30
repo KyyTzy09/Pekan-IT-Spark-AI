@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useBadgeCelebration } from "@/components/student/badge-unlock-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -794,7 +795,8 @@ function MasteredCelebration({
     const t = window.setTimeout(onClose, 4200);
     return () => window.clearTimeout(t);
   }, [open, onClose]);
-  return (
+  if (typeof window === "undefined") return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -822,7 +824,8 @@ function MasteredCelebration({
           )}
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 
@@ -859,7 +862,8 @@ function WhyModal({
   result: SubmitPracticeResult | null;
   question: { questionText: string; conceptName: string; topicName: string };
 }) {
-  return (
+  if (typeof window === "undefined") return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -971,6 +975,7 @@ function WhyModal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
