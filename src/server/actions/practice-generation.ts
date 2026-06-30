@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
-import { chatModel, generateText } from "@/lib/ai";
+import { chatModel, generateText, safeParseJson } from "@/lib/ai";
 
 const generateTopicSchema = z.object({
   subjectId: z.string().min(1),
@@ -99,12 +99,7 @@ Output HANYA JSON valid (tanpa code block):
 
     let json: unknown;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        json = JSON.parse(jsonMatch[0]);
-      } else {
-        json = JSON.parse(text);
-      }
+      json = safeParseJson(text);
     } catch {
       await decrementAiQuota(userId, "topicGen", 1);
       return {
@@ -271,12 +266,7 @@ Output HANYA JSON valid (tanpa code block):
 
     let json: unknown;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        json = JSON.parse(jsonMatch[0]);
-      } else {
-        json = JSON.parse(text);
-      }
+      json = safeParseJson(text);
     } catch {
       await decrementAiQuota(userId, "practiceGen", 1);
       return {
@@ -450,12 +440,7 @@ Output HANYA JSON valid (tanpa code block):
 
     let json: unknown;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        json = JSON.parse(jsonMatch[0]);
-      } else {
-        json = JSON.parse(text);
-      }
+      json = safeParseJson(text);
     } catch {
       await decrementAiQuota(userId, "topicGen", 1).catch(() => {});
       await decrementAiQuota(userId, "practiceGen", 1).catch(() => {});
