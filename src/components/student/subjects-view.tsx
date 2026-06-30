@@ -525,10 +525,35 @@ export function SubjectDetailView({
 }) {
   const { subject, topics, totalConcepts, masteredConcepts, pretestCompleted } =
     summary;
+  const router = useRouter();
+  const [generatingTopic, setGeneratingTopic] = React.useState(false);
+  const [topicError, setTopicError] = React.useState<string | null>(null);
   const pct =
     totalConcepts > 0
       ? Math.round((masteredConcepts / totalConcepts) * 100)
       : 0;
+
+  const handleGenerateTopic = async () => {
+    setTopicError(null);
+    setGeneratingTopic(true);
+    try {
+      const res = await fetch("/api/practice/generate-topic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subjectId: subject.id }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        router.refresh();
+      } else {
+        setTopicError(data.error ?? "Gagal generate topik.");
+      }
+    } catch {
+      setTopicError("Gagal generate topik. Coba lagi.");
+    } finally {
+      setGeneratingTopic(false);
+    }
+  };
   return (
     <div className="space-y-5 sm:space-y-7">
       <Reveal>
@@ -689,10 +714,37 @@ export function SubjectDetailView({
                   Skill tree
                 </h2>
               </div>
-              <span className="text-[10.5px] font-semibold text-muted-foreground">
-                Tap topik buat liat konstelasi konsep
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10.5px] font-semibold text-muted-foreground">
+                  Tap topik buat liat konstelasi konsep
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={generatingTopic}
+                  onClick={handleGenerateTopic}
+                  className="rounded-full border-[var(--purple)]/30 text-[var(--purple)] hover:bg-[var(--purple)]/8 text-[11px] font-bold"
+                >
+                  {generatingTopic ? (
+                    <>
+                      <Loader2 size={12} className="mr-1 animate-spin" />
+                      Generate...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={12} className="mr-1" />
+                      Generate Topik
+                    </>
+                  )}
+                </Button>
+              </div>
             </header>
+            {topicError && (
+              <div className="mb-3 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2 text-[12px] font-medium text-destructive">
+                <span className="size-1.5 shrink-0 rounded-full bg-destructive" />
+                {topicError}
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               {topics.map((t) => (
                 <TopicCard key={t.id} topic={t} subjectColor={subject.color} />
