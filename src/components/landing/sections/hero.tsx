@@ -40,7 +40,10 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden">
       {/* ── Background particles ── */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden md:block">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 hidden md:block"
+      >
         <div
           className="absolute left-[5%] top-[10%] size-2.5 rounded-full bg-[var(--coral)] opacity-70 will-change-[transform]"
           style={{

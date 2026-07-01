@@ -29,9 +29,7 @@ import {
   getMasteryLabel,
   aggregateSubjectMastery,
 } from "@/server/learning/mastery";
-import {
-  difficultyToScore,
-} from "@/server/learning/difficulty";
+import { difficultyToScore } from "@/server/learning/difficulty";
 import type {
   BloomTaxonomy,
   ConceptStatus,
@@ -437,7 +435,12 @@ export async function recordQuestionAttempt(
 
   const question = await prisma.question.findUnique({
     where: { id: questionId },
-    select: { id: true, conceptId: true, difficulty: true, difficultyScore: true },
+    select: {
+      id: true,
+      conceptId: true,
+      difficulty: true,
+      difficultyScore: true,
+    },
   });
   if (!question) return { ok: false, error: "Soal tidak ditemukan" };
 
@@ -476,7 +479,8 @@ export async function recordQuestionAttempt(
     : 0;
 
   // Get difficulty score (use new field, fallback to conversion)
-  const difficultyScore = question.difficultyScore ?? difficultyToScore(question.difficulty);
+  const difficultyScore =
+    question.difficultyScore ?? difficultyToScore(question.difficulty);
 
   // Calculate new mastery using new system
   const masteryResult = computeNewMastery({
@@ -520,7 +524,12 @@ export async function recordQuestionAttempt(
       attemptCount: { increment: 1 },
       correctCount: isCorrect ? { increment: 1 } : undefined,
       totalTimeSpent: { increment: timeSpent ?? 0 },
-      peakScore: { set: Math.max(existingMastery?.peakScore ?? 0, masteryResult.newMastery) },
+      peakScore: {
+        set: Math.max(
+          existingMastery?.peakScore ?? 0,
+          masteryResult.newMastery,
+        ),
+      },
       lastAttemptAt: now,
     },
   });
@@ -583,7 +592,10 @@ export async function recordQuestionAttempt(
 /**
  * Update subject mastery aggregation after concept mastery changes.
  */
-async function updateSubjectMastery(userId: string, conceptId: string): Promise<void> {
+async function updateSubjectMastery(
+  userId: string,
+  conceptId: string,
+): Promise<void> {
   // Find which subject this concept belongs to
   const concept = await prisma.concept.findUnique({
     where: { id: conceptId },
@@ -598,7 +610,7 @@ async function updateSubjectMastery(userId: string, conceptId: string): Promise<
     where: { topic: { subjectId } },
     select: { id: true },
   });
-  const conceptIds = concepts.map(c => c.id);
+  const conceptIds = concepts.map((c) => c.id);
 
   // Get all concept masteries for this subject
   const conceptMasteries = await prisma.studentMastery.findMany({

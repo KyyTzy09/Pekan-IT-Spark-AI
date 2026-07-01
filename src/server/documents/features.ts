@@ -151,7 +151,12 @@ export async function buildDocumentChatContext(
   topK: number = 4,
   queryEmbedding?: number[],
 ): Promise<{ context: string; hasContext: boolean }> {
-  const chunks = await retrieveDocumentChunks(documentId, query, topK, queryEmbedding);
+  const chunks = await retrieveDocumentChunks(
+    documentId,
+    query,
+    topK,
+    queryEmbedding,
+  );
   if (chunks.length === 0) {
     return { context: "", hasContext: false };
   }

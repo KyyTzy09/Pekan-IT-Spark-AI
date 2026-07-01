@@ -359,7 +359,13 @@ function AnimatedCanopy({
   );
 }
 
-function GroundPlane({ stage, progressFactor }: { stage: number; progressFactor: number }) {
+function GroundPlane({
+  stage,
+  progressFactor,
+}: {
+  stage: number;
+  progressFactor: number;
+}) {
   const grassCount = Math.round((10 + stage * 15) * progressFactor);
   const groundRadius = 6 + progressFactor * 4; // 6 → 10
 
@@ -433,10 +439,26 @@ function GroundPlane({ stage, progressFactor }: { stage: number; progressFactor:
       </mesh>
       {/* Terrain bumps (small hills) */}
       {[
-        { pos: [2.5, 0.06, 1.5] as [number, number, number], scale: [1.8, 0.15, 1.5] as [number, number, number], color: '#4a9e5c' },
-        { pos: [-2, 0.04, -2] as [number, number, number], scale: [1.5, 0.1, 1.2] as [number, number, number], color: '#3d8b4f' },
-        { pos: [1, 0.03, -2.8] as [number, number, number], scale: [2, 0.08, 1.5] as [number, number, number], color: '#4a9e5c' },
-        { pos: [-3, 0.05, 1] as [number, number, number], scale: [1.2, 0.12, 1] as [number, number, number], color: '#3d8b4f' },
+        {
+          pos: [2.5, 0.06, 1.5] as [number, number, number],
+          scale: [1.8, 0.15, 1.5] as [number, number, number],
+          color: "#4a9e5c",
+        },
+        {
+          pos: [-2, 0.04, -2] as [number, number, number],
+          scale: [1.5, 0.1, 1.2] as [number, number, number],
+          color: "#3d8b4f",
+        },
+        {
+          pos: [1, 0.03, -2.8] as [number, number, number],
+          scale: [2, 0.08, 1.5] as [number, number, number],
+          color: "#4a9e5c",
+        },
+        {
+          pos: [-3, 0.05, 1] as [number, number, number],
+          scale: [1.2, 0.12, 1] as [number, number, number],
+          color: "#3d8b4f",
+        },
       ].map((hill, i) => (
         <mesh key={`hill-${i}`} position={hill.pos} scale={hill.scale}>
           <sphereGeometry args={[1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -526,10 +548,12 @@ function TreeScene({
   const progressFactor = Math.min(1, (totalXp + totalMastered * 50) / 500); // 0 = baru daftar, 1 = cukup aktif
   const trunkHeight = 0.4 + progressFactor * 7.6; // 0.4 (bibit) → 8 (pohon besar)
   const trunkRadius = 0.05 + progressFactor * 0.3; // 0.05 (tipis) → 0.35 (tebal)
-  const branchCount = totalMastered > 0 ? Math.min(totalMastered, 14) : stage >= 2 ? 1 : 0;
+  const branchCount =
+    totalMastered > 0 ? Math.min(totalMastered, 14) : stage >= 2 ? 1 : 0;
   // Minimum leaves per stage — kecambah HARUS punya daun
   const minLeavesByStage = [3, 10, 25, 50]; // stage 1=3, stage 2=10, stage 3=25, stage 4=50
-  const baseLeafCount = totalMastered > 0 ? Math.round(10 + (avgMasteryPct / 100) * 90) : 0;
+  const baseLeafCount =
+    totalMastered > 0 ? Math.round(10 + (avgMasteryPct / 100) * 90) : 0;
   const leafCount = Math.max(baseLeafCount, minLeavesByStage[stage - 1] ?? 3);
 
   return (

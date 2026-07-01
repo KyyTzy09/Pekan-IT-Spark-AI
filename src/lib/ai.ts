@@ -117,7 +117,7 @@ async function tryGroqCompletion(
       } else {
         const response = await client.chat.completions.create(
           { model: modelName, messages, temperature },
-          { timeout: AI_TIMEOUT_STREAM_MS, maxRetries: 0 },
+          { timeout: AI_TIMEOUT_MS, maxRetries: 0 },
         );
         return { text: response.choices[0]?.message?.content || "" };
       }
@@ -241,7 +241,7 @@ export async function generateText({
         aiLog.error(
           `${EMOJI.error} Semua fallback gagal! Terakhir: glm-5 — ${formatErr(fallbackGlmErr)}`,
         );
-        throw err;
+        throw fallbackGlmErr;
       }
     }
   }

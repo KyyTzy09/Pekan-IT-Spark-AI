@@ -205,14 +205,18 @@ export function OnDemandGenerator({
                     </p>
                     <Select
                       value={subjectSlug || "__auto__"}
-                      onValueChange={(val) => setSubjectSlug(val === "__auto__" ? "" : val)}
+                      onValueChange={(val) =>
+                        setSubjectSlug(val === "__auto__" ? "" : val)
+                      }
                       disabled={submitting}
                     >
                       <SelectTrigger className="h-10 w-full rounded-2xl border-border/40 bg-background/70 text-[13px]">
                         <SelectValue placeholder="Otomatis (pilih dari fokus kamu)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__auto__">Otomatis (pilih dari fokus kamu)</SelectItem>
+                        <SelectItem value="__auto__">
+                          Otomatis (pilih dari fokus kamu)
+                        </SelectItem>
                         {subjectOptions.map((s) => (
                           <SelectItem key={s.slug} value={s.slug}>
                             {s.name}

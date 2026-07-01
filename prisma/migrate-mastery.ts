@@ -48,7 +48,10 @@ async function main() {
 
       // Calculate confidence based on attempt count
       // 0 attempts = 0 confidence, 30+ attempts = 100 confidence
-      const confidence = Math.min(Math.round((old.attemptCount / 30) * 100), 100);
+      const confidence = Math.min(
+        Math.round((old.attemptCount / 30) * 100),
+        100,
+      );
 
       await prisma.studentMastery.upsert({
         where: {
@@ -79,7 +82,10 @@ async function main() {
 
       migrated++;
     } catch (err) {
-      console.error(`   ❌ Failed to migrate ${old.userId}/${old.conceptId}:`, err);
+      console.error(
+        `   ❌ Failed to migrate ${old.userId}/${old.conceptId}:`,
+        err,
+      );
       skipped++;
     }
   }
@@ -214,7 +220,9 @@ async function main() {
     }
   }
 
-  console.log(`   ✅ Created/updated: ${subjectMasteriesCreated} subject masteries\n`);
+  console.log(
+    `   ✅ Created/updated: ${subjectMasteriesCreated} subject masteries\n`,
+  );
 
   // ═══════════════════════════════════════════════════════════════
   // Summary

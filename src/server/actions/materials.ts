@@ -7,12 +7,10 @@ import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
 import { incrementAiQuota, decrementAiQuota } from "@/server/ai-quota";
 import { generateAdaptiveMaterial } from "@/server/ai/generate-adaptive-material";
 
-
 const generateMaterialSchema = z.object({
   subjectId: z.string().min(1),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).default("MEDIUM"),
 });
-
 
 export async function generateOnDemandMaterial(input: {
   subjectId: string;
@@ -52,7 +50,6 @@ export async function generateOnDemandMaterial(input: {
       };
     }
 
-
     // Validate subject
     const subject = await prisma.subject.findFirst({
       where: { id: subjectId, isActive: true },
@@ -90,9 +87,13 @@ export async function generateOnDemandMaterial(input: {
     });
 
     if (concept) {
-      const contextDesc = extraConcepts.length > 0
-        ? `${concept.name}; ${extraConcepts.slice(0, 4).map((c) => c.name).join(", ")}${extraConcepts.length > 5 ? ", ..." : ""}`
-        : concept.description || concept.name;
+      const contextDesc =
+        extraConcepts.length > 0
+          ? `${concept.name}; ${extraConcepts
+              .slice(0, 4)
+              .map((c) => c.name)
+              .join(", ")}${extraConcepts.length > 5 ? ", ..." : ""}`
+          : concept.description || concept.name;
       console.log("[MATERIAL] 📚 Konteks konsep:", contextDesc);
 
       const material = await generateAdaptiveMaterial({

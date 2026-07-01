@@ -169,5 +169,15 @@ export async function parseSessionFromCookieHeader(
     .find((c) => c.startsWith(`${COOKIE_NAME}=`));
   if (!match) return null;
   const token = match.split("=").slice(1).join("=");
-  return verifyToken(token);
+  // Cek sessionVersion ke DB — sama seperti getSession() supaya invalidasi berlaku di middleware
+  const session = await verifyToken(token);
+  if (!session) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: session.id },
+    select: { sessionVersion: true },
+  });
+  if (!user || user.sessionVersion !== (session.sessionVersion ?? 0)) {
+    return null;
+  }
+  return session;
 }

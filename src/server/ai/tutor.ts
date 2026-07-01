@@ -281,7 +281,9 @@ export async function generateTutorStream(input: {
       );
     }
   } else if (input.hasDocumentContext) {
-    aiLog.info(`${EMOJI.ok} RAG di-skip — dokumen linked, konteks sudah tersedia`);
+    aiLog.info(
+      `${EMOJI.ok} RAG di-skip — dokumen linked, konteks sudah tersedia`,
+    );
   } else if (query.trim().length > 0) {
     aiLog.info(`${EMOJI.ok} RAG di-skip — pesan terlalu pendek/greeting`);
   }
@@ -305,14 +307,21 @@ export async function generateTutorStream(input: {
   // Window messages to fit within model context: keep system prompt + last N conversation turns
   const MAX_TURNS = 10; // 10 user-assistant pairs = 20 messages
   const systemMessages = input.messages.filter((m) => m.role === "system");
-  const conversationMessages = input.messages.filter((m) => m.role !== "system");
+  const conversationMessages = input.messages.filter(
+    (m) => m.role !== "system",
+  );
 
   let windowedMessages: typeof input.messages;
   if (conversationMessages.length > MAX_TURNS * 2) {
     const keep = conversationMessages.slice(-(MAX_TURNS * 2));
     // Always keep the first user message (it often contains the core question)
-    const firstUserIdx = conversationMessages.findIndex((m) => m.role === "user");
-    if (firstUserIdx > 0 && !keep.includes(conversationMessages[firstUserIdx])) {
+    const firstUserIdx = conversationMessages.findIndex(
+      (m) => m.role === "user",
+    );
+    if (
+      firstUserIdx > 0 &&
+      !keep.includes(conversationMessages[firstUserIdx])
+    ) {
       keep[0] = conversationMessages[firstUserIdx];
     }
     windowedMessages = [...systemMessages, ...keep];

@@ -1,6 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("server-only", () => ({}));
+vi.mock("server-only", () => ({}))
+
+// Mock OpenAI and Gemini constructors — throw at module init without API keys
+vi.mock("openai", () => ({
+  default: class MockOpenAI {
+    chat = { completions: { create: vi.fn() } };
+  },
+}));
+vi.mock("@google/generative-ai", () => ({
+  GoogleGenerativeAI: class MockGemini {
+    getGenerativeModel = vi.fn(() => ({ generateContent: vi.fn() }));
+  },
+}));
 
 import { safeParseJson } from "@/lib/ai";
 

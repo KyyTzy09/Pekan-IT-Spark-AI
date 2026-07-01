@@ -131,7 +131,8 @@ export function DashboardWithChallengesView({
                   Gagal memuat tantangan
                 </h4>
                 <p className="mt-1 text-xs text-muted-foreground max-w-sm leading-relaxed">
-                  Terjadi kesalahan saat memuat tantangan harian. Coba muat ulang halaman.
+                  Terjadi kesalahan saat memuat tantangan harian. Coba muat
+                  ulang halaman.
                 </p>
               </div>
             ) : (

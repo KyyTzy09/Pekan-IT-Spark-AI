@@ -187,19 +187,34 @@ describe("Mastery System", () => {
 
   describe("computeConfidence", () => {
     it("increases with more attempts", () => {
-      const low = computeConfidence({ attemptCount: 5, daysSinceLastAttempt: 0 });
-      const high = computeConfidence({ attemptCount: 30, daysSinceLastAttempt: 0 });
+      const low = computeConfidence({
+        attemptCount: 5,
+        daysSinceLastAttempt: 0,
+      });
+      const high = computeConfidence({
+        attemptCount: 30,
+        daysSinceLastAttempt: 0,
+      });
       expect(high).toBeGreaterThan(low);
     });
 
     it("decreases with older attempts", () => {
-      const recent = computeConfidence({ attemptCount: 10, daysSinceLastAttempt: 0 });
-      const old = computeConfidence({ attemptCount: 10, daysSinceLastAttempt: 30 });
+      const recent = computeConfidence({
+        attemptCount: 10,
+        daysSinceLastAttempt: 0,
+      });
+      const old = computeConfidence({
+        attemptCount: 10,
+        daysSinceLastAttempt: 30,
+      });
       expect(recent).toBeGreaterThan(old);
     });
 
     it("caps at 100", () => {
-      const result = computeConfidence({ attemptCount: 100, daysSinceLastAttempt: 0 });
+      const result = computeConfidence({
+        attemptCount: 100,
+        daysSinceLastAttempt: 0,
+      });
       expect(result).toBeLessThanOrEqual(100);
     });
   });

@@ -747,13 +747,16 @@ async function resolveQuestionOutsideTransaction(
   if (matQuota.allowed) {
     try {
       // Use conceptHint if available; otherwise fetch first concept from DB
-      const conceptName = item.conceptHint
-        ?? await prisma.concept.findFirst({
-          where: { topic: { subjectId: subject.id } },
-          select: { name: true },
-          orderBy: { order: "asc" },
-        }).then((c) => c?.name)
-        ?? subject.name;
+      const conceptName =
+        item.conceptHint ??
+        (await prisma.concept
+          .findFirst({
+            where: { topic: { subjectId: subject.id } },
+            select: { name: true },
+            orderBy: { order: "asc" },
+          })
+          .then((c) => c?.name)) ??
+        subject.name;
       const material = await generateMaterialMarkdown({
         userName,
         subjectName: subject.name,

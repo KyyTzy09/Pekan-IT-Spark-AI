@@ -75,7 +75,9 @@ export default function RegisterPage() {
   const [password, setPassword] = React.useState("");
 
   React.useEffect(() => {
-    getIsGoogleEnabled().then(setGoogleEnabled).catch(() => {});
+    getIsGoogleEnabled()
+      .then(setGoogleEnabled)
+      .catch(() => {});
   }, []);
 
   const {

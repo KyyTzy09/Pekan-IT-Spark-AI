@@ -107,7 +107,8 @@ export function PracticeEmptyState({
               Sedang menyiapkan soal...
             </p>
             <p className="mt-1 text-[12.5px] text-muted-foreground">
-              AI sedang membuat soal latihan untuk mapel ini. Tunggu sebentar ya.
+              AI sedang membuat soal latihan untuk mapel ini. Tunggu sebentar
+              ya.
             </p>
           </>
         ) : (
@@ -117,7 +118,9 @@ export function PracticeEmptyState({
               Belum ada soal latihan
             </p>
             <p className="mt-1 text-[12.5px] text-muted-foreground">
-              {autoGenError || error || "Generate soal untuk mapel yang kamu inginkan."}
+              {autoGenError ||
+                error ||
+                "Generate soal untuk mapel yang kamu inginkan."}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {subjectId && (

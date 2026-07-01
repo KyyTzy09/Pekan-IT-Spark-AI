@@ -50,7 +50,9 @@ export default async function TopicPickerPage({
   const topics = await prisma.topic.findMany({
     where: {
       subject: subjectFilter,
-      ...(subjectSlug ? { subject: { ...subjectFilter, slug: subjectSlug } } : {}),
+      ...(subjectSlug
+        ? { subject: { ...subjectFilter, slug: subjectSlug } }
+        : {}),
     },
     include: {
       subject: {

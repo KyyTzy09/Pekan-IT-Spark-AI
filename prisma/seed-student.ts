@@ -129,7 +129,7 @@ async function main() {
 
   for (const seed of knowledgeSeed) {
     if (!seed.concept) continue;
-    
+
     // Old table (backward compat)
     const oldData = {
       masteryScore: seed.mastery / 100, // convert to 0-1
@@ -171,17 +171,19 @@ async function main() {
       where: { topic: { subjectId } },
       select: { id: true },
     });
-    const conceptIds = subjectConcepts.map(c => c.id);
-    
+    const conceptIds = subjectConcepts.map((c) => c.id);
+
     const masteries = await prisma.studentMastery.findMany({
       where: { userId: user.id, conceptId: { in: conceptIds } },
       select: { score: true, confidence: true },
     });
 
     if (masteries.length > 0) {
-      const avgScore = masteries.reduce((sum, m) => sum + m.score, 0) / masteries.length;
-      const avgConfidence = masteries.reduce((sum, m) => sum + m.confidence, 0) / masteries.length;
-      const conceptsMastered = masteries.filter(m => m.score >= 89).length;
+      const avgScore =
+        masteries.reduce((sum, m) => sum + m.score, 0) / masteries.length;
+      const avgConfidence =
+        masteries.reduce((sum, m) => sum + m.confidence, 0) / masteries.length;
+      const conceptsMastered = masteries.filter((m) => m.score >= 89).length;
 
       await prisma.subjectMastery.upsert({
         where: {

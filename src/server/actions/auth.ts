@@ -174,6 +174,9 @@ export async function registerAction(
   const passwordHash = await bcrypt.hash(data.password, 12);
 
   if (data.role === "STUDENT") {
+    // FIX #2: buat user dulu, baru setSession di luar — kalau setSession gagal,
+    // user tetap bisa login manual. Tidak bisa wrap setSession dalam prisma.$transaction
+    // karena setSession butuh Next.js cookies() context.
     const user = await prisma.user.create({
       data: {
         email,
@@ -193,8 +196,8 @@ export async function registerAction(
         sessionVersion: true,
       },
     });
-    await setSession(makeSessionUser(user));
     clearRateLimit(`register:${email}`);
+    await setSession(makeSessionUser(user));
   } else {
     const link = await prisma.parentStudentLink.findUnique({
       where: { inviteCode: data.inviteCode },
@@ -226,9 +229,21 @@ export async function registerAction(
       };
     }
 
-    // Wrap in transaction to prevent orphan parent account
+    // FIX #3: setSession dipanggil di LUAR transaction — cookie tidak boleh
+    // di-set di dalam Prisma transaction callback karena kalau rollback,
+    // cookie sudah terkirim ke browser untuk user yang tidak ada di DB.
+    let parentUser: {
+      id: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isOnboarded: boolean;
+      image: string | null;
+      sessionVersion: number;
+    };
+
     await prisma.$transaction(async (tx) => {
-      const parent = await tx.user.create({
+      parentUser = await tx.user.create({
         data: {
           email,
           name: data.name,
@@ -250,13 +265,12 @@ export async function registerAction(
 
       await tx.parentStudentLink.update({
         where: { id: link.id },
-        data: { status: "ACCEPTED", parentId: parent.id },
+        data: { status: "ACCEPTED", parentId: parentUser.id },
       });
-
-      await setSession(makeSessionUser(parent));
     });
 
     clearRateLimit(`register:${email}`);
+    await setSession(makeSessionUser(parentUser!));
   }
 
   return {};

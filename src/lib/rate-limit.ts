@@ -82,22 +82,9 @@ export function clearRateLimit(key: string): void {
   // Also clear from DB (fire-and-forget)
   import("@/lib/prisma")
     .then(({ prisma }) =>
-      prisma.rateLimit.delete({ where: { key } }).catch(() => {}),
+      prisma.rateLimit.deleteMany({ where: { key } }).catch(() => {}),
     )
     .catch(() => {});
 }
 
-// Prevent memory leak: clean up expired entries every 30 minutes
-if (typeof setInterval !== "undefined") {
-  setInterval(
-    () => {
-      const now = Date.now();
-      for (const [key, entry] of attempts) {
-        if (now > entry.resetAt) {
-          attempts.delete(key);
-        }
-      }
-    },
-    30 * 60 * 1000,
-  ).unref();
-}
+

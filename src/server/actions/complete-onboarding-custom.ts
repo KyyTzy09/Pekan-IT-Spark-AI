@@ -242,7 +242,10 @@ export async function completeOnboardingCustom(
         }> = [];
 
         // Track mastery per concept from pretest answers
-        const conceptCorrectMap = new Map<string, { correct: number; total: number }>();
+        const conceptCorrectMap = new Map<
+          string,
+          { correct: number; total: number }
+        >();
 
         for (const pa of data.pretestAnswers) {
           const qId = questionIdByIndex.get(pa.questionIndex);
@@ -261,7 +264,10 @@ export async function completeOnboardingCustom(
           const firstConcept = conceptsData.find((c) => c.topicId === topicId);
           if (!firstConcept) continue;
 
-          const bucket = conceptCorrectMap.get(firstConcept.id) ?? { correct: 0, total: 0 };
+          const bucket = conceptCorrectMap.get(firstConcept.id) ?? {
+            correct: 0,
+            total: 0,
+          };
           bucket.total += 1;
           if (pa.isCorrect) bucket.correct += 1;
           conceptCorrectMap.set(firstConcept.id, bucket);
@@ -282,13 +288,23 @@ export async function completeOnboardingCustom(
               userId,
               conceptId,
               masteryScore,
-              status: ratio > 0.7 ? "LEARNING" as const : ratio > 0 ? "STRUGGLING" as const : "NOT_STARTED" as const,
+              status:
+                ratio > 0.7
+                  ? ("LEARNING" as const)
+                  : ratio > 0
+                    ? ("STRUGGLING" as const)
+                    : ("NOT_STARTED" as const),
               attemptCount: total,
               lastAttemptAt: new Date(),
             },
             update: {
               masteryScore,
-              status: ratio > 0.7 ? "LEARNING" as const : ratio > 0 ? "STRUGGLING" as const : "NOT_STARTED" as const,
+              status:
+                ratio > 0.7
+                  ? ("LEARNING" as const)
+                  : ratio > 0
+                    ? ("STRUGGLING" as const)
+                    : ("NOT_STARTED" as const),
               attemptCount: { increment: total },
               lastAttemptAt: new Date(),
             },

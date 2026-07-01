@@ -84,9 +84,9 @@ export async function isLocked(
   });
   if (!lock) return false;
   if (lock.expiresAt < now) {
-    // Expired, clean up
+    // Expired, clean up — pakai deleteMany supaya tidak throw kalau sudah dihapus request lain
     await prisma.generationLock
-      .delete({ where: { id: lock.id } })
+      .deleteMany({ where: { id: lock.id } })
       .catch(() => {});
     return false;
   }

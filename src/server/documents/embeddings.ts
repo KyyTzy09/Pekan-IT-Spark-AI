@@ -121,8 +121,9 @@ export async function retrieveDocumentChunks(
   });
   if (rows.length === 0) return [];
 
-  const queryVec = queryEmbedding
-    ?? (await embed({ model: embeddingModel, value: query })).embedding;
+  const queryVec =
+    queryEmbedding ??
+    (await embed({ model: embeddingModel, value: query })).embedding;
   const scored: RetrievedChunk[] = rows.map((r) => {
     let docVec: number[];
     try {

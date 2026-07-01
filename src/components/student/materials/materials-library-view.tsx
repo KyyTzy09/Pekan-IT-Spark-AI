@@ -217,7 +217,9 @@ export function MaterialsLibraryView({
           {subjectOptions.length > 0 && (
             <Select
               value={subjectId || "__all__"}
-              onValueChange={(val) => setSubjectId(val === "__all__" ? "" : val)}
+              onValueChange={(val) =>
+                setSubjectId(val === "__all__" ? "" : val)
+              }
             >
               <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-full border-border/40 bg-card/60 px-3 text-[11.5px] font-bold">
                 <SelectValue placeholder="Semua mapel" />
@@ -396,10 +398,12 @@ export function MaterialsLibraryView({
                 {/* Info */}
                 <div className="rounded-xl bg-muted/50 px-4 py-3">
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                    ℹ️ Materi akan di-generate oleh AI sesuai gaya belajarmu.
-                    {" "}Sisa kuota hari ini:{" "}
+                    ℹ️ Materi akan di-generate oleh AI sesuai gaya belajarmu.{" "}
+                    Sisa kuota hari ini:{" "}
                     <span className="font-bold text-foreground">
-                      {materialQuota ? `${Math.max(0, materialQuota.limit - materialQuota.used)}x` : "—"}
+                      {materialQuota
+                        ? `${Math.max(0, materialQuota.limit - materialQuota.used)}x`
+                        : "—"}
                     </span>
                     .
                   </p>

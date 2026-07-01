@@ -42,7 +42,11 @@ export default async function MaterialsPage() {
   return (
     <MaterialsLibraryView
       initialResult={result}
-      materialQuota={materialQuota ? { used: materialQuota.used, limit: materialQuota.limit } : undefined}
+      materialQuota={
+        materialQuota
+          ? { used: materialQuota.used, limit: materialQuota.limit }
+          : undefined
+      }
       subjectOptions={subjects.map((s) => ({
         id: s.id,
         name: s.name,

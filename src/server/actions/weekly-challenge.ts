@@ -64,47 +64,48 @@ async function buildWeeklySubjectInput(
   });
   if (!subject || !subject.isActive) return null;
 
-  const [recentProfiles, prevProfiles, weakMastery, strongMastery] = await Promise.all([
-    prisma.studentKnowledgeProfile.findMany({
-      where: {
-        userId,
-        updatedAt: { gte: new Date(now.getTime() - 7 * 86_400_000) },
-        concept: { topic: { subjectId } },
-      },
-      select: { masteryScore: true },
-    }),
-    prisma.studentKnowledgeProfile.findMany({
-      where: {
-        userId,
-        updatedAt: {
-          gte: new Date(now.getTime() - 14 * 86_400_000),
-          lt: new Date(now.getTime() - 7 * 86_400_000),
+  const [recentProfiles, prevProfiles, weakMastery, strongMastery] =
+    await Promise.all([
+      prisma.studentKnowledgeProfile.findMany({
+        where: {
+          userId,
+          updatedAt: { gte: new Date(now.getTime() - 7 * 86_400_000) },
+          concept: { topic: { subjectId } },
         },
-        concept: { topic: { subjectId } },
-      },
-      select: { masteryScore: true },
-    }),
-    prisma.studentMastery.findMany({
-      where: {
-        userId,
-        score: { lt: 70 },
-        concept: { topic: { subjectId } },
-      },
-      orderBy: { score: "asc" },
-      take: 5,
-      include: { concept: { select: { name: true } } },
-    }),
-    prisma.studentMastery.findMany({
-      where: {
-        userId,
-        score: { gte: 70 },
-        concept: { topic: { subjectId } },
-      },
-      orderBy: { score: "desc" },
-      take: 5,
-      include: { concept: { select: { name: true } } },
-    }),
-  ]);
+        select: { masteryScore: true },
+      }),
+      prisma.studentKnowledgeProfile.findMany({
+        where: {
+          userId,
+          updatedAt: {
+            gte: new Date(now.getTime() - 14 * 86_400_000),
+            lt: new Date(now.getTime() - 7 * 86_400_000),
+          },
+          concept: { topic: { subjectId } },
+        },
+        select: { masteryScore: true },
+      }),
+      prisma.studentMastery.findMany({
+        where: {
+          userId,
+          score: { lt: 70 },
+          concept: { topic: { subjectId } },
+        },
+        orderBy: { score: "asc" },
+        take: 5,
+        include: { concept: { select: { name: true } } },
+      }),
+      prisma.studentMastery.findMany({
+        where: {
+          userId,
+          score: { gte: 70 },
+          concept: { topic: { subjectId } },
+        },
+        orderBy: { score: "desc" },
+        take: 5,
+        include: { concept: { select: { name: true } } },
+      }),
+    ]);
 
   const recent = recentProfiles.map((p) => p.masteryScore);
   const prev = prevProfiles.map((p) => p.masteryScore);

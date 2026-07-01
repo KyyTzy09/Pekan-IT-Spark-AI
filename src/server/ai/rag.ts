@@ -78,8 +78,9 @@ async function retrieveContextInner(
   if (signal?.aborted) throw new Error("Aborted");
 
   // Reuse pre-computed embedding if available (avoids double embedding)
-  const queryEmbedding = options.queryEmbedding
-    ?? (await embed({ model: embeddingModel, value: query })).embedding;
+  const queryEmbedding =
+    options.queryEmbedding ??
+    (await embed({ model: embeddingModel, value: query })).embedding;
 
   // Check again after potentially slow embedding call
   if (signal?.aborted) throw new Error("Aborted");

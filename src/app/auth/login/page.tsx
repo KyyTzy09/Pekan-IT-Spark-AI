@@ -61,7 +61,9 @@ function LoginForm() {
   }, [authError]);
 
   React.useEffect(() => {
-    getIsGoogleEnabled().then(setGoogleEnabled).catch(() => {});
+    getIsGoogleEnabled()
+      .then(setGoogleEnabled)
+      .catch(() => {});
   }, []);
 
   const {

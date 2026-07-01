@@ -177,7 +177,12 @@ export async function getNextPracticeQuestion(
   const [profiles, recentlyAttempted] = await Promise.all([
     prisma.studentMastery.findMany({
       where: { userId, conceptId: { in: concepts.map((c) => c.id) } },
-      select: { conceptId: true, score: true, confidence: true, attemptCount: true },
+      select: {
+        conceptId: true,
+        score: true,
+        confidence: true,
+        attemptCount: true,
+      },
     }),
     prisma.questionAttempt.findMany({
       where: {
@@ -211,10 +216,14 @@ export async function getNextPracticeQuestion(
   >();
   for (const p of profiles) {
     const masteryLabel = getMasteryLabel(p.score);
-    const status: ConceptStatus = 
-      p.score >= 89 ? "MASTERED" :
-      p.score < 16 && p.score > 0 ? "STRUGGLING" :
-      p.score > 0 ? "LEARNING" : "NOT_STARTED";
+    const status: ConceptStatus =
+      p.score >= 89
+        ? "MASTERED"
+        : p.score < 16 && p.score > 0
+          ? "STRUGGLING"
+          : p.score > 0
+            ? "LEARNING"
+            : "NOT_STARTED";
     masteryByConcept.set(p.conceptId, {
       score: p.score,
       status,
@@ -979,10 +988,14 @@ export async function submitPracticeAnswer(input: {
     select: { score: true },
   });
   const prevScore = prevProfile?.score ?? 0;
-  const prevStatus: ConceptStatus = 
-    prevScore >= 89 ? "MASTERED" :
-    prevScore < 16 && prevScore > 0 ? "STRUGGLING" :
-    prevScore > 0 ? "LEARNING" : "NOT_STARTED";
+  const prevStatus: ConceptStatus =
+    prevScore >= 89
+      ? "MASTERED"
+      : prevScore < 16 && prevScore > 0
+        ? "STRUGGLING"
+        : prevScore > 0
+          ? "LEARNING"
+          : "NOT_STARTED";
 
   const isCorrect = answersMatch(
     input.answer,
@@ -1064,9 +1077,7 @@ export async function submitPracticeAnswer(input: {
           select: { conceptId: true, score: true },
         }),
       ]);
-      const scoreMap = new Map(
-        profiles.map((p) => [p.conceptId, p.score]),
-      );
+      const scoreMap = new Map(profiles.map((p) => [p.conceptId, p.score]));
       const sorted = prereqs
         .map((p) => ({
           id: p.id,
@@ -1152,9 +1163,13 @@ export async function getPracticeStats(): Promise<PracticeStats | null> {
       p.conceptId,
       {
         conceptId: p.conceptId,
-        status: (p.score >= 89 ? "MASTERED" :
-          p.score < 16 && p.score > 0 ? "STRUGGLING" :
-          p.score > 0 ? "LEARNING" : "NOT_STARTED") as ConceptStatus,
+        status: (p.score >= 89
+          ? "MASTERED"
+          : p.score < 16 && p.score > 0
+            ? "STRUGGLING"
+            : p.score > 0
+              ? "LEARNING"
+              : "NOT_STARTED") as ConceptStatus,
         masteryScore: p.score / 100, // convert to 0-1 for old system
       },
     ]),

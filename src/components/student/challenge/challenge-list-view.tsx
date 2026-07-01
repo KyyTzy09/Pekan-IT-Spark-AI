@@ -178,7 +178,9 @@ export function ChallengeListView({
       .then((json) => {
         setAllChallenges(json.items || []);
       })
-      .catch((err) => console.warn("[challenge-list] fetch history failed:", err))
+      .catch((err) =>
+        console.warn("[challenge-list] fetch history failed:", err),
+      )
       .finally(() => setLoadingAll(false));
   }, [statusFilter, allChallenges.length]);
 
