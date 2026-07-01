@@ -5,7 +5,7 @@ import Link from "next/link";
 import { memo } from "react";
 import { cn } from "@/lib/utils";
 
-type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
+type ChallengeStatus = "GENERATING" | "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
 type ChallengeItemKind = "QUESTION" | "MATERIAL" | "REFLECTION";
 type ChallengeSource = "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
 
@@ -40,6 +40,11 @@ const STATUS_META: Record<
   ChallengeStatus,
   { label: string; color: string; bg: string }
 > = {
+  GENERATING: {
+    label: "Generating...",
+    color: "text-[var(--purple)]",
+    bg: "bg-[var(--purple)]/10",
+  },
   ACTIVE: {
     label: "Aktif",
     color: "text-[var(--coral)]",

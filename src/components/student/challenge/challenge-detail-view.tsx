@@ -19,7 +19,7 @@ import { ChallengeItemRenderer } from "@/components/student/challenge/challenge-
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
+type ChallengeStatus = "GENERATING" | "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
 type ChallengeItemKind = "QUESTION" | "MATERIAL" | "REFLECTION";
 type ChallengeItemStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
 
@@ -114,6 +114,11 @@ const STATUS_META: Record<
   ChallengeStatus,
   { label: string; color: string; bg: string }
 > = {
+  GENERATING: {
+    label: "Generating...",
+    color: "text-[var(--purple)]",
+    bg: "bg-[var(--purple)]/10",
+  },
   ACTIVE: {
     label: "Belum selesai",
     color: "text-[var(--coral)]",

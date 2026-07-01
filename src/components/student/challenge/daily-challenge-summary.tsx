@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
+type ChallengeStatus = "GENERATING" | "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
 type ChallengeSource = "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
 
 interface DailyChallenge {
@@ -21,9 +21,106 @@ interface DailyChallenge {
 
 export function DailyChallengeSummary({
   challenges,
+  loading = false,
+  generating = false,
+  error = false,
 }: {
   challenges: DailyChallenge[];
+  loading?: boolean;
+  generating?: boolean;
+  error?: boolean;
 }) {
+  // Loading / generating state
+  if (loading || generating) {
+    return (
+      <article className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-12 -top-12 size-32 rounded-full bg-[var(--purple)]/20 opacity-60 blur-3xl"
+        />
+        <div className="relative flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+            Tantangan Hari Ini
+          </p>
+          <span className="rounded-full bg-[color-mix(in_oklch,var(--purple)_12%,transparent)] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[var(--purple)]">
+            <span className="inline-block size-1.5 animate-pulse rounded-full bg-[var(--purple)]" />{" "}
+            {generating ? "Generating..." : "Loading..."}
+          </span>
+        </div>
+        <h2 className="relative mt-1.5 font-heading text-[18px] font-bold leading-tight">
+          {generating
+            ? "AI sedang menyiapkan tantanganmu... 🤖"
+            : "Memuat tantangan hari ini..."}
+        </h2>
+        <p className="relative mt-1 text-[12px] text-muted-foreground">
+          {generating
+            ? "Biasanya butuh 10-30 detik. Jangan tutup halaman ini ya!"
+            : "Tunggu sebentar..."}
+        </p>
+        <div className="relative mt-4 flex gap-2">
+          <div className="h-2 w-16 animate-pulse rounded-full bg-muted" />
+          <div className="h-2 w-12 animate-pulse rounded-full bg-muted" />
+          <div className="h-2 w-20 animate-pulse rounded-full bg-muted" />
+        </div>
+      </article>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <article className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-12 -top-12 size-32 rounded-full bg-red-500/20 opacity-60 blur-3xl"
+        />
+        <div className="relative flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+            Gagal Memuat
+          </p>
+        </div>
+        <h2 className="relative mt-1.5 font-heading text-[18px] font-bold leading-tight">
+          Gagal memuat tantangan 😔
+        </h2>
+        <p className="relative mt-1 text-[12px] text-muted-foreground">
+          Coba refresh halaman atau tunggu beberapa saat lalu coba lagi.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="relative mt-4"
+          onClick={() => window.location.reload()}
+        >
+          Refresh Halaman
+        </Button>
+      </article>
+    );
+  }
+
+  // Empty state
+  if (challenges.length === 0) {
+    return (
+      <article className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/80 p-5 shadow-[0_8px_24px_rgba(80,20,50,0.06)] backdrop-blur-md sm:p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-12 -top-12 size-32 rounded-full bg-[var(--purple)]/20 opacity-60 blur-3xl"
+        />
+        <div className="relative flex items-start justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--purple)]">
+            Tantangan Hari Ini
+          </p>
+        </div>
+        <h2 className="relative mt-1.5 font-heading text-[18px] font-bold leading-tight">
+          Belum ada tantangan hari ini
+        </h2>
+        <p className="relative mt-1 text-[12px] text-muted-foreground">
+          Pilih mapel di Settings untuk mulai dapat tantangan harian.
+        </p>
+      </article>
+    );
+  }
+
+  // Normal state
   const totalItems = challenges.reduce((acc, c) => acc + c.itemCount, 0);
   const completedItems = challenges.reduce(
     (acc, c) => acc + c.completedItemCount,
@@ -59,64 +156,52 @@ export function DailyChallengeSummary({
         Campuran soal, materi, dan refleksi yang dipersonalisasi buat kamu.
       </p>
 
+      {/* Progress bar */}
       {totalItems > 0 && (
-        <div className="relative mt-3.5 h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--coral)] transition-all"
-            style={{ width: `${(completedItems / totalItems) * 100}%` }}
-          />
+        <div className="relative mt-3">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-[var(--purple)] transition-all duration-500"
+              style={{ width: `${(completedItems / totalItems) * 100}%` }}
+            />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {completedItems}/{totalItems} item selesai
+            {totalPoints > 0 && ` · ${totalPoints} XP`}
+          </p>
         </div>
       )}
 
-      <div className="relative mt-3 space-y-1.5">
-        {challenges.slice(0, 3).map((c) => {
-          const _pct =
-            c.itemCount > 0 ? (c.completedItemCount / c.itemCount) * 100 : 0;
-          return (
-            <Link
-              key={c.id}
-              href={`/challenge/${c.id}`}
-              className="group/dc flex items-center gap-2.5 rounded-2xl border border-border/40 bg-background/40 p-2.5 transition-all hover:border-[var(--purple)]/30"
-            >
-              <span
-                className="grid size-8 shrink-0 place-items-center rounded-xl text-[16px]"
-                style={{
-                  background: c.subject?.color
-                    ? `linear-gradient(135deg, ${c.subject.color}30, transparent)`
-                    : "color-mix(in oklch, var(--purple) 10%, transparent)",
-                }}
-              >
-                {c.subject?.icon ?? "✨"}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-heading text-[12.5px] font-bold">
-                  {c.title}
-                </p>
-                <p className="text-[10.5px] text-muted-foreground">
-                  {c.completedItemCount}/{c.itemCount} selesai
-                </p>
-              </div>
-              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover/dc:translate-x-0.5" />
-            </Link>
-          );
-        })}
+      {/* Challenge list */}
+      <div className="relative mt-4 space-y-2">
+        {challenges.map((challenge) => (
+          <Link
+            key={challenge.id}
+            href={`/challenges/${challenge.id}`}
+            className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-background/50 p-3 transition-colors hover:bg-background/80"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold">
+                {challenge.subject?.icon ?? "📚"} {challenge.title}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {challenge.completedItemCount}/{challenge.itemCount} item
+                {challenge.status === "COMPLETED" && " · ✅ Selesai"}
+              </p>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        ))}
       </div>
 
-      <div className="relative mt-4 flex items-center justify-between gap-2">
-        <span className="text-[10.5px] font-bold text-muted-foreground">
-          {totalPoints} XP hari ini
-        </span>
-        <Button
-          asChild
-          size="sm"
-          className="h-9 rounded-full bg-[var(--purple)] text-white shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
-        >
-          <Link href="/challenge">
-            Lihat semua
-            <ChevronRight size={13} />
-          </Link>
-        </Button>
-      </div>
+      {/* View all link */}
+      <Link
+        href="/challenges"
+        className="relative mt-4 flex items-center gap-1 text-[12px] font-semibold text-[var(--purple)] hover:underline"
+      >
+        Lihat semua tantangan
+        <ChevronRight className="size-3" />
+      </Link>
     </article>
   );
 }

@@ -26,7 +26,7 @@ interface MaterialDetail {
   relatedChallenges: Array<{
     id: string;
     title: string;
-    status: "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
+    status: "GENERATING" | "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
   }>;
 }
 

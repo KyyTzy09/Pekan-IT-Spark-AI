@@ -7,7 +7,7 @@ import { Reveal } from "@/components/shared/reveal";
 import { ChallengeCard } from "@/components/student/challenge/challenge-card";
 import { Button } from "@/components/ui/button";
 
-type ChallengeStatus = "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
+type ChallengeStatus = "GENERATING" | "ACTIVE" | "COMPLETED" | "SKIPPED" | "EXPIRED";
 type ChallengeSource = "AUTO_DAILY" | "AUTO_WEEKLY" | "ON_DEMAND";
 
 interface ChallengeListItem {

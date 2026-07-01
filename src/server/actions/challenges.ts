@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/session";
 import { XP_REWARDS } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
+import { challengeLog } from "@/lib/logger";
 import {
   addXp,
   checkAndUnlockBadges,
@@ -248,7 +249,7 @@ export async function generateAndStoreDailyChallenges(
   date: Date,
 ): Promise<void> {
   const dateStr = date.toISOString().split("T")[0];
-  console.log(`[DAILY] 🚀 Memulai generate challenge untuk ${dateStr}`);
+  const timer = challengeLog.timer("daily_generate", { userId, date: dateStr });
 
   // Cek apakah udah ada challenge buat hari ini
   const today = toDateOnly(date);
@@ -264,17 +265,14 @@ export async function generateAndStoreDailyChallenges(
     },
   });
   if (existingCount > 0) {
-    console.log(
-      `[DAILY] ⏭️  Udah ada ${existingCount} challenge hari ini, skip generate`,
-    );
+    challengeLog.info("daily_skip_exists", { userId, count: existingCount });
     return;
   }
 
   // Lock: cegah generation dobel dari polling simultan
-  if (!(await acquireDbLock(userId, "DAILY"))) {
-    console.log(
-      "[DAILY] 🔒 Ada proses generate lain yang lagi jalan, skip duplikat",
-    );
+  const lockAcquired = await acquireDbLock(userId, "DAILY");
+  if (!lockAcquired) {
+    challengeLog.warn("daily_skip_locked", { userId });
     return;
   }
 
@@ -291,15 +289,16 @@ export async function generateAndStoreDailyChallenges(
     });
 
     if (!profile) {
-      console.log("[DAILY] ❌ Profil ga ketemu, batal generate");
+      challengeLog.warn("daily_no_profile", { userId });
       return;
     }
 
-    console.log("[DAILY] 👤 Profil loaded", {
-      nama: profile.user?.name ?? "(unknown)",
-      kelas: profile.grade,
-      gayaBelajar: profile.learningStyle ?? "VISUAL",
-      jumlahSubjectDipilih: profile.challengeSubjectIds.length,
+    challengeLog.info("daily_profile_loaded", {
+      userId,
+      name: profile.user?.name ?? "(unknown)",
+      grade: profile.grade,
+      learningStyle: profile.learningStyle ?? "VISUAL",
+      subjectCount: profile.challengeSubjectIds.length,
     });
 
     const subjectIds = pickChallengeSubjectIds(
@@ -311,7 +310,7 @@ export async function generateAndStoreDailyChallenges(
     );
 
     if (subjectIds.length === 0) {
-      console.log("[DAILY] ⚠️  Belum pilih mapel, skip generate");
+      challengeLog.warn("daily_no_subjects", { userId });
       return;
     }
 
@@ -327,33 +326,69 @@ export async function generateAndStoreDailyChallenges(
       DAILY_CHALLENGE_SUBJECTS,
     );
 
-    console.log(
-      "[DAILY] 📚 Mapel yang dipilih:",
-      distributedSubjects.map((id) => subjectMap.get(id) ?? id).join(", "),
-    );
+    challengeLog.info("daily_subjects_selected", {
+      userId,
+      subjects: distributedSubjects.map((id) => subjectMap.get(id) ?? id),
+    });
 
     const now = new Date();
     let successCount = 0;
     let failCount = 0;
+    const MAX_RETRIES = 2;
 
     for (const subjectId of distributedSubjects) {
       const subjectName = subjectMap.get(subjectId) ?? subjectId;
-      try {
-        console.log(`[DAILY] ⏳ Generating untuk ${subjectName}...`);
-        await generateOneDailyChallenge(userId, date, subjectId, profile, now);
-        successCount++;
-        console.log(`[DAILY] ✅ Berhasil generate untuk ${subjectName}`);
-      } catch (err) {
+      let lastError: unknown = null;
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        const subjectTimer = challengeLog.timer("daily_subject", {
+          userId,
+          subjectId,
+          subjectName,
+          attempt,
+        });
+        try {
+          await generateOneDailyChallenge(userId, date, subjectId, profile, now);
+          successCount++;
+          subjectTimer({ status: "ok" });
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          challengeLog.warn("daily_subject_retry", {
+            userId,
+            subjectId,
+            subjectName,
+            attempt,
+            maxRetries: MAX_RETRIES,
+            error: errorMsg,
+          });
+        }
+      }
+
+      if (lastError) {
         failCount++;
-        console.error(`[DAILY] ❌ Gagal generate untuk ${subjectName}:`, err);
+        const errorMsg = lastError instanceof Error ? lastError.message : String(lastError);
+        challengeLog.error("daily_subject_failed", {
+          userId,
+          subjectId,
+          subjectName,
+          attempts: MAX_RETRIES,
+          error: errorMsg,
+        });
       }
     }
 
-    console.log(
-      `[DAILY] 🎉 Selesai! ${successCount} berhasil, ${failCount} gagal dari ${distributedSubjects.length} mapel`,
-    );
+    challengeLog.info("daily_complete", {
+      userId,
+      success: successCount,
+      failed: failCount,
+      total: distributedSubjects.length,
+    });
   } finally {
     await releaseDbLock(userId, "DAILY");
+    challengeLog.info("daily_lock_released", { userId });
   }
 }
 
